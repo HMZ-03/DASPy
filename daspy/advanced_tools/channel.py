@@ -54,7 +54,7 @@ def channel_checking(data, deg=10, thresh=5, continuity=True, adjacent=2,
     """
     Use the energy of each channel to determine which channels are bad.
 
-    :param data: 2-dimensional array. Axis 0 is channel number and axis 1 is
+    :param data: 2-dimensional np.ndarray. Axis 0 is channel number and axis 1 is
         time series
     :param deg: int. Degree of the fitting polynomial
     :param thresh: int or float. The MAD multiple of bad channel energy lower
@@ -104,28 +104,31 @@ def channel_location(tx, ty, tn):
     l_track_cum = np.hstack(([0], np.cumsum(l_track)))
     idx_kp = np.where(tn >= 0)[0]
 
-    chn = tn[idx_kp[0]]
-    interp_ch = [[tx[idx_kp[0]], ty[idx_kp[0]], chn]]
+    interp_ch = []
+    chn = np.floor(tn[idx_kp[0]])
+    if abs(chn - tn[idx_kp[0]]) < 1e-6:
+        interp_ch.append([[tx[idx_kp[0]], ty[idx_kp[0]], chn]])
 
-    sag_interval = []
+    seg_interval = []
     for i in range(1, len(idx_kp)):
         # calculate actual interval between known-channel points
         istart, iend = idx_kp[i - 1], idx_kp[i]
         n_chn_kp = tn[iend] - tn[istart]
         d_interp = (l_track_cum[iend] - l_track_cum[istart]) / n_chn_kp
-        sag_interval.append([int(tn[istart]), int(tn[iend]), d_interp])
+        seg_interval.append([tn[istart], tn[iend], d_interp])
 
         l_res = 0  # remaining fiber length before counting the next segment
-
+        # consider if the given channelnumber is not an integer
+        chn_res = tn[istart] - int(tn[istart])
         for j in range(istart, iend):
             l_start = l_track[j] + l_res
 
             # if tp segment length is large for more than one interval, get the
             # channel loc
-            if l_start >= d_interp:
+            if l_start >= d_interp * (1 - chn_res):
                 # floor int, num of channel available
-                n_chn_tp = int(l_start / d_interp)
-                l_new = (np.arange(n_chn_tp) + 1) * d_interp - \
+                n_chn_tp = int(l_start / d_interp + chn_res)
+                l_new = (np.arange(n_chn_tp) + 1 - chn_res) * d_interp - \
                     l_res  # channel distance from segment start
 
                 # interpolate the channel loc
@@ -145,41 +148,58 @@ def channel_location(tx, ty, tn):
 
                 # handle floor int problem when l_start/d_interp is near an
                 # interger
-                if (d_interp - l_res) / d_interp < 1.0e-6:
+                if (d_interp - l_res) / d_interp < 1e-6:
                     chn += 1
                     interp_ch.append([tx[j + 1], ty[j + 1], int(tn[j + 1])])
                     l_res = 0
+                chn_res = 0
             # if tp segment length is not enough for one interval, simply add
             # the length to next segment
             elif l_start < d_interp:
                 l_res = l_start
 
-    interp_ch = np.array(interp_ch)
-    sag_interval = np.array(sag_interval)
-    return sag_interval, interp_ch
+    return np.array(seg_interval), np.array(interp_ch)
 
 
-def location_interpolation(known_pt, dx, track_pt=None, plot=False,
+def location_interpolation(known_pt, track_pt=None, dx=None, data_type='lonlat',
                            verbose=False):
     """
     Interpolate to obtain the positions of all channels.
 
-    :dx: channel interval in m
+    :param known_pt: N*3 np.ndarray. Points with known channel numbers. Each row
+        includes two coordinates and a channel number.
+    :param track_pt: M*2 np.ndarray. Optional fiber spatial track points without
+        channel numbers. Each row includes two coordinates.
+    :param dx: Known points far from the track (> dx) will be excluded.
+        Recommended setting is channel interval. The unit is m.
+    :param data_type: str. Coordinate type. 'latlon' for latitude and longitude,
+        'xy' for x and y.
+    :param verbose: bool. If True, return interpoleted channel location and
+        segment interval.
+    :return: Interpoleted channel location if verbose is False.
     """
-    from pyproj import Proj
-    kla, klo, kn = known_pt.T
-    zone = np.floor((max(klo) + min(klo)) / 2 / 6).astype(int) + 31
-    DASProj = Proj(proj='utm', zone=zone, ellps='WGS84', preserve_units=False)
-    kx, ky = DASProj(klo, kla)
+    if data_type == 'lonlat':
+        from pyproj import Proj
+        klo, kla, kn = known_pt.T
+        zone = np.floor((max(klo) + min(klo)) / 2 / 6).astype(int) + 31
+        DASProj = Proj(proj='utm', zone=zone, ellps='WGS84',
+                       preserve_units=False)
+        kx, ky = DASProj(klo, kla)
+    elif data_type == 'xy':
+        kx, ky, kn = known_pt.T
+    
     if track_pt is None:
-        sag_interval, interp_ch = channel_location(kx, ky, kn)
+        seg_interval, interp_ch = channel_location(kx, ky, kn)
     else:
-        tla, tlo = track_pt.T
-        tx, ty = DASProj(tlo, tla)
+        if data_type == 'lonlat':
+            tlo, tla = track_pt.T
+            tx, ty = DASProj(tlo, tla)
+        elif data_type == 'xy':
+            tx, ty = track_pt.T
+        
         tn = np.zeros(len(track_pt)) - 1
 
         # insert the known points into the fiber track data
-        # points far from the track (> chn interval) are excluded
         K = len(klo)
         dx_matrix = np.tile(tx, (len(kx), 1)) - np.tile(kx, (len(tx), 1)).T
         dy_matrix = np.tile(ty, (len(ky), 1)) - np.tile(ky, (len(ty), 1)).T
@@ -198,31 +218,14 @@ def location_interpolation(known_pt, dx, track_pt=None, plot=False,
                   'If they are reliable, they can be merged in sequence as' +
                   'track points to input')
             return None
-        sag_interval, interp_ch = channel_location(tx, ty, tn)
+        seg_interval, interp_ch = channel_location(tx, ty, tn)
 
-    interp_ch[:, 1], interp_ch[:, 0] = DASProj(interp_ch[:, 0], interp_ch[:, 1],
-                                               inverse=True)
-    if plot:
-        # map for verification
-        import matplotlib.pyplot as plt
-        chlo, chla, chn = interp_ch[:, 0], interp_ch[:, 1], interp_ch[:, 2]
-        plt.plot(tlo, tla, 'k')
-        plt.plot(chlo, chla, 'r+')
-        idx_kp = np.where(tn >= 0)[0]
-        for i in idx_kp[1:]:
-            ichn = int(tn[i])
-            plt.plot(tlo[i], tla[i], 'ko')
-            plt.text(tlo[i], tla[i], 'track ' + str(ichn),
-                     verticalalignment='top')
-            # minus 1 due to python start with 0 but channel start with 1
-            plt.plot(chlo[ichn - 1], chla[ichn - 1], 'r+')
-            plt.text(chlo[ichn - 1], chla[ichn - 1], 'interp ' +
-                     str(int(chn[ichn - 1])), verticalalignment='bottom')
-        plt.savefig('map.png', dpi=300)
-        print('Illustration map written map.png')
+    if data_type == 'lonlat':
+        interp_ch[:, 1], interp_ch[:, 0] = \
+                DASProj(interp_ch[:, 0], interp_ch[:, 1], inverse=True)
 
     if verbose:
-        return interp_ch, sag_interval
+        return interp_ch, seg_interval
     return interp_ch
 
 
