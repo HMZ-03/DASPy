@@ -6,7 +6,7 @@ setup(
     description=(
         'DASPy is an open-source project dedicated to provide a python package '
         'for DAS (Distributed Acoustic Sensing) data processing, which '
-        'comprises Classic seismic data processing techniques and Specialized '
+        'comprises classic seismic data processing techniques and Specialized '
         'algorithms for DAS applications.'
         ),
     long_description=open('README.md').read(),
@@ -15,8 +15,8 @@ setup(
     maintainer='Minzhe Hu',
     maintainer_email='hmz2018@mail.ustc.edu.cn',
     license='MIT License',
-    url='https://github.com/hmz-03/DASPy',
-    packages=find_packages(),
+    url='https://github.com/HMZ-03/DASPy',
+    packages=find_packages(),   
     entry_points={
         'console_scripts': [
             'daspy = daspy.main:main',
@@ -29,10 +29,10 @@ setup(
     ],
     python_requires='>=3',
     install_requires=[
-        'numpy',
+        'numpy>=1.15',
         'scipy',
         'matplotlib',
-        'geographiclib'
+        'geographiclib',
         'pyproj'
     ]
 )

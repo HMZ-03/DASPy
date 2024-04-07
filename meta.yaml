@@ -1,0 +1,32 @@
+  package:
+    name: daspy
+    version: 1.0.0
+  
+  source:
+    path: /data/DASPy/
+   
+  build:
+    number: 0
+  
+  requirements:
+    build:
+      - python >=3
+      - setuptools
+    run:
+      - python >=3
+      - numpy >=1.15
+      - scipy
+      - matplotlib
+      - geographiclib
+      - pyproj
+  
+  test:
+    imports:
+      - daspy
+  
+  about:
+    home: https://github.com/HMZ-03/DASPy
+    license: MIT
+    summary: Python package for DAS (Distributed Acoustic Sensing) data processing
+    description: Classic seismic data processing techniques and specialized algorithms for DAS applications.
+    dev_url: https://github.com/HMZ-03/DASPy
