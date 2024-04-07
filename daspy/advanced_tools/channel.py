@@ -5,6 +5,7 @@
 import numpy as np
 from copy import deepcopy
 from geographiclib.geodesic import Geodesic
+from pyproj import Proj
 
 
 def robust_polyfit(data, deg, thresh):
@@ -179,7 +180,6 @@ def location_interpolation(known_pt, track_pt=None, dx=None, data_type='lonlat',
     :return: Interpoleted channel location if verbose is False.
     """
     if data_type == 'lonlat':
-        from pyproj import Proj
         klo, kla, kn = known_pt.T
         zone = np.floor((max(klo) + min(klo)) / 2 / 6).astype(int) + 31
         DASProj = Proj(proj='utm', zone=zone, ellps='WGS84',

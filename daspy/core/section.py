@@ -1,6 +1,6 @@
 # Purpose: Module for handling Section objects.
 # Author: Minzhe Hu
-# Date: 2024.3.26
+# Date: 2024.4.7
 # Email: hmz2018@mail.ustc.edu.cn
 import warnings
 import pickle
@@ -82,6 +82,7 @@ class Section(object):
         """
         Join two sections in time.
         """
+        out = self.copy()
         if isinstance(other, Section):
             if other.dx != self.dx:
                 if self.dx is None:
@@ -98,9 +99,13 @@ class Section(object):
             elif isinstance(self.end_time, DASDateTime) and \
                 isinstance(other.start_time, DASDateTime):
                 if abs(other.start_time - self.end_time) > 1 / other.fs:
-                    warnings.warn('The start time of the second Section is '
-                                  'inconsistent with the end time of the first '
-                                  'Section')
+                    if abs(other.endtime - self.start_time) <= 1 / other.fs:
+                        out = other.copy()
+                        other = self.copy()
+                    else:
+                        warnings.warn('The start time of the second Section is '
+                                      'inconsistent with the end time of the '
+                                      'first Section')
             data = other.data
         elif isinstance(other, np.ndarray):
             data = other
@@ -115,7 +120,7 @@ class Section(object):
             else:
                 raise ValueError('These two Sections have different number of '
                                  'channels, please check.')
-        out = self.copy()
+
         out.data = np.hstack((out.data, data))
 
         return out

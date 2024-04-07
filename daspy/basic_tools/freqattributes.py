@@ -1,8 +1,7 @@
 # Purpose: Analyze frequency attribute and transform in frequency domain
 # Author: Minzhe Hu
-# Date: 2024.3.26
+# Date: 2024.4.7
 # Email: hmz2018@mail.ustc.edu.cn
-import math
 import numpy as np
 from numpy.fft import rfft, rfft2, fftshift, fftfreq, rfftfreq
 from scipy.signal import stft
@@ -16,8 +15,8 @@ def next_pow_2(i):
     :param i: float or int.
     :return: int. The next power of two for i.
     """
-    buf = math.ceil(math.log(i) / math.log(2))
-    return int(math.pow(2, buf))
+    buf = np.ceil(np.log2(i))
+    return np.power(2, buf).astype(int)
 
 
 def spectrum(data, fs, taper=0.05, nfft='default'):
