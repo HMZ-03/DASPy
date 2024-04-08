@@ -10,12 +10,12 @@
   
   requirements:
     build:
-      - python
+      - python >=3.8
       - setuptools
     run:
-      - python
+      - python >=3.8
       - numpy
-      - scipy
+      - scipy >=1.13
       - matplotlib
       - geographiclib
       - pyproj
