@@ -9,6 +9,7 @@ import pickle
 import numpy as np
 import h5py
 import segyio
+from pathlib import Path
 from nptdms import TdmsFile
 from datetime import timedelta, timezone
 from daspy.core.section import Section
@@ -22,9 +23,10 @@ def read(fname=None, output_type='Section', ch1=0, ch2=None) -> Section:
         means output numpy.array for data and a dictionary for metadata
     """
     if fname is None:
-        fname = 'example.pkl'
-
-    if fname.lower().endswith('.pkl'):
+        with open(Path(__file__).parent / 'example.pkl', 'rb') as f:
+            sec_dict = pickle.load(f)
+        return Section(**sec_dict)
+    elif fname.lower().endswith('.pkl'):
         with open(fname, 'rb') as f:
             sec_dict = pickle.load(f)
         return Section(**sec_dict)
