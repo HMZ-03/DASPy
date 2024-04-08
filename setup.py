@@ -33,6 +33,9 @@ setup(
         'scipy',
         'matplotlib',
         'geographiclib',
-        'pyproj'
+        'pyproj',
+        'h5py',
+        'segyio',
+        'nptdms'
     ]
 )

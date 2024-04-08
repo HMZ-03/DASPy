@@ -3,7 +3,7 @@
     version: 1.0.0
   
   source:
-    path: /data/DASPy/
+    git_url: https://github.com/HMZ-03/DASPy.git
    
   build:
     number: 0
@@ -19,6 +19,9 @@
       - matplotlib
       - geographiclib
       - pyproj
+      - h5py
+      - segyio
+      - nptdms
   
   test:
     imports:
