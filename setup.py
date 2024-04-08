@@ -17,11 +17,12 @@ setup(
     license='MIT License',
     url='https://github.com/HMZ-03/DASPy',
     packages=find_packages(),
-    entry_points={
+    entry_points={  
         'console_scripts': [
             'daspy = daspy.main:main',
             ]
     },
+    include_package_data=True,
     package_data={
         'daspy': ['daspy/core/example.pkl']
     },
