@@ -10,10 +10,10 @@
   
   requirements:
     build:
-      - python =3.8
+      - python
       - setuptools
     run:
-      - python =3.8
+      - python
       - numpy
       - scipy
       - matplotlib
