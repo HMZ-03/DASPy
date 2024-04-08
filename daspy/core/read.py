@@ -15,12 +15,15 @@ from daspy.core.section import Section
 from daspy.core.dasdatetime import DASDateTime
 
 
-def read(fname, output_type='Section', ch1=0, ch2=None) -> Section:
+def read(fname=None, output_type='Section', ch1=0, ch2=None) -> Section:
     """
     :param fname: Path of DAS data file.
     :param output_type: str. 'Section' means output as Section class, 'array'
         means output numpy.array for data and a dictionary for metadata
     """
+    if fname is None:
+        fname = 'example.pkl'
+
     if fname.lower().endswith('.pkl'):
         with open(fname, 'rb') as f:
             sec_dict = pickle.load(f)

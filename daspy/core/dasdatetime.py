@@ -3,8 +3,10 @@
 # Date: 2024.3.28
 # Email: hmz2018@mail.ustc.edu.cn
 import numpy as np
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
+
+utc = timezone.utc
 
 class DASDateTime(datetime):
     def __add__(self, other):
