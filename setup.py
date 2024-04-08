@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 
 setup(
@@ -16,7 +16,7 @@ setup(
     maintainer_email='hmz2018@mail.ustc.edu.cn',
     license='MIT License',
     url='https://github.com/HMZ-03/DASPy',
-    packages='./daspy/',
+    packages=find_packages(),
     entry_points={
         'console_scripts': [
             'daspy = daspy.main:main',
