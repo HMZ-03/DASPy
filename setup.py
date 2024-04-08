@@ -22,6 +22,9 @@ setup(
             'daspy = daspy.main:main',
             ]
     },
+    package_data={
+        'daspy': ['daspy/core/example.pkl']
+    },
     classifiers=[
         'Operating System :: OS Independent',
         'License :: OSI Approved :: MIT License',
