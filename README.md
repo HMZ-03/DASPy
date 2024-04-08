@@ -1,5 +1,6 @@
-<img alt="DASPy: A Data Processing Python Toolkit for Distributed Acoustic Sensing." class="right" style="width: 20%" src="https://upload.wikimedia.org/wikipedia/en/3/3c/Logo_of_University_of_Science_and_Technology_of_China.svg"/>
-<img alt="DASPy: A Data Processing Python Toolkit for Distributed Acoustic Sensing." class="right" style="width: 20%" src="https://dams.ustc.edu.cn/_upload/tpl/0c/4e/3150/template3150/images/pcdams.png"/>
+<center class="half">
+<img src="https://upload.wikimedia.org/wikipedia/en/3/3c/Logo_of_University_of_Science_and_Technology_of_China.svg" height="450" /><img src="https://dams.ustc.edu.cn/_upload/tpl/0c/4e/3150/template3150/images/pcdams.png" height="450" />
+<center>
 
 
 # DASPy
