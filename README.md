@@ -23,5 +23,11 @@ or
 conda install hmz-03::daspy
 ```
 
+If an error is reported, please try updating conda:
+
+```
+conda update -n base -c conda-forge conda
+```
+
 ## DASPy Coding Style Guide
 see [PEP 8](https://peps.python.org/pep-0008/)
