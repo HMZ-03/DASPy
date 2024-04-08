@@ -1,4 +1,4 @@
-<img src="https://upload.wikimedia.org/wikipedia/en/3/3c/Logo_of_University_of_Science_and_Technology_of_China.svg" height="170" />&emsp;<img src="https://dams.ustc.edu.cn/_upload/tpl/0c/4e/3150/template3150/images/pcdams.png" height="150" />
+<img src="https://raw.githubusercontent.com/HMZ-03/DASPy/main/website/USTC.svg" height="170" />&emsp;<img src="https://raw.githubusercontent.com/HMZ-03/DASPy/main/website/DAMS.png" height="150" />
 
 
 # DASPy
@@ -29,5 +29,14 @@ If an error is reported, please try updating conda:
 conda update -n base -c conda-forge conda
 ```
 
-## DASPy Coding Style Guide
+# Getting started
+```
+from daspy import read
+sec = read()  # load example waveform
+sec.bandpass(1, 10)
+sec.plot()
+```
+<img src="https://raw.githubusercontent.com/HMZ-03/DASPy/main/website/waveform.svg" height="250" />
+
+# DASPy Coding Style Guide
 see [PEP 8](https://peps.python.org/pep-0008/)
