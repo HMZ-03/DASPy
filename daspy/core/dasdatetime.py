@@ -1,6 +1,6 @@
 # Purpose: Module for handling DASDateTime objects.
 # Author: Minzhe Hu
-# Date: 2024.3.28
+# Date: 2024.4.8
 # Email: hmz2018@mail.ustc.edu.cn
 import numpy as np
 from datetime import datetime, timedelta, timezone

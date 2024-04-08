@@ -1,6 +1,6 @@
 # Purpose: Module for reading DAS data.
 # Author: Robbin Luo, Minzhe Hu
-# Date: 2024.3.27
+# Date: 2024.4.8
 # Email: hmz2018@mail.ustc.edu.cn
 # Modified from
 # https://github.com/RobbinLuo/das-toolkit/blob/main/DasTools/DasPrep.py
