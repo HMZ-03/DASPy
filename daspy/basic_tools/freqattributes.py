@@ -1,6 +1,6 @@
 # Purpose: Analyze frequency attribute and transform in frequency domain
 # Author: Minzhe Hu
-# Date: 2024.4.7
+# Date: 2024.4.9
 # Email: hmz2018@mail.ustc.edu.cn
 import numpy as np
 from numpy.fft import rfft, rfft2, fftshift, fftfreq, rfftfreq
@@ -73,18 +73,21 @@ def spectrogram(data, fs, nperseg=256, noverlap=None, nfft=None, detrend=False,
         detrend = detrending
     elif detrend in ['constant', 'demean']:
         detrend = demeaning
-    if len(data.shape) == 2:
+    if len(data.shape) == 1:
+        f, t, Zxx = stft(data, fs=fs, nperseg=nperseg, noverlap=noverlap,
+                         nfft=nfft, detrend=detrend, boundary=boundary)
+    elif len(data) == 1:
+        f, t, Zxx = stft(data[0], fs=fs, nperseg=nperseg, noverlap=noverlap,
+                          nfft=nfft, detrend=detrend, boundary=boundary)
+    else:
         Zxx = []
         for d in data:
             f, t, Zxxi = stft(d, fs=fs, nperseg=nperseg, noverlap=noverlap,
                               nfft=nfft, detrend=detrend, boundary=boundary)
             Zxx.append(abs(Zxxi))
         Zxx = np.mean(np.array(Zxx), axis=0)
-        return Zxx, f, t
-    else:
-        f, t, Zxx = stft(data, fs=fs, nperseg=nperseg, noverlap=noverlap, nfft=nfft,
-                    detrend=detrend, boundary=boundary)
-        return Zxx, f, t
+
+    return Zxx, f, t
 
 def fk_transform(data, dx, fs, taper=(0, 0.05), nfft='default'):
     """

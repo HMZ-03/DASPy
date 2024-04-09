@@ -11,10 +11,10 @@
   
   requirements:
     build:
-      - python =3.12
+      - python =3.11
       - setuptools
     run:
-      - python =3.12
+      - python =3.11
       - numpy
       - scipy >=1.13
       - matplotlib
