@@ -9,7 +9,7 @@ setup(
         'comprises classic seismic data processing techniques and Specialized '
         'algorithms for DAS applications.'
         ),
-    long_description=open('README.md').read(),
+    long_description=open('../README.md').read(),
     author='Minzhe Hu, Zefeng Li',
     author_email='hmz2018@mail.ustc.edu.cn',
     maintainer='Minzhe Hu',
@@ -24,7 +24,7 @@ setup(
     },
     include_package_data=True,
     package_data={
-        'daspy': ['daspy/core/example.pkl']
+        'daspy': ['core/example.pkl']
     },
     classifiers=[
         'Operating System :: OS Independent',

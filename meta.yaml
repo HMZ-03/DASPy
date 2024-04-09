@@ -3,6 +3,7 @@
     version: 1.0.0
   
   source:
+    #path: /data/DASPy/daspy/
     git_url: https://github.com/HMZ-03/DASPy.git
    
   build:
