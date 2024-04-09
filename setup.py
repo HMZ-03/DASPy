@@ -33,7 +33,7 @@ setup(
     ],
     python_requires='>=3',
     install_requires=[
-        'numpy',
+        'numpy<=1.26',
         'scipy>=1.13',
         'matplotlib',
         'geographiclib',

@@ -1,6 +1,6 @@
 # Purpose: Module for handling Section objects.
 # Author: Minzhe Hu
-# Date: 2024.4.7
+# Date: 2024.4.9
 # Email: hmz2018@mail.ustc.edu.cn
 import warnings
 import pickle
@@ -99,7 +99,7 @@ class Section(object):
             elif isinstance(self.end_time, DASDateTime) and \
                 isinstance(other.start_time, DASDateTime):
                 if abs(other.start_time - self.end_time) > 1 / other.fs:
-                    if abs(other.endtime - self.start_time) <= 1 / other.fs:
+                    if abs(other.end_time - self.start_time) <= 1 / other.fs:
                         out = other.copy()
                         other = self.copy()
                     else:
@@ -574,12 +574,16 @@ class Section(object):
             ['even', 'odd', 'constant', 'zeros', None].
         :return: Spectrogram, frequency sequence and time sequence.
         """
-        xmin = int(kwargs.pop('xmin', 0) - self.start_channel)
-        xmax = int(kwargs.pop('xmax', len(self.data)) - self.start_channel)
-        Zxx, f, t0 = spectrogram(self.data[xmin:xmax], self.fs, **kwargs)
-        t = []
-        for ti in t0:
-            t.append(self.start_time + ti)
+        if 'xmin' in kwargs.keys():
+            xmin = int(kwargs.pop('xmin') - self.start_channel)
+        else:
+            xmin = 0
+        if  'xmax' in kwargs.keys():
+            xmax = int(kwargs.pop('xmax') - self.start_channel)
+        else:
+            xmax = len(self.data)
+
+        Zxx, f, t = spectrogram(self.data[xmin:xmax], self.fs, **kwargs)
 
         return Zxx, f, t
 
