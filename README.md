@@ -13,8 +13,9 @@ DASPy is licensed under the MIT License.
 
 # Installation
 DASPy is currently running on Linux, Windows and Mac OS.
-DASPy runs on Python 3.8 and up. We recommend you use the latest version of python 3 if possible.
+DASPy runs on Python 3.9 and up. We recommend you use the latest version of python 3 if possible.
 
+## Conda
 ```
 conda install -c hmz-03 daspy
 ```
@@ -28,6 +29,11 @@ If an error is reported, please try updating conda:
 ```
 conda update -n base -c conda-forge conda
 ```
+
+## Manual installation
+1. Install Dependent packages: numpy, scipy >=1.13, matplotlib, geographiclib, pyproj, h5py, segyio, nptdms
+
+2. Add DASPy into your Python path.
 
 # Getting started
 ```
