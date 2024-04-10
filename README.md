@@ -15,6 +15,11 @@ DASPy is licensed under the MIT License.
 DASPy is currently running on Linux, Windows and Mac OS.
 DASPy runs on Python 3.9 and up. We recommend you use the latest version of python 3 if possible.
 
+## Pip
+```
+pip install git+https://github.com/HMZ-03/DASPy.git
+```
+
 ## Conda
 ```
 conda install -c hmz-03 daspy
