@@ -24,10 +24,6 @@ pip install git+https://github.com/HMZ-03/DASPy.git
 ```
 conda install -c hmz-03 daspy
 ```
-or
-```
-conda install hmz-03::daspy
-```
 
 If an error is reported, please try updating conda:
 
@@ -36,7 +32,7 @@ conda update -n base -c conda-forge conda
 ```
 
 ## Manual installation
-1. Install Dependent packages: numpy, scipy >=1.13, matplotlib, geographiclib, pyproj, h5py, segyio, nptdms
+1. Install dependent packages: numpy, scipy >=1.13, matplotlib, geographiclib, pyproj, h5py, segyio, nptdms
 
 2. Add DASPy into your Python path.
 
