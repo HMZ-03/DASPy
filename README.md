@@ -50,4 +50,4 @@ sec.plot()
 <img src="https://raw.githubusercontent.com/HMZ-03/DASPy/main/website/waveform.png" height="500" />
 
 # DASPy Coding Style Guide
-see [PEP 8](https://peps.python.org/pep-0008/)
+see [here](CodingStyleGuide.md)
