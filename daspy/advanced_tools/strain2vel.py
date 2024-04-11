@@ -1,6 +1,6 @@
 # Purpose: Convert strain rate data to velocity
 # Author: Minzhe Hu
-# Date: 2024.3.26
+# Date: 2024.4.11
 # Email: hmz2018@mail.ustc.edu.cn
 import numpy as np
 from numpy.fft import irfft2, ifftshift
@@ -21,7 +21,7 @@ def fk_rescaling(data, dx, fs, taper=(0.02, 0.05), pad='default', fmax=None,
 
     :param data: numpy.ndarray. Data to do fk rescaling.
     :param dx: Channel interval in m.
-    :param fs: Sampling rate in Hz.    
+    :param fs: Sampling rate in Hz.
     :param taper: float or sequence of floats. Each float means decimal
         percentage of Tukey taper for corresponding dimension (ranging from 0 to
         1). Default is 0.1 which tapers 5% from the beginning and 5% from the
@@ -76,7 +76,7 @@ def curvelet_conversion(data, dx, fs, pad=0.3, scale_begin=2, nbscales=None,
                         nbangles=16):
     """
     Use curevelet transform to convert strain/strain rate to
-    velocity/acceleration.
+    velocity/acceleration. {Yang et al. , 2023, Geophys. Res. Lett.}
 
     :param data: numpy.ndarray. Data to convert.
     :param dx: Channel interval in m.
@@ -104,14 +104,15 @@ def curvelet_conversion(data, dx, fs, pad=0.3, scale_begin=2, nbscales=None,
     for s in range(0, scale_begin - 1):
         for w in range(len(C[s])):
             C[s][w] *= 0
-    
+
     for s in range(scale_begin - 1, len(C)):
         nbangles = len(C[s])
         velocity = _velocity_bin(nbangles, fs, dx)
         factors = np.mean(velocity, axis=1)
         for w in range(nbangles):
             if abs(factors[w]) == np.inf:
-                factors[w] = abs(velocity[w]).min() * np.sign(velocity[w,0]) * 2
+                factors[w] = abs(velocity[w]).min() * \
+                    np.sign(velocity[w, 0]) * 2
             C[s][w] *= factors[w]
 
     data_vel = ifdct_wrapping(C, is_real=True, size=data_pd.shape)
@@ -121,7 +122,8 @@ def curvelet_conversion(data, dx, fs, pad=0.3, scale_begin=2, nbscales=None,
 
 def slowness(g, dx, fs, slm, sls, swin=2):
     """
-    Estimate the slowness time series by calculate semblance
+    Estimate the slowness time series by calculate semblance.
+    {Lior et al., 2021, Solid Earth}
 
     :param g: 2-dimensional array. time series of adjacent channels used for
         estimating slowness
@@ -170,12 +172,13 @@ def slowness(g, dx, fs, slm, sls, swin=2):
 def slant_stacking(data, dx, fs, L=None, slm=0.01,
                    sls=0.000125, frqlow=0.1, frqhigh=15, channel='all'):
     """
-    Convert strain to velocity based on slant-stack
+    Convert strain to velocity based on slant-stack.
 
     :param data: 2-dimensional array. Axis 0 is channel number and axis 1 is
         time series
     :param dx: float. Spatical sampling rate (in m)
-    :param L: int. the number of adjacent channels over which slowness is estimated
+    :param L: int. the number of adjacent channels over which slowness is
+        estimated
     :param slm: float. Slowness x max
     :param sls: float. slowness step
     :param freqmin: Pass band low corner frequency.

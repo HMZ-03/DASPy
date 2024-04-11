@@ -1,6 +1,6 @@
 # Purpose: Waveform decomposition
 # Author: Minzhe Hu
-# Date: 2024.3.26
+# Date: 2024.4.11
 # Email: hmz2018@mail.ustc.edu.cn
 import numpy as np
 from numpy.fft import irfft2, ifftshift
@@ -127,7 +127,7 @@ def curvelet_windowing(data, dx, fs, vmin=None, vmax=None, flag=None, pad=0.3,
                        scale_begin=3, nbscales=None, nbangles=16):
     """
     Use curevelet transform to keep cooherent signal with certain velocity
-    range.
+    range. {Atterholt et al., 2022 , Geophys. J. Int.}
 
     :param data: numpy.ndarray. Data to decomposite.
     :param dx: Channel interval in m.

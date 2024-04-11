@@ -1,6 +1,6 @@
 # Purpose: Analyze frequency attribute and transform in frequency domain
 # Author: Minzhe Hu
-# Date: 2024.4.9
+# Date: 2024.4.1
 # Email: hmz2018@mail.ustc.edu.cn
 import numpy as np
 from numpy.fft import rfft, rfft2, fftshift, fftfreq, rfftfreq
@@ -47,7 +47,7 @@ def spectrum(data, fs, taper=0.05, nfft='default'):
     return spec, f
 
 
-def spectrogram(data, fs, nperseg=256, noverlap=None, nfft=None, detrend=False, 
+def spectrogram(data, fs, nperseg=256, noverlap=None, nfft=None, detrend=False,
                 boundary='odd'):
     """
     Computes the spectrogram of the given data.
@@ -78,7 +78,7 @@ def spectrogram(data, fs, nperseg=256, noverlap=None, nfft=None, detrend=False,
                          nfft=nfft, detrend=detrend, boundary=boundary)
     elif len(data) == 1:
         f, t, Zxx = stft(data[0], fs=fs, nperseg=nperseg, noverlap=noverlap,
-                          nfft=nfft, detrend=detrend, boundary=boundary)
+                         nfft=nfft, detrend=detrend, boundary=boundary)
     else:
         Zxx = []
         for d in data:
@@ -89,9 +89,10 @@ def spectrogram(data, fs, nperseg=256, noverlap=None, nfft=None, detrend=False,
 
     return Zxx, f, t
 
+
 def fk_transform(data, dx, fs, taper=(0, 0.05), nfft='default'):
     """
-    Transform the data to the fk domain using 2-D Fourier transform method
+    Transform the data to the fk domain using 2-D Fourier transform method.
 
     :param data: numpy.ndarray. Data to do fk transform.
     :param dx: Channel interval in m.

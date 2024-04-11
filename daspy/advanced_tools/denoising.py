@@ -1,6 +1,6 @@
 # Purpose: Remove noise from data
 # Author: Minzhe Hu, Zefeng Li
-# Date: 2024.2.23
+# Date: 2024.4.11
 # Email: hmz2018@mail.ustc.edu.cn
 import numpy as np
 from scipy.ndimage import median_filter
@@ -11,7 +11,8 @@ from daspy.advanced_tools.fdct import fdct_wrapping, ifdct_wrapping
 
 def spike_removal(data, nch=50, nsp=5, thresh=10):
     """
-    Use a median filter to remove high-strain spikes in the data.
+    Use a median filter to remove high-strain spikes in the data. Modified from
+    https://github.com/atterholt/curvelet-denoising/blob/main/MedianFilter.m
 
     :param data: numpy.ndarray. Data to remove spikes from.
     :param nch: int. Number of channels over which to compute the median.
@@ -165,6 +166,9 @@ def curvelet_denoising(data, choice=0, pad=0.3, noise=None, soft_thresh=True,
                        scale_begin=3, nbscales=None, nbangles=16):
     """
     Use curevelet transform to filter stochastic or/and cooherent noise.
+    Modified from
+    https://github.com/atterholt/curvelet-denoising/blob/main/CurveletDenoising.m
+    {Atterholt et al., 2022 , Geophys. J. Int.}
 
     :param data: numpy.ndarray. Data to denoise.
     :param choice: int. 0 for Gaussian denoising using soft thresholding, 1 for

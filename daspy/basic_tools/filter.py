@@ -2,6 +2,7 @@
 # Author: Minzhe Hu
 # Date: 2024.3.26
 # Email: hmz2018@mail.ustc.edu.cn
+# Modified from https://docs.obspy.org/_modules/obspy/signal/filter.html
 import warnings
 import numpy as np
 from scipy.signal import cheb2ord, cheby2, hilbert, iirfilter, zpk2sos, sosfilt
@@ -16,8 +17,7 @@ def _preprocessing(data, detrend, taper):
         data = demeaning(data)
     
     if taper:
-        if isinstance(taper, bool):
-            taper = 0.1
+        taper = (taper, 0.1)[taper is True]
         data = cosine_taper(data, p=taper)
 
     return data
@@ -178,13 +178,13 @@ def lowpass_cheby_2(data, fs, freq, maxorder=12, ba=False, freq_passband=False):
     :param fs: Sampling rate in Hz.
     :param freq: The frequency above which signals are attenuated with 95 dB.
     :param maxorder: Maximal order of the designed cheby2 filter.
-    :param ba: If True return only the filter coefficients (b, a) instead of 
+    :param ba: If True return only the filter coefficients (b, a) instead of
         filtering.
     :param freq_passband: If True return additionally to the filtered data, the
         iteratively determined pass band frequency.
     :return: Filtered data.
     """
-    if len(data.shape) == 1:
+    if data.ndim == 1:
         data = data[np.newaxis, :]
 
     nyquist = fs * 0.5

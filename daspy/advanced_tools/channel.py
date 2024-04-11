@@ -1,6 +1,6 @@
 # Purpose: Several functions for analysis data quality and geometry of channels
 # Author: Minzhe Hu, Zefeng Li
-# Date: 2024.3.26
+# Date: 2024.4.11
 # Email: hmz2018@mail.ustc.edu.cn
 import numpy as np
 from copy import deepcopy
@@ -100,7 +100,7 @@ def channel_checking(data, deg=10, thresh=5, continuity=True, adjacent=2,
     return good_chn, bad_chn
 
 
-def channel_location(tx, ty, tn):
+def _channel_location(tx, ty, tn):
     l_track = np.sqrt(np.diff(tx) ** 2 + np.diff(ty) ** 2)
     l_track_cum = np.hstack(([0], np.cumsum(l_track)))
     idx_kp = np.where(tn >= 0)[0]
@@ -187,16 +187,16 @@ def location_interpolation(known_pt, track_pt=None, dx=None, data_type='lonlat',
         kx, ky = DASProj(klo, kla)
     elif data_type == 'xy':
         kx, ky, kn = known_pt.T
-    
+
     if track_pt is None:
-        seg_interval, interp_ch = channel_location(kx, ky, kn)
+        seg_interval, interp_ch = _channel_location(kx, ky, kn)
     else:
         if data_type == 'lonlat':
             tlo, tla = track_pt.T
             tx, ty = DASProj(tlo, tla)
         elif data_type == 'xy':
             tx, ty = track_pt.T
-        
+
         tn = np.zeros(len(track_pt)) - 1
 
         # insert the known points into the fiber track data
@@ -218,11 +218,11 @@ def location_interpolation(known_pt, track_pt=None, dx=None, data_type='lonlat',
                   'If they are reliable, they can be merged in sequence as' +
                   'track points to input')
             return None
-        seg_interval, interp_ch = channel_location(tx, ty, tn)
+        seg_interval, interp_ch = _channel_location(tx, ty, tn)
 
     if data_type == 'lonlat':
         interp_ch[:, 1], interp_ch[:, 0] = \
-                DASProj(interp_ch[:, 0], interp_ch[:, 1], inverse=True)
+            DASProj(interp_ch[:, 0], interp_ch[:, 1], inverse=True)
 
     if verbose:
         return interp_ch, seg_interval

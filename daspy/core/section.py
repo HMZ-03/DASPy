@@ -1,6 +1,6 @@
 # Purpose: Module for handling Section objects.
 # Author: Minzhe Hu
-# Date: 2024.4.9
+# Date: 2024.4.11
 # Email: hmz2018@mail.ustc.edu.cn
 import warnings
 import pickle
@@ -28,9 +28,6 @@ from daspy.advanced_tools.strain2vel import (slant_stacking, fk_rescaling,
 
 
 class Section(object):
-    opt_attrs = ['start_channel', 'start_distance', 'start_time',
-                 'gauge_length', 'data_type', 'scale', 'geometry', 'headers']
-
     def __init__(self, data, dx, fs, **kwargs):
         """
         :param data: numpy.ndarray. Data recorded by DAS.
@@ -48,14 +45,18 @@ class Section(object):
         :param geometry: numpy.ndarray. Should include latitude and longitude
             (first two columns), and can also include depth (last column).
         """
+        if data.ndim == 1:
+            data = data[np.newaxis, :]
         self.data = data
         self.dx = dx
         self.fs = fs
-        self.start_time = 0
-        self.start_channel = 0
-        self.start_distance = 0
-        for attr in self.opt_attrs:
-            if attr in kwargs:
+        opt_attrs = ['start_channel', 'start_distance', 'start_time',
+                     'gauge_length', 'data_type', 'scale', 'geometry',
+                     'headers']
+        for attr in opt_attrs:
+            if attr.startswith('start'):
+                setattr(self, attr, kwargs.pop(attr, 0))
+            elif attr in kwargs:
                 setattr(self, attr, kwargs.pop(attr))
 
     def __str__(self):
@@ -97,7 +98,7 @@ class Section(object):
                     raise ValueError('These two Sections have different fs, '
                                      'please check.')
             elif isinstance(self.end_time, DASDateTime) and \
-                isinstance(other.start_time, DASDateTime):
+                    isinstance(other.start_time, DASDateTime):
                 if abs(other.start_time - self.end_time) > 1 / other.fs:
                     if abs(other.end_time - self.start_time) <= 1 / other.fs:
                         out = other.copy()
@@ -126,15 +127,15 @@ class Section(object):
         return out
 
     @property
+    def shape(self):
+        return self.data.shape
+
+    @property
     def nch(self):
-        if self.data.ndim == 1:
-            self.data = np.reshape(self.data, (1,-1))
         return len(self.data)
 
     @property
     def nt(self):
-        if self.data.ndim == 1:
-            self.data = np.reshape(self.data, (1,-1))
         return len(self.data[0])
 
     @property
@@ -158,7 +159,7 @@ class Section(object):
 
         return self
 
-    def channel_data(self, ch):
+    def single_chn_data(self, ch):
         """
         Extract data from one of the channels
         """
@@ -578,7 +579,7 @@ class Section(object):
             xmin = int(kwargs.pop('xmin') - self.start_channel)
         else:
             xmin = 0
-        if  'xmax' in kwargs.keys():
+        if 'xmax' in kwargs.keys():
             xmax = int(kwargs.pop('xmax') - self.start_channel)
         else:
             xmax = len(self.data)
@@ -645,7 +646,7 @@ class Section(object):
         """
         if data_type == 'coordinate':
             if hasattr(self, 'gauge_length') and 'channel_gap' not in \
-                kwargs.items():
+                    kwargs.items():
                 kwargs['channel_gap'] = self.gauge_length / self.dx / 2
             if 'data' in kwargs.items():
                 return(turning_points(data_type=data_type, **kwargs))
@@ -727,7 +728,7 @@ class Section(object):
             floats. Sequence of 2 floats represents the start and end of taper.
         :param edge: float. The width of fan mask taper edge.
         :param flag: -1 keep only negative apparent velocities, 0 keep both
-            postive and negative apparent velocities, 1 keep only positive 
+            postive and negative apparent velocities, 1 keep only positive
             pparent velocities.
         :param izero: Whether rezero anything that was zero before the filter.
         """
@@ -824,7 +825,7 @@ class Section(object):
         self._strain2vel_attr()
         return self
 
-    def slant_stacking(self, **kwargs): 
+    def slant_stacking(self, **kwargs):
         """
         Convert strain to velocity based on slant-stack.
 
@@ -834,7 +835,7 @@ class Section(object):
         :param freqmin: Pass band low corner frequency.
         :param freqmax: Pass band high corner frequency.
         :param channel: int or list or 'all'. convert a certain channel number /
-            certain channel range / all channels. 
+            certain channel range / all channels.
         """
         if ('channel' in kwargs.keys()) and not isinstance(kwargs['channel'],
                                                            str):
