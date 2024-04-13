@@ -1,6 +1,6 @@
 # Purpose: Remove noise from data
 # Author: Minzhe Hu, Zefeng Li
-# Date: 2024.4.11
+# Date: 2024.4.13
 # Email: hmz2018@mail.ustc.edu.cn
 import numpy as np
 from scipy.ndimage import median_filter
@@ -48,7 +48,7 @@ def common_mode_noise_removal(data):
     :return: numpy.ndarray. Denoised data.
     """
     nch, nt = data.shape
-    common = np.sum(data, 0) / nch
+    common = np.median(data, 0)
     xx = np.sum(common ** 2)
     data_dn = np.zeros((nch, nt))
     for i in range(nch):
