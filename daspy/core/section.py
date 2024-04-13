@@ -1,6 +1,6 @@
 # Purpose: Module for handling Section objects.
 # Author: Minzhe Hu
-# Date: 2024.4.11
+# Date: 2024.4.13
 # Email: hmz2018@mail.ustc.edu.cn
 import warnings
 import pickle
@@ -121,8 +121,10 @@ class Section(object):
             else:
                 raise ValueError('These two Sections have different number of '
                                  'channels, please check.')
-
-        out.data = np.hstack((out.data, data))
+        if out.data is None:
+            out.data = data
+        else:
+            out.data = np.hstack((out.data, data))
 
         return out
 
