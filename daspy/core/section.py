@@ -1,6 +1,6 @@
 # Purpose: Module for handling Section objects.
 # Author: Minzhe Hu
-# Date: 2024.4.13
+# Date: 2024.4.14
 # Email: hmz2018@mail.ustc.edu.cn
 import warnings
 import pickle
@@ -51,8 +51,8 @@ class Section(object):
         self.dx = dx
         self.fs = fs
         opt_attrs = ['start_channel', 'start_distance', 'start_time',
-                     'gauge_length', 'data_type', 'scale', 'geometry',
-                     'headers']
+                     'origin_time', 'gauge_length', 'data_type', 'scale',
+                     'geometry', 'turning_channels', 'headers']
         for attr in opt_attrs:
             if attr.startswith('start'):
                 setattr(self, attr, kwargs.pop(attr, 0))
@@ -145,6 +145,10 @@ class Section(object):
         return self.start_time + self.nt / self.fs
 
     @property
+    def end_channel(self):
+        return self.start_channel + self.nch
+
+    @property
     def end_distance(self):
         return self.start_distance + self.nch * self.dx
 
@@ -167,14 +171,14 @@ class Section(object):
         """
         return self.data[int(ch - self.start_channel)]
 
-    def plot(self, xmode=1, ymode=1, obj='waveform', kwargs_pro={}, **kwargs):
+    def plot(self, xmode='distance', tmode='origin', obj='waveform',
+             kwargs_pro={}, **kwargs):
         """
         Plot several types of 2-D seismological data.
 
-        :param xmode: 0 or 1. Attributes of the x-axis. 1 for actual distance, 0
-            for channel number.
-        :param ymode: 0 or 1. Attributes of the y-axis. 1 for actual time, 0
-            for sampling points.
+        :param xmode: str. 'distance' or 'channel'.
+        :param tmode: str. 'origin', 'time' or 'sampling'. If origin_time is not
+            defined, 'origin' and 'time' is the same.
         :param obj: str. Type of data to plot. It should be one of 'waveform',
             'phasepick', 'spectrum', 'spectrogram', 'fk', 'dispersion' or
             'faults'.
@@ -230,20 +234,25 @@ class Section(object):
         else:
             data = kwargs.pop('data')
 
-        if xmode == 0:
+        if xmode == 'channel':
             dx = None
             if 'x0' not in kwargs.keys() and hasattr(self, 'start_channel'):
                 kwargs['x0'] = self.start_channel
-        elif xmode == 1:
+        elif xmode == 'distance':
             dx = self.dx
             if 'x0' not in kwargs.keys() and hasattr(self, 'start_distance'):
                 kwargs['x0'] = self.start_distance
-        if ymode == 0:
+        if tmode == 'sampling':
             fs = None
-        elif ymode == 1:
+        elif tmode in ['origin', 'time']:
             fs = self.fs
             if 't0' not in kwargs.keys() and hasattr(self, 'start_time'):
                 kwargs['t0'] = self.start_time
+
+            if tmode == 'origin' and hasattr(self, 'origin_time'):
+                kwargs['t0'] -= self.origin_time
+            elif obj == 'spectrogram':
+                kwargs['t'] = [self.start_time + t for t in kwargs['t']]
 
         plot(data, dx, fs, obj=obj, **kwargs)
 
@@ -651,15 +660,21 @@ class Section(object):
                     kwargs.items():
                 kwargs['channel_gap'] = self.gauge_length / self.dx / 2
             if 'data' in kwargs.items():
-                return(turning_points(data_type=data_type, **kwargs))
+                output = turning_points(data_type=data_type, **kwargs)
             elif hasattr(self, 'geometry'):
-                return(turning_points(self.geometry, data_type=data_type,
-                                      **kwargs))
+                output = turning_points(self.geometry, data_type=data_type,
+                                        **kwargs)
             else:
                 raise ValueError('Geometry needs to be defined in DASdata, or '
                                  'coordinate data should be given.')
         else:
-            return(turning_points(self.data, data_type=data_type, **kwargs))
+            output = turning_points(self.data, data_type=data_type, **kwargs)
+
+        if isinstance(output, tuple):
+            self.turning_channels = np.array(set(output[0]) + set(output[1]))
+        else:
+            self.turning_channels = output
+        return output
 
     def spike_removal(self, nch=50, nsp=5, thresh=10):
         """
@@ -778,16 +793,20 @@ class Section(object):
             self.data_type = 'velocity or acceleration'
         return self
 
-    def fk_rescaling(self, verbose=False, **kwargs):
+    def fk_rescaling(self, turning=None, verbose=False, **kwargs):
         """
         Convert strain / strain rate to velocity / acceleration by fk rescaling.
 
-        :param verbose: If True, return f-k spectrum, frequency sequence,
-            wavenumber sequence and f-k mask.
+        :param turning: Sequence of int. Channel number of turning points. If
+            self.turning exists, it will be used by default unless the parameter
+            turning is set to False.
+        :param verbose: If True and turning is not set, return f-k spectrum,
+            frequency sequence, wavenumber sequence and f-k mask.
         :param taper: float or sequence of floats. Each float means decimal
             percentage of Tukey taper for corresponding dimension (ranging from
             0 to 1). Default is 0.1 which tapers 5% from the beginning and 5%
-            from the end.
+            from the end. If the turning parameter is set, this parameter will
+            be invalid.
         :param pad: Pad the data or not. It can be float or sequence of floats.
             Each float means padding percentage before FFT for corresponding
             dimension. If set to 0.1 will pad 5% before the beginning and after
@@ -799,8 +818,11 @@ class Section(object):
             parameters can reduce artifacts.
         :param edge: float. The width of fan mask taper edge.
         """
+        if hasattr(self, 'turning_channels') and turning is None:
+            turning = np.array(self.turning_channels) - self.start_channel
+
         self._strain2vel_attr()
-        if verbose:
+        if verbose and not turning:
             data_res, fk, f, k, mask = fk_rescaling(self.data, self.dx, self.fs,
                                                     verbose=True, **kwargs)
             self.data = data_res
@@ -809,51 +831,59 @@ class Section(object):
             self.data = fk_rescaling(self.data, self.dx, self.fs, **kwargs)
             return self
 
-    def curvelet_conversion(self, **kwargs):
+    def curvelet_conversion(self, turning=None, **kwargs):
         """
         Use curevelet transform to convert strain/strain rate to
         velocity/acceleration.
 
-        :param pad: float or sequence of floats. Each float means padding percentage
-            before FFT for corresponding dimension. If set to 0.1 will pad 5% before
-            the beginning and after the end.
+        :param turning: Sequence of int. Channel number of turning points. If
+            self.turning exists, it will be used by default unless the parameter
+            turning is set to False.
+        :param pad: float or sequence of floats. Each float means padding
+            percentage before FFT for corresponding dimension. If set to 0.1
+            will pad 5% before the beginning and after the end.
         :param scale_begin: int. The beginning scale to do conversion.
-        :param nbscales: int. Number of scales including the coarsest wavelet level.
-            Default set to ceil(log2(min(M,N)) - 3).
+        :param nbscales: int. Number of scales including the coarsest wavelet
+            level. Default set to ceil(log2(min(M,N)) - 3).
         :param nbangles: int. Number of angles at the 2nd coarsest level,
             minimum 8, must be a multiple of 4.
         """
-        self.data = curvelet_conversion(self.data, self.dx, self.fs, **kwargs)
+        if hasattr(self, 'turning_channels') and turning is None:
+            turning = np.array(self.turning_channels) - self.start_channel
+
+        self.data = curvelet_conversion(self.data, self.dx, self.fs,
+                                        turning=turning, **kwargs)
         self._strain2vel_attr()
         return self
 
-    def slant_stacking(self, **kwargs):
+    def slant_stacking(self, channel='all', turning=None, **kwargs):
         """
         Convert strain to velocity based on slant-stack.
 
+        :param channel: int or list or 'all'. convert a certain channel number /
+            certain channel range / all channels.
+        :param turning: Sequence of int. Channel number of turning points. If
+            self.turning exists, it will be used by default unless the parameter
+            turning is set to False.
         :param L: int. the number of adjacent channels over which slowness is estimated
         :param slm: float. Slowness x max
         :param sls: float. slowness step
         :param freqmin: Pass band low corner frequency.
         :param freqmax: Pass band high corner frequency.
-        :param channel: int or list or 'all'. convert a certain channel number /
-            certain channel range / all channels.
         """
-        if ('channel' in kwargs.keys()) and not isinstance(kwargs['channel'],
-                                                           str):
-            if isinstance(kwargs['channel'], int):
-                self.start_channel = kwargs['channel']
-                kwargs['channel'] -= self.start_channel
-                self.data = np.reshape(slant_stacking(self.data, self.dx,
-                                       self.fs, **kwargs), (1, -1))
-                self._strain2vel_attr()
-                return self
-            else:
-                self.start_channel = kwargs['channel'][0]
-                kwargs['channel'] = np.array(kwargs['channel']) - \
-                    self.start_channel
-                self.start_distance += kwargs['channel'][0] * self.dx
+        if hasattr(self, 'turning_channels') and turning is None:
+            turning = np.array(self.turning_channels) - self.start_channel
 
-        self.data = slant_stacking(self.data, self.dx, self.fs, **kwargs)
+        if channel == 'all':
+            channel = list(range(self.nch))
+        elif isinstance(channel, int):
+            channel = [channel - self.start_channel]
+        else:
+            channel = np.array(channel) - self.start_channel
+
+        self.start_channel += channel
+        self.start_distance += channel * self.dx
+        self.data = slant_stacking(self.data, self.dx, self.fs, channel=channel,
+                                   turning=turning, **kwargs)
         self._strain2vel_attr()
         return self

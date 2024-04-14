@@ -1,6 +1,6 @@
 # Purpose: Convert strain rate data to velocity
 # Author: Minzhe Hu
-# Date: 2024.4.11
+# Date: 2024.4.14
 # Email: hmz2018@mail.ustc.edu.cn
 import numpy as np
 from numpy.fft import irfft2, ifftshift
@@ -15,7 +15,7 @@ from daspy.advanced_tools.decomposition import fk_fan_mask
 
 def fk_rescaling(data, dx, fs, taper=(0.02, 0.05), pad='default', fmax=None,
                  kmin=(1 / 2000, 1 / 3000), vmax=(15000, 30000), edge=0.2,
-                 verbose=False):
+                 turning=None, verbose=False):
     """
     Convert strain/strain rate to velocity/acceleration by fk rescaling.
 
@@ -35,45 +35,55 @@ def fk_rescaling(data, dx, fs, taper=(0.02, 0.05), pad='default', fmax=None,
         floats represents the start and end of taper. Setting these parameters
         can reduce artifacts.
     :param edge: float. The width of fan mask taper edge.
+    :param turning: Sequence of int. Channel number of turning points.
     :param verbose: If True, return converted data, f-k spectrum, frequency
         sequence, wavenumber sequence and f-k mask.
     :return: Converted data and some variables in the process if verbose==True.
     """
-    data_tp = cosine_taper(data, taper)
-
-    if pad == 'default':
-        nch, nt = data.shape
-        dn = (next_pow_2(nch) - nch, next_pow_2(nt) - nt)
-        nfft = None
-    elif pad is None or pad is False:
-        dn = 0
-        nfft = None
+    if turning:
+        data_vel = np.zeros_like(data)
+        start_ch = [0, *turning]
+        end_ch = [*turning, len(data)]
+        for (s, e) in zip(start_ch, end_ch):
+            data_vel[s:e] = fk_rescaling(data[s:e], dx, fs, taper=taper,
+                                         pad=pad, fmax=fmax, kmin=kmin,
+                                         vmax=vmax, edge=edge, verbose=False)
     else:
-        dn = np.round(np.array(pad) * data.shape).astype(int)
-        nfft = 'default'
+        data_tp = cosine_taper(data, taper)
 
-    data_pd = padding(data_tp, dn)
-    nch, nt = data_pd.shape
+        if pad == 'default':
+            nch, nt = data.shape
+            dn = (next_pow_2(nch) - nch, next_pow_2(nt) - nt)
+            nfft = None
+        elif pad is None or pad is False:
+            dn = 0
+            nfft = None
+        else:
+            dn = np.round(np.array(pad) * data.shape).astype(int)
+            nfft = 'default'
 
-    fk, f, k = fk_transform(data_pd, dx, fs, taper=taper, nfft=nfft)
+        data_pd = padding(data_tp, dn)
+        nch, nt = data_pd.shape
 
-    ff = np.tile(f, (len(k), 1))
-    kk = np.tile(k, (len(f), 1)).T
-    vv = - np.divide(ff, kk, out=np.ones_like(ff) * 1e10, where=kk != 0)
+        fk, f, k = fk_transform(data_pd, dx, fs, taper=taper, nfft=nfft)
 
-    mask = fk_fan_mask(f, k, fmax=fmax, kmin=kmin, vmax=vmax, edge=edge) * vv
-    mask[kk == 0] = 0
+        ff = np.tile(f, (len(k), 1))
+        kk = np.tile(k, (len(f), 1)).T
+        vv = - np.divide(ff, kk, out=np.ones_like(ff) * 1e10, where=kk != 0)
 
-    data_res = irfft2(ifftshift(fk * mask, axes=0)).real[:nch, :nt]
-    data_res = padding(data_res, dn, reverse=True)
+        mask = fk_fan_mask(f, k, fmax=fmax, kmin=kmin, vmax=vmax, edge=edge) * vv
+        mask[kk == 0] = 0
 
-    if verbose:
-        return data_res, fk, f, k, mask
-    return data_res
+        data_vel = irfft2(ifftshift(fk * mask, axes=0)).real[:nch, :nt]
+        data_vel = padding(data_vel, dn, reverse=True)
+
+        if verbose:
+            return data_vel, fk, f, k, mask
+    return data_vel
 
 
 def curvelet_conversion(data, dx, fs, pad=0.3, scale_begin=2, nbscales=None,
-                        nbangles=16):
+                        nbangles=16, turning=None):
     """
     Use curevelet transform to convert strain/strain rate to
     velocity/acceleration. {Yang et al. , 2023, Geophys. Res. Lett.}
@@ -89,35 +99,47 @@ def curvelet_conversion(data, dx, fs, pad=0.3, scale_begin=2, nbscales=None,
         Default set to ceil(log2(min(M,N)) - 3).
     :param nbangles: int. Number of angles at the 2nd coarsest level,
         minimum 8, must be a multiple of 4.
+    :param turning: Sequence of int. Channel number of turning points.
     :return: numpy.ndarray. Converted data.
     """
-    if pad is None or pad is False:
-        pad = 0
-    dn = np.round(np.array(pad) * data.shape).astype(int)
-    data_pd = padding(data, dn)
+    if turning:
+        data_vel = np.zeros_like(data)
+        start_ch = [0, *turning]
+        end_ch = [*turning, len(data)]
+        for (s, e) in zip(start_ch, end_ch):
+            data_vel[s:e] = curvelet_conversion(data[s:e], dx, fs, pad=pad,
+                                                scale_begin=scale_begin,
+                                                nbscales=nbscales,
+                                                nbangles=nbangles, turning=None)
+    else:
+        if pad is None or pad is False:
+            pad = 0
+        dn = np.round(np.array(pad) * data.shape).astype(int)
+        data_pd = padding(data, dn)
 
-    C = fdct_wrapping(data_pd, is_real=False, finest=1, nbscales=nbscales,
-                      nbangles_coarse=nbangles)
+        C = fdct_wrapping(data_pd, is_real=False, finest=1, nbscales=nbscales,
+                        nbangles_coarse=nbangles)
 
-    # rescale with velocity
-    np.seterr(divide='ignore')
-    for s in range(0, scale_begin - 1):
-        for w in range(len(C[s])):
-            C[s][w] *= 0
+        # rescale with velocity
+        np.seterr(divide='ignore')
+        for s in range(0, scale_begin - 1):
+            for w in range(len(C[s])):
+                C[s][w] *= 0
 
-    for s in range(scale_begin - 1, len(C)):
-        nbangles = len(C[s])
-        velocity = _velocity_bin(nbangles, fs, dx)
-        factors = np.mean(velocity, axis=1)
-        for w in range(nbangles):
-            if abs(factors[w]) == np.inf:
-                factors[w] = abs(velocity[w]).min() * \
-                    np.sign(velocity[w, 0]) * 2
-            C[s][w] *= factors[w]
+        for s in range(scale_begin - 1, len(C)):
+            nbangles = len(C[s])
+            velocity = _velocity_bin(nbangles, fs, dx)
+            factors = np.mean(velocity, axis=1)
+            for w in range(nbangles):
+                if abs(factors[w]) == np.inf:
+                    factors[w] = abs(velocity[w]).min() * \
+                        np.sign(velocity[w, 0]) * 2
+                C[s][w] *= factors[w]
 
-    data_vel = ifdct_wrapping(C, is_real=True, size=data_pd.shape)
+        data_vel = ifdct_wrapping(C, is_real=True, size=data_pd.shape)
+        data_vel = padding(data_vel, dn, reverse=True)
 
-    return padding(data_vel, dn, reverse=True)
+    return data_vel
 
 
 def slowness(g, dx, fs, slm, sls, swin=2):
@@ -170,7 +192,8 @@ def slowness(g, dx, fs, slm, sls, swin=2):
 
 
 def slant_stacking(data, dx, fs, L=None, slm=0.01,
-                   sls=0.000125, frqlow=0.1, frqhigh=15, channel='all'):
+                   sls=0.000125, frqlow=0.1, frqhigh=15, turning=None,
+                   channel='all'):
     """
     Convert strain to velocity based on slant-stack.
 
@@ -183,6 +206,7 @@ def slant_stacking(data, dx, fs, L=None, slm=0.01,
     :param sls: float. slowness step
     :param freqmin: Pass band low corner frequency.
     :param freqmax: Pass band high corner frequency.
+    :param turning: Sequence of int. Channel number of turning points.
     :param channel: int or list or 'all'. convert a certain channel number /
         certain channel range / all channels.
     :return: Converted velocity data
@@ -191,26 +215,31 @@ def slant_stacking(data, dx, fs, L=None, slm=0.01,
         L = round(50 / dx)
 
     nch, nt = data.shape
-    data_ex = padding(data, (2 * L, 0))
-    swin = int(max((1 / frqhigh * fs) // 2, 1))
-    if isinstance(channel, str) and channel == 'all':
-        vel = np.zeros_like(data)
-        for i in range(nch):
-            p, _ = slowness(data_ex[i:i + 2 * L + 1], dx, fs, slm, sls,
-                            swin=swin)
-            vel[i] = bandpass(data[i] / p, fs=fs, freqmin=frqlow,
-                              freqmax=frqhigh)
+    if channel == 'all':
+        channel = list(range(nch))
     elif isinstance(channel, int):
-        p, _ = slowness(data_ex[channel:channel + 2 * L + 1], dx, fs, slm, sls,
-                        swin=swin)
-        vel = bandpass(data[channel] / p, fs=fs, freqmin=frqlow,
-                       freqmax=frqhigh)
+        channel = [channel]
+
+    if turning:
+        data_vel = np.zeros((0, len(data[0])))
+        start_ch = [0, *turning]
+        end_ch = [*turning, len(data)]
+        for (s, e) in zip(start_ch, end_ch):
+            channel_seg = [ch-s for ch in range(s,e) if ch in channel]
+            if len(channel_seg):
+                d_vel = slant_stacking(data[s:e], dx, fs, L=L, slm=slm, sls=sls,
+                                       frqlow=frqlow, frqhigh=frqhigh,
+                                       turning=None, channel=channel_seg)
+                data_vel = np.vstack((data_vel, d_vel))
+
     else:
-        vel = np.zeros((len(channel), nt))
+        data_ex = padding(data, (2 * L, 0))
+        swin = int(max((1 / frqhigh * fs) // 2, 1))
+        data_vel = np.zeros((len(channel), nt))
         for i, ch in enumerate(channel):
             p, _ = slowness(data_ex[ch:ch + 2 * L + 1], dx, fs, slm, sls,
                             swin=swin)
-            vel[i] = bandpass(data[ch] / p, fs=fs, freqmin=frqlow,
-                              freqmax=frqhigh)
+            data_vel[i] = bandpass(data[ch] / p, fs=fs, freqmin=frqlow,
+                                   freqmax=frqhigh)
 
-    return vel
+    return data_vel
