@@ -1,6 +1,6 @@
 # Purpose: Several functions for analysis data quality and geometry of channels
 # Author: Minzhe Hu, Zefeng Li
-# Date: 2024.4.11
+# Date: 2024.4.14
 # Email: hmz2018@mail.ustc.edu.cn
 import numpy as np
 from copy import deepcopy
@@ -328,7 +328,7 @@ def turning_points(data, data_type='coordinate', thresh=5, depth_info=False,
         median = np.median(cc)
         mad = np.median(abs(cc - median))
 
-        return np.argwhere(cc < median - thresh * mad)[0] - 0.5
+        return np.argwhere(cc < median - thresh * mad)[0]
 
     else:
         raise ValueError('Data_type should be \'coordinate\' or \'waveform\'.')
