@@ -1,12 +1,12 @@
 # Purpose: Plot data
 # Author: Minzhe Hu
-# Date: 2024.4.11
+# Date: 2024.4.14
 # Email: hmz2018@mail.ustc.edu.cn
 import numpy as np
 import matplotlib.pyplot as plt
 
 
-def plot(data, dx=None, fs=None, ax=None, obj='waveform', dpi=200,
+def plot(data, dx=None, fs=None, ax=None, obj='waveform', dpi=150,
          transpose=False, t0=0, x0=0, pick=None, f=None, k=None, t=None, c=None,
          cmap=None, vmin=None, vmax=None, xlim=None, ylim=None, xlog=False,
          ylog=False, xinv=False, yinv=False, xaxis=True, yaxis=True,
