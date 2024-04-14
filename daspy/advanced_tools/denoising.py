@@ -1,6 +1,6 @@
 # Purpose: Remove noise from data
 # Author: Minzhe Hu, Zefeng Li
-# Date: 2024.4.13
+# Date: 2024.4.14
 # Email: hmz2018@mail.ustc.edu.cn
 import numpy as np
 from scipy.ndimage import median_filter
@@ -40,15 +40,21 @@ def spike_removal(data, nch=50, nsp=5, thresh=10):
     return data_dn
 
 
-def common_mode_noise_removal(data):
+def common_mode_noise_removal(data, method='median'):
     """
     Remove common mode noise (sometimes called horizontal noise) from data.
 
     :param data: numpy.ndarray. Data to remove common mode noise.
+    :param method:str. Method for extracting commmon mode noise. 'median' or
+        'mean'
     :return: numpy.ndarray. Denoised data.
     """
     nch, nt = data.shape
-    common = np.median(data, 0)
+    if method == 'median':
+        common = np.median(data, 0)
+    elif method == 'mean':
+        common = np.mean(data, 0)
+
     xx = np.sum(common ** 2)
     data_dn = np.zeros((nch, nt))
     for i in range(nch):
