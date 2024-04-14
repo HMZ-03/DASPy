@@ -5,7 +5,7 @@
 
 DASPy is an open-source project dedicated to provide a python package for DAS (Distributed Acoustic Sensing) data processing.
 
-The goal of the daspy project is to lower the bar of DAS data processing. DASPy includes:
+The goal of the DASPy project is to lower the bar of DAS data processing. DASPy includes:
 * Classic seismic data processing techniques, including preprocessing, filter, spectrum analysis, and visualization
 * Specialized algorithms for DAS applications, including denoising, waveform decomposition, channel attribute analysis, and strain-velocity conversion. 
 
