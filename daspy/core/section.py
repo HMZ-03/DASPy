@@ -37,6 +37,7 @@ class Section(object):
         :param start_distance: number. Distance of the first channel, in m.
         :param start_time: number or DASDateTime. Time of the first
             sampling point. If number, the unit is s.
+        :param origin_time: number or DASDateTime. Ocurance time of the event. 
         :param gauge_length: number. Gauge length in m.
         :param data_type: str. Can be 'phase', 'phase shift', 'strain',
             'strain rate', 'displacement', 'velocity', or 'acceleration'.
@@ -44,6 +45,9 @@ class Section(object):
             notation.
         :param geometry: numpy.ndarray. Should include latitude and longitude
             (first two columns), and can also include depth (last column).
+        :param turning_channels: sequnce of channel numbers. Channel numbers of
+            turning points.
+        :param headers: dict. Other headers.
         """
         if data.ndim == 1:
             data = data[np.newaxis, :]
