@@ -1,4 +1,4 @@
-<img src="https://raw.githubusercontent.com/HMZ-03/DASPy/main/website/USTC.svg" height="170" />&emsp;<img src="https://raw.githubusercontent.com/HMZ-03/DASPy/main/website/DAMS.png" height="150" />
+<img src="./website/USTC.svg" height="170" />&emsp;<img src="./website/DAMS.png" height="150" />
 
 
 # DASPy
@@ -40,10 +40,10 @@ conda update -n base -c conda-forge conda
 ```
 from daspy import read
 sec = read()  # load example waveform
-sec.bandpass(1, 10)
+sec.bandpass(1, 15)
 sec.plot()
 ```
-<img src="https://raw.githubusercontent.com/HMZ-03/DASPy/main/website/waveform.png" height="500" />
+<img src="./website/waveform.png" height="500" />
 
 # DASPy Coding Style Guide
 see [here](CodingStyleGuide.md)
