@@ -8,14 +8,13 @@ from datetime import datetime, timedelta, timezone
 
 
 utc = timezone.utc
+_tz_str = time.strftime('%z', time.localtime())
+_tz_h = int(_tz_str[:3])
+_tz_m = int(_tz_str[0] + _tz_str[3:5])
+local_tz = timezone(timedelta(hours=_tz_h, minutes=_tz_m))
 
 
 class DASDateTime(datetime):
-
-    _tz_str = time.strftime('%z', time.localtime())
-    _tz_h = int(_tz_str[:3])
-    _tz_m = int(_tz_str[0] + _tz_str[3:5])
-    local_tz = timezone(timedelta(hours=_tz_h, minutes=_tz_m))
 
     def __add__(self, other):
         if isinstance(other, Iterable):
@@ -35,12 +34,11 @@ class DASDateTime(datetime):
             return out
         elif isinstance(other, datetime):
             if self.tzinfo and not other.tzinfo:
-                subtracted = other.replace(tzinfo=DASDateTime.local_tz)
+                return (super().__sub__(other.replace(tzinfo=local_tz
+                                                      ))).total_seconds()
             elif not self.tzinfo and other.tzinfo:
                 return - (other - self)
-            else:
-                subtracted = other
-            return (super().__sub__(subtracted)).total_seconds()
+            return (super().__sub__(other)).total_seconds()
         elif not isinstance(other, timedelta):
             other = timedelta(seconds=other)
         return super().__sub__(other)
