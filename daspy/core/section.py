@@ -1,6 +1,6 @@
 # Purpose: Module for handling Section objects.
 # Author: Minzhe Hu
-# Date: 2024.4.14
+# Date: 2024.4.15
 # Email: hmz2018@mail.ustc.edu.cn
 import warnings
 import pickle
@@ -145,16 +145,16 @@ class Section(object):
         return len(self.data[0])
 
     @property
-    def end_time(self):
-        return self.start_time + self.nt / self.fs
-
-    @property
     def end_channel(self):
         return self.start_channel + self.nch
 
     @property
     def end_distance(self):
         return self.start_distance + self.nch * self.dx
+
+    @property
+    def end_time(self):
+        return self.start_time + self.nt / self.fs
 
     def copy(self):
         return deepcopy(self)
