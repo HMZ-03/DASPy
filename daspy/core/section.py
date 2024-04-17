@@ -14,8 +14,8 @@ from daspy.basic_tools.preprocessing import (phase2strain, normalization,
                                              padding, trimming,
                                              time_integration,
                                              time_differential)
-from daspy.basic_tools.filter import (bandpass, bandstop, lowpass, highpass,
-                                      envelope)
+from daspy.basic_tools.filter import (bandpass, bandstop, lowpass,
+                                      lowpass_cheby_2, highpass, envelope)
 from daspy.basic_tools.freqattributes import (spectrum, spectrogram,
                                               fk_transform)
 from daspy.advanced_tools.channel import channel_checking, turning_points
@@ -185,8 +185,7 @@ class Section(object):
         :param tmode: str. 'origin', 'time' or 'sampling'. If origin_time is not
             defined, 'origin' and 'time' is the same.
         :param obj: str. Type of data to plot. It should be one of 'waveform',
-            'phasepick', 'spectrum', 'spectrogram', 'fk', 'dispersion' or
-            'faults'.
+            'phasepick', 'spectrum', 'spectrogram', 'fk', or 'dispersion'.
         :param kwargs_pro: dict. If obj is one of 'spectrum', 'spectrogram',
             'fk' and data is not specified, this parameter will be used to
             process the data to plot.
@@ -537,6 +536,26 @@ class Section(object):
         self.data = lowpass(self.data, self.fs, freq, **kwargs)
         return self
 
+    def lowpass_cheby_2(self, freq, **kwargs):
+        """
+        Filter data by passing data only below a certain frequency. The main
+        purpose of this cheby2 filter is downsampling. This method will
+        iteratively design a filter, whose pass band frequency is determined
+        dynamically, such that the values above the stop band frequency are
+        lower than -96dB.
+
+        :param freq: The frequency above which signals are attenuated with 95
+            dB.
+        :param maxorder: Maximal order of the designed cheby2 filter.
+        :param ba: If True return only the filter coefficients (b, a) instead of
+            filtering.
+        :param freq_passband: If True return additionally to the filtered data,
+            the iteratively determined pass band frequency.
+        :return: Filtered data.
+        """
+        self.data = lowpass_cheby_2(self.data, self.fs, freq, **kwargs)
+        return self
+
     def highpass(self, freq, **kwargs):
         """
         Filter data removing data below certain frequency 'freq' using
@@ -613,9 +632,7 @@ class Section(object):
         else:
             xmax = len(self.data)
 
-        Zxx, f, t = spectrogram(self.data[xmin:xmax], self.fs, **kwargs)
-
-        return Zxx, f, t
+        return spectrogram(self.data[xmin:xmax], self.fs, **kwargs)
 
     def fk_transform(self, **kwargs):
         """

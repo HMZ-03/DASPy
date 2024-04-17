@@ -8,9 +8,9 @@ import matplotlib.pyplot as plt
 
 def plot(data, dx=None, fs=None, ax=None, obj='waveform', dpi=150, title=None,
          transpose=False, t0=0, x0=0, pick=None, f=None, k=None, t=None, c=None,
-         cmap=None, vmin=None, vmax=None, xlim=None, ylim=None, xlog=False,
-         ylog=False, xinv=False, yinv=False, xaxis=True, yaxis=True,
-         colorbar=True):
+         cmap=None, vmin=None, vmax=None, xmode='distance', tmode='time',
+         xlim=None, ylim=None, xlog=False, ylog=False, xinv=False, yinv=False,
+         xaxis=True, yaxis=True, colorbar=True):
     """
     Plot several types of 2-D seismological data.
 
@@ -20,7 +20,7 @@ def plot(data, dx=None, fs=None, ax=None, obj='waveform', dpi=150, title=None,
     :param ax: Matplotlib.axes.Axes. Axes to plot. If not specified, the
         function will directly display the image using matplotlib.pyplot.show().
     :param obj: str. Type of data to plot. It should be one of 'waveform',
-        'phasepick', 'spectrum', 'spectrogram', 'fk', 'dispersion' or 'faults'.
+        'phasepick', 'spectrum', 'spectrogram', 'fk', or 'dispersion'.
     :param dpi: int. The resolution of the figure in dots-per-inch.
     :param title: str. The title of this axes.
     :param transpose: bool. Transpose the figure or not.
@@ -34,6 +34,8 @@ def plot(data, dx=None, fs=None, ax=None, obj='waveform', dpi=150, title=None,
     :param cmap: str or Colormap. The Colormap instance or registered colormap
         name used to map scalar data to colors.
     :param vmin, vmax: Define the data range that the colormap covers.
+    :param xmode: str. 'distance' or 'channel'.
+    :param tmode: str. 'time' or 'sampling'.
     :param xlim, ylim: Set the x-axis and y-axis view limits.
     :param xlog, ylog: bool. If True, set the x-axis' or y-axis' scale as log.
     :param xinv, yinv: bool. If True, invert x-axis or y-axis.
@@ -57,13 +59,18 @@ def plot(data, dx=None, fs=None, ax=None, obj='waveform', dpi=150, title=None,
         if vmin is None:
             vmin = -vmax
         origin = 'upper'
-        (fs, ylabel) = ((fs, 'Time (s)'), (1, 'Sampling Points'))[fs is None]
-        if dx:
-            xlabel = 'Disitance (km)'
-            extent = [x0 * 1e-3, (x0 + nch * dx) * 1e-3, t0 + nt / fs, t0]
-        else:
+        if fs is None or tmode == 'sampling':
+            ylabel = 'Sampling points'
+            fs = 1
+        elif tmode == 'time':
+            ylabel = 'Time (s)'
+
+        if dx is None or xmode == 'channel':
             xlabel = 'Channel'
             extent = [x0, x0 + nch, t0 + nt / fs, t0]
+        elif xmode == 'distance':
+            xlabel = 'Disitance (km)'
+            extent = [x0 * 1e-3, (x0 + nch * dx) * 1e-3, t0 + nt / fs, t0]
 
         if obj == 'phasepick':
             if len(pick) != nch:
@@ -89,12 +96,12 @@ def plot(data, dx=None, fs=None, ax=None, obj='waveform', dpi=150, title=None,
             vmin = np.percentile(data, 20)
         if obj == 'spectrum':
             origin = 'lower'
-            if dx:
-                xlabel = 'Disitance (km)'
-                extent = [x0 * 1e-3, (x0 + nch * dx) * 1e-3, f.min(), f.max()]
-            else:
+            if dx is None or xmode == 'channel':
                 xlabel = 'Channel'
                 extent = [x0, x0 + nch, f.min(), f.max()]
+            elif xmode == 'distance':
+                xlabel = 'Disitance (km)'
+                extent = [x0 * 1e-3, (x0 + nch * dx) * 1e-3, f.min(), f.max()]
             ylabel = 'Frequency (Hz)'
         elif obj == 'spectrogram':
             data = data.T
@@ -113,22 +120,6 @@ def plot(data, dx=None, fs=None, ax=None, obj='waveform', dpi=150, title=None,
             xlabel = 'Frequency (Hz)'
             ylabel = 'Phase Velocity (m/s)'
             extent = [min(f), max(f), min(c), max(c)]
-
-    if obj == 'faults':
-        if not cmap:
-            cmap = 'hot_r'
-        if vmax is None:
-            vmax = np.percentile(data, 80)
-        if vmin is None:
-            vmin = 0
-        origin = 'upper'
-        (fs, ylabel) = ((fs, 'Time (s)'), (1, 'Sampling Points'))[dx is None]
-        if dx:
-            xlabel = 'Disitance (km)'
-            extent = [x0 * 1e-3, (x0 + nch * dx) * 1e-3, t0 + nt / fs, t0]
-        else:
-            xlabel = 'Channel'
-            extent = [x0, x0 + nch, t0 + nt / fs, t0]
 
     if transpose:
         if origin == 'lower':
