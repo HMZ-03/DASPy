@@ -37,7 +37,7 @@ class Section(object):
         :param start_distance: number. Distance of the first channel, in m.
         :param start_time: number or DASDateTime. Time of the first
             sampling point. If number, the unit is s.
-        :param origin_time: number or DASDateTime. Ocurance time of the event. 
+        :param origin_time: number or DASDateTime. Ocurance time of the event.
         :param gauge_length: number. Gauge length in m.
         :param data_type: str. Can be 'phase shift', 'phase change rate',
             'strain', 'strain rate', 'displacement', 'velocity', 'acceleration',
@@ -442,15 +442,16 @@ class Section(object):
         return self
 
     def _time_int_dif_attr(self, mode=0):
-        for type_group in [['phase shift', 'phase change rate'],
-                           ['strain','strain rate'],
-                           ['displacement', 'velocity', 'acceleration']]:
+        for type_group in [['phase change rate', 'phase shift'],
+                           ['strain rate', 'strain'],
+                           ['acceleration', 'velocity', 'displacement']]:
             for (i, tp) in enumerate(type_group):
                 if tp in self.data_type:
                     try:
-                        self.data_type = type_group[i + mode]
+                        self.data_type = self.data_type.replace(
+                            tp, type_group[i + mode])
                     except BaseException:
-                        operate = ('integrate', 'differentiate')[mode > 0]
+                        operate = ('differentiate', 'integrate')[mode > 0]
                         print(f'Data type conversion error. Can not {operate} '
                               f'{self.data_type} data.')
                     return self
@@ -462,7 +463,7 @@ class Section(object):
         """
         self.data = time_integration(self.data, self.fs)
         if hasattr(self, 'data_type'):
-            self._time_int_dif_attr(mode=-1)
+            self._time_int_dif_attr(mode=1)
         return self
 
     def time_differential(self):
@@ -471,7 +472,7 @@ class Section(object):
         """
         self.data = time_differential(self.data, self.fs)
         if hasattr(self, 'data_type'):
-            self._time_int_dif_attr(mode=1)
+            self._time_int_dif_attr(mode=-1)
         return self
 
     def bandpass(self, freqmin, freqmax, **kwargs):
