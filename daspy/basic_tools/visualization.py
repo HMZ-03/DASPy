@@ -1,12 +1,12 @@
 # Purpose: Plot data
 # Author: Minzhe Hu
-# Date: 2024.4.14
+# Date: 2024.4.17
 # Email: hmz2018@mail.ustc.edu.cn
 import numpy as np
 import matplotlib.pyplot as plt
 
 
-def plot(data, dx=None, fs=None, ax=None, obj='waveform', dpi=150,
+def plot(data, dx=None, fs=None, ax=None, obj='waveform', dpi=150, title=None,
          transpose=False, t0=0, x0=0, pick=None, f=None, k=None, t=None, c=None,
          cmap=None, vmin=None, vmax=None, xlim=None, ylim=None, xlog=False,
          ylog=False, xinv=False, yinv=False, xaxis=True, yaxis=True,
@@ -22,6 +22,7 @@ def plot(data, dx=None, fs=None, ax=None, obj='waveform', dpi=150,
     :param obj: str. Type of data to plot. It should be one of 'waveform',
         'phasepick', 'spectrum', 'spectrogram', 'fk', 'dispersion' or 'faults'.
     :param dpi: int. The resolution of the figure in dots-per-inch.
+    :param title: str. The title of this axes.
     :param transpose: bool. Transpose the figure or not.
     :param t0, x0: The beginning of time and space.
     :param pick: Sequence of picked phases. Required if obj=='phasepick'.
@@ -140,7 +141,8 @@ def plot(data, dx=None, fs=None, ax=None, obj='waveform', dpi=150,
 
     bar = ax.imshow(data.T, vmin=vmin, vmax=vmax, extent=extent, aspect='auto',
                     origin=origin, cmap=cmap)
-
+    if title:
+        ax.set_title(title)
     if xaxis:
         ax.set_xlabel(xlabel)
     else:

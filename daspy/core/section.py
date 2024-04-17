@@ -1,6 +1,6 @@
 # Purpose: Module for handling Section objects.
 # Author: Minzhe Hu
-# Date: 2024.4.15
+# Date: 2024.4.17
 # Email: hmz2018@mail.ustc.edu.cn
 import warnings
 import pickle
@@ -39,8 +39,9 @@ class Section(object):
             sampling point. If number, the unit is s.
         :param origin_time: number or DASDateTime. Ocurance time of the event. 
         :param gauge_length: number. Gauge length in m.
-        :param data_type: str. Can be 'phase', 'phase shift', 'strain',
-            'strain rate', 'displacement', 'velocity', or 'acceleration'.
+        :param data_type: str. Can be 'phase shift', 'phase change rate',
+            'strain', 'strain rate', 'displacement', 'velocity', 'acceleration',
+            or normalized above parameters.
         :param scale: number. Scale of data. Usually in the form of scientific
             notation.
         :param geometry: numpy.ndarray. Should include latitude and longitude
@@ -193,6 +194,7 @@ class Section(object):
             function will directly display the image using
             matplotlib.pyplot.show().
         :param dpi: int. The resolution of the figure in dots-per-inch.
+        :param title: str. The title of this axes.
         :param transpose: bool. Transpose the figure or not.
         :param cmap: str or Colormap. The Colormap instance or registered
             colormap name used to map scalar data to colors.
@@ -218,7 +220,6 @@ class Section(object):
         :param t: Time sequence. Required if obj=='spectrogram' and data is
             specified.
         """
-
         if 'data' not in kwargs.keys():
             if obj == 'waveform':
                 data = self.data
@@ -237,6 +238,11 @@ class Section(object):
                 data *= self.scale
         else:
             data = kwargs.pop('data')
+
+        if 'title' not in kwargs.keys():
+            kwargs['title'] = obj
+            if hasattr(self, 'data_type'):
+                kwargs['title'] += f' ({self.data_type})'
 
         if xmode == 'channel':
             dx = None
@@ -262,7 +268,8 @@ class Section(object):
 
     def phase2strain(self, lam, e, n, gl=None):
         """
-        Convert the optical phase shift in radians to strain.
+        Convert the optical phase shift in radians to strain, or phase change
+        rate to strain rate.
 
         :param lam: float. Operational optical wavelength in vacuum.
         :param e: float. photo-slastic scaling factor for logitudinal strain in
@@ -271,14 +278,17 @@ class Section(object):
         :paran gl: float. Gauge length. Required if self.gauge_length has not
             been set.
         """
-        if hasattr(self, 'data_type'):
-            if self.data_type != 'phase shift':
-                warnings.warn('The data type is {}, not phase shift. But it' +
-                              'still takes effect.'.format(self.data_type))
         if gl:
             self.gauge_length = gl
         self.data = phase2strain(self.data, lam, e, n, self.gauge_length)
-        self.data_type = 'strain rate'
+        if hasattr(self, 'data_type'):
+            if 'phase' not in self.data_type:
+                warnings.warn('The data type is {}, not phase shift. But it' +
+                              'still takes effect.'.format(self.data_type))
+            else:
+                self.data_type = self.data_type.replace('phase shift', 'strain')
+                self.data_type = self.data_type.replace('phase change rate',
+                                                        'strain rate')
         return self
 
     def normalization(self, method='z-score'):
@@ -432,18 +442,19 @@ class Section(object):
         return self
 
     def _time_int_dif_attr(self, mode=0):
-        for large_type in [['phase', 'phase shift'], ['strain', 'strain rate'],
+        for type_group in [['phase shift', 'phase change rate'],
+                           ['strain','strain rate'],
                            ['displacement', 'velocity', 'acceleration']]:
-            if self.data_type.lower() in large_type:
-                i = large_type.index(self.data_type.lower())
-                try:
-                    self.data_type = large_type[i + mode]
-                except BaseException:
-                    print('Data type conversion error. Can not %s %s data.' %
-                          (('integrate', 'differentiate')[mode > 0],
-                           self.data_type))
-                return self
-        print('Unable to convert data type.')
+            for (i, tp) in enumerate(type_group):
+                if tp in self.data_type:
+                    try:
+                        self.data_type = type_group[i + mode]
+                    except BaseException:
+                        operate = ('integrate', 'differentiate')[mode > 0]
+                        print(f'Data type conversion error. Can not {operate} '
+                              f'{self.data_type} data.')
+                    return self
+        warnings.warn('Unable to convert data type.')
 
     def time_integration(self):
         """
@@ -556,6 +567,8 @@ class Section(object):
         taken too seriously.
         """
         self.data = envelope(self.data)
+        if hasattr(self, 'data_type'):
+            self.data_type += ' envelope'
         return self
 
     def spectrum(self, taper=0.05, nfft='default'):
@@ -785,13 +798,13 @@ class Section(object):
 
     def _strain2vel_attr(self):
         if hasattr(self, 'data_type'):
-            if self.data_type.lower() == 'strain':
-                self.data_type = 'velocity'
-            elif self.data_type.lower() == 'strain rate':
+            if 'strain rate' in self.data_type:
                 self.data_type = 'acceleration'
+            elif 'strain' in self.data_type:
+                self.data_type = 'velocity'
             else:
-                warnings.warn('The data type is {}, '.format(self.data_type) +
-                              'not strain or strain rate. But it still takes '
+                warnings.warn(f'The data type is {self.data_type}, neither '
+                              'strain nor strain rate. But it still takes '
                               'effect.')
         else:
             self.data_type = 'velocity or acceleration'
