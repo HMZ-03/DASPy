@@ -244,8 +244,8 @@ def _horizontal_angle_change(geo, gap=10):
     angle = np.zeros(nch)
     for i in range(1, nch - 1):
         lat, lon = geo[i]
-        lat_s, lon_s = geo[max(i - gap, 0)]
-        lat_e, lon_e = geo[min(i + gap, nch - 1)]
+        lon_s, lat_s = geo[max(i - gap, 0)]
+        lon_e, lat_e = geo[min(i + gap, nch - 1)]
         azi_s = Geodesic.WGS84.Inverse(lat_s, lon_s, lat, lon)['azi1']
         azi_e = Geodesic.WGS84.Inverse(lat, lon, lat_e, lon_e)['azi1']
         dazi = azi_e - azi_s
@@ -261,8 +261,8 @@ def _vertical_angle_change(geo, gap=10):
     angle = np.zeros(nch)
     for i in range(1, nch - 1):
         lat, lon, dep = geo[i]
-        lat_s, lon_s, dep_s = geo[max(i - gap, 0)]
-        lat_e, lon_e, dep_e = geo[min(i + gap, nch - 1)]
+        lon_s, lat_s, dep_s = geo[max(i - gap, 0)]
+        lon_e, lat_e, dep_e = geo[min(i + gap, nch - 1)]
         s12_s = Geodesic.WGS84.Inverse(lat_s, lon_s, lat, lon)['s12']
         theta_s = np.arctan((dep - dep_s) / s12_s) / np.pi * 180
         s12_e = Geodesic.WGS84.Inverse(lat, lon, lat_e, lon_e)['s12']
