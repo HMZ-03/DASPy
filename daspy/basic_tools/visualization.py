@@ -87,7 +87,8 @@ def plot(data, dx=None, fs=None, ax=None, obj='waveform', dpi=150, title=None,
                                marker=',', s=0.1, c='black')
 
     if obj in ['spectrum', 'spectrogram', 'fk', 'dispersion']:
-        data = abs(data)
+        if isinstance(data[0, 0], complex):
+            data = abs(data)
         if not cmap:
             cmap = 'jet'
         if vmax is None:
