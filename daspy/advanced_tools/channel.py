@@ -173,7 +173,7 @@ def location_interpolation(known_pt, track_pt=None, dx=None, data_type='lonlat',
         channel numbers. Each row includes two coordinates.
     :param dx: Known points far from the track (> dx) will be excluded.
         Recommended setting is channel interval. The unit is m.
-    :param data_type: str. Coordinate type. 'latlon' for latitude and longitude,
+    :param data_type: str. Coordinate type. 'lonlat' for longitude and latitude,
         'xy' for x and y.
     :param verbose: bool. If True, return interpoleted channel location and
         segment interval.
