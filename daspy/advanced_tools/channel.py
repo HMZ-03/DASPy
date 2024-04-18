@@ -1,6 +1,6 @@
 # Purpose: Several functions for analysis data quality and geometry of channels
 # Author: Minzhe Hu, Zefeng Li
-# Date: 2024.4.14
+# Date: 2024.4.18
 # Email: hmz2018@mail.ustc.edu.cn
 import numpy as np
 from copy import deepcopy
@@ -108,7 +108,7 @@ def _channel_location(tx, ty, tn):
     interp_ch = []
     chn = np.floor(tn[idx_kp[0]])
     if abs(chn - tn[idx_kp[0]]) < 1e-6:
-        interp_ch.append([[tx[idx_kp[0]], ty[idx_kp[0]], chn]])
+        interp_ch.append([tx[idx_kp[0]], ty[idx_kp[0]], chn])
 
     seg_interval = []
     for i in range(1, len(idx_kp)):
