@@ -221,7 +221,7 @@ def location_interpolation(known_pt, track_pt=None, dx=None, data_type='lonlat',
         seg_interval, interp_ch = _channel_location(tx, ty, tn)
 
     if data_type == 'lonlat':
-        interp_ch[:, 1], interp_ch[:, 0] = \
+        interp_ch[:, 0], interp_ch[:, 1] = \
             DASProj(interp_ch[:, 0], interp_ch[:, 1], inverse=True)
 
     if verbose:
