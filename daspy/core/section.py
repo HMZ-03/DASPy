@@ -1,6 +1,6 @@
 # Purpose: Module for handling Section objects.
 # Author: Minzhe Hu
-# Date: 2024.4.17
+# Date: 2024.4.20
 # Email: hmz2018@mail.ustc.edu.cn
 import warnings
 import pickle
@@ -704,11 +704,11 @@ class Section(object):
                                  'coordinate data should be given.')
         else:
             output = turning_points(self.data, data_type=data_type, **kwargs)
-
+    
         if isinstance(output, tuple):
-            self.turning_channels = np.array(set(output[0]) + set(output[1]))
-        else:
-            self.turning_channels = output
+            output = np.array(set(output[0]) + set(output[1]))
+        output += + self.start_channel
+        self.turning_channels = output
         return output
 
     def spike_removal(self, nch=50, nsp=5, thresh=10):
