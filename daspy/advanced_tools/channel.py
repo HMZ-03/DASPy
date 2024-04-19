@@ -1,6 +1,6 @@
 # Purpose: Several functions for analysis data quality and geometry of channels
 # Author: Minzhe Hu, Zefeng Li
-# Date: 2024.4.18
+# Date: 2024.4.20
 # Email: hmz2018@mail.ustc.edu.cn
 import numpy as np
 from copy import deepcopy
@@ -243,7 +243,7 @@ def _horizontal_angle_change(geo, gap=10):
     nch = len(geo)
     angle = np.zeros(nch)
     for i in range(1, nch - 1):
-        lat, lon = geo[i]
+        lon, lat = geo[i]
         lon_s, lat_s = geo[max(i - gap, 0)]
         lon_e, lat_e = geo[min(i + gap, nch - 1)]
         azi_s = Geodesic.WGS84.Inverse(lat_s, lon_s, lat, lon)['azi1']
@@ -260,7 +260,7 @@ def _vertical_angle_change(geo, gap=10):
     nch = len(geo)
     angle = np.zeros(nch)
     for i in range(1, nch - 1):
-        lat, lon, dep = geo[i]
+        lon, lat, dep = geo[i]
         lon_s, lat_s, dep_s = geo[max(i - gap, 0)]
         lon_e, lat_e, dep_e = geo[min(i + gap, nch - 1)]
         s12_s = Geodesic.WGS84.Inverse(lat_s, lon_s, lat, lon)['s12']
@@ -274,16 +274,18 @@ def _vertical_angle_change(geo, gap=10):
 
 def _local_maximum_indexes(data, thresh):
     idx = np.where(data > thresh)[0]
-    i = list(np.where(np.diff(idx) > 1)[0] + 1)
-    if len(idx) - 1 not in i:
-        i.append(len(idx) - 1)
-    b = 0
-    max_idx = []
-    for e in i:
-        max_idx.append(idx[b] + np.argmax(data[idx[b]:idx[e]]))
-        b = e
-
-    return max_idx
+    if len(idx):
+        i = list(np.where(np.diff(idx) > 1)[0] + 1)
+        if len(idx) - 1 not in i:
+            i.append(len(idx) - 1)
+        b = 0
+        max_idx = []
+        for e in i:
+            max_idx.append(idx[b] + np.argmax(data[idx[b]:idx[e]]))
+            b = e
+        return max_idx
+    else:
+        return []
 
 
 def turning_points(data, data_type='coordinate', thresh=5, depth_info=False,
