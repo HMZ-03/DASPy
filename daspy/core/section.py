@@ -706,7 +706,7 @@ class Section(object):
             output = turning_points(self.data, data_type=data_type, **kwargs)
     
         if isinstance(output, tuple):
-            output = np.array(set(output[0]) + set(output[1]))
+            output = np.array(list(set(output[0]) | set(output[1])))
         output += + self.start_channel
         self.turning_channels = output
         return output
