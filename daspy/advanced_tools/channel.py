@@ -1,6 +1,6 @@
 # Purpose: Several functions for analysis data quality and geometry of channels
 # Author: Minzhe Hu, Zefeng Li
-# Date: 2024.4.20
+# Date: 2024.4.22
 # Email: hmz2018@mail.ustc.edu.cn
 import numpy as np
 from copy import deepcopy
@@ -51,7 +51,7 @@ def _continuity_checking(lst1, lst2, adjacent=2, toleration=2):
 
 
 def channel_checking(data, deg=10, thresh=5, continuity=True, adjacent=2,
-                     toleration=2, verbose=False):
+                     toleration=2, mode='low', verbose=False):
     """
     Use the energy of each channel to determine which channels are bad.
 
@@ -65,8 +65,9 @@ def channel_checking(data, deg=10, thresh=5, continuity=True, adjacent=2,
     :param adjacent: int. The number of nearby channels for continuity checks.
     :param toleration: int. The number of discontinuous channel allowed in each
         channel (including itself) in the continuity check.
-    :param plot: bool or str. False means no plotting. Str or True means
-        plotting while str gives a non-default filename.
+    :param mode: str. 'low' means bad channels have low amplitude, 'high' means
+        bad channels have high amplitude, and 'both' means bad channels are
+        likely to have low or high amplitude.
     :return: Good channels and bad channels.
     """
     nch = len(data)
@@ -78,7 +79,13 @@ def channel_checking(data, deg=10, thresh=5, continuity=True, adjacent=2,
 
     # Iterate eliminates outliers.
     mad = np.median(abs(deviation[weights > 0]))
-    bad_chn = np.argwhere(deviation < -thresh * mad).ravel().tolist()
+    if mode == 'low':
+        bad_chn = np.argwhere(deviation < -thresh * mad).ravel().tolist()
+    elif mode == 'high':
+        bad_chn = np.argwhere(deviation > thresh * mad).ravel().tolist()
+    elif mode == 'high':
+        bad_chn = np.argwhere(deviation < -thresh * mad).ravel().tolist() + \
+                np.argwhere(deviation > thresh * mad).ravel().tolist()
     good_chn = list(set(range(nch)) - set(bad_chn))
 
     if continuity:
