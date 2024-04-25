@@ -1,6 +1,6 @@
 # Purpose: Module for reading DAS data.
 # Author: Minzhe Hu
-# Date: 2024.4.11
+# Date: 2024.4.25
 # Email: hmz2018@mail.ustc.edu.cn
 # Modified from
 # https://github.com/RobbinLuo/das-toolkit/blob/main/DasTools/DasPrep.py
@@ -78,30 +78,27 @@ def _read_h5(fname, **kwargs):
             data = h5_file['Acquisition/Raw[0]/RawData/'][:, ch1:ch2].T
 
         # read metadata
-        try:
-            time_arr = h5_file['Acquisition/Raw[0]/RawDataTime/']
-            if len(time_arr) == 0:
-                warnings.warn('This data doesn\'t include Data time.')
-                fs = None
-            else:
-                fs = 1 / (np.diff(time_arr).mean() / 1e6)
-        except KeyError:
-            warnings.warn('This data doesn\'t include Data time.')
-            fs = None
+        fs = h5_file['Acquisition/Raw[0]'].attrs['OutputDataRate']
         headers = dict(h5_file['Acquisition'].attrs)
-        dx = headers['SpatialSamplingInterval']
-        gauge_length = headers['GaugeLength']
+        dx = headers.pop('SpatialSamplingInterval')
+        gauge_length = headers.pop('GaugeLength')
         metadata = {'fs': fs, 'dx': dx, 'start_channel': ch1,
                     'start_distance': ch1 * dx, 'gauge_length': gauge_length,
-                    'headers': headers}
+                    }
         if 'MeasurementStartTime' in headers.keys():
-            stime_str = headers['MeasurementStartTime'].decode('ascii')
+            stime_str = headers.pop('MeasurementStartTime').decode('ascii')
             stime = DASDateTime.strptime(
                 stime_str[:-6], '%Y-%m-%dT%H:%M:%S.%f')
             tz_hours, tz_minutes = int(stime_str[-6:-3]), int(stime_str[-2:])
             tz = timezone(timedelta(hours=tz_hours, minutes=tz_minutes))
             stime.replace(tzinfo=tz)
             metadata['start_time'] = stime
+
+        if 'Custom' in h5_file['Acquisition'].keys():
+            headers['refractive_index'] = h5_file['Acquisition/Custom'].\
+                attrs['Fibre Refractive Index']
+
+        metadata['headers'] = headers
 
     return data, metadata
 
@@ -118,10 +115,10 @@ def _read_tdms(fname, **kwargs):
                            for i in range(ch1, ch2)])
 
         # read metadata
-        fs = tdms_file.properties['SamplingFrequency[Hz]']
-        dx = tdms_file.properties['SpatialResolution[m]']
-        gauge_length = tdms_file.properties['GaugeLength']
         headers = tdms_file.properties
+        fs = headers.pop('SamplingFrequency[Hz]')
+        dx = headers.pop('SpatialResolution[m]')
+        gauge_length = headers.pop('GaugeLength')
 
     metadata = {'fs': fs, 'dx': dx, 'start_channel': ch1,
                 'start_distance': ch1 * dx, 'gauge_length': gauge_length,

@@ -1,6 +1,6 @@
 # Purpose: Module for handling Section objects.
 # Author: Minzhe Hu
-# Date: 2024.4.20
+# Date: 2024.4.25
 # Email: hmz2018@mail.ustc.edu.cn
 import warnings
 import pickle
@@ -265,7 +265,7 @@ class Section(object):
 
         plot(data, dx, fs, obj=obj, **kwargs)
 
-    def phase2strain(self, lam, e, n, gl=None):
+    def phase2strain(self, lam, e, n=None, gl=None):
         """
         Convert the optical phase shift in radians to strain, or phase change
         rate to strain rate.
@@ -277,9 +277,16 @@ class Section(object):
         :paran gl: float. Gauge length. Required if self.gauge_length has not
             been set.
         """
+        if n:
+            if hasattr(self, 'headers'):
+                self.headers['refractive_index'] = n
+            else:
+                self.headers = {'refractive_index': n}
         if gl:
             self.gauge_length = gl
-        self.data = phase2strain(self.data, lam, e, n, self.gauge_length)
+        self.data = phase2strain(self.data, lam, e,
+                                 self.headers['refractive_index'],
+                                 self.gauge_length)
         if hasattr(self, 'data_type'):
             if 'phase' not in self.data_type:
                 warnings.warn('The data type is {}, not phase shift. But it' +
