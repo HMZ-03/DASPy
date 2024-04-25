@@ -11,14 +11,13 @@ import h5py
 import segyio
 from pathlib import Path
 from nptdms import TdmsFile
-from datetime import timedelta, timezone
 from daspy.core.section import Section
 from daspy.core.dasdatetime import DASDateTime
 
 
 def read(fname=None, output_type='Section', **kwargs):
     """
-    :param fname: Path of DAS data file.
+    :param fname: str or pathlib.PosixPath. Path of DAS data file.
     :param output_type: str. 'Section' means output an instances of
         daspy.Section, 'array' means output numpy.array for data and a
         dictionary for metadata
@@ -64,9 +63,58 @@ def _read_pkl(fname, **kwargs):
     return data, sec_dict
 
 
+def _read_h5_headers(group):
+    headers = {}
+    if len(group.attrs) != 0:
+        headers['attrs'] = dict(group.attrs)
+    for k in group.keys():
+        gp = group[k]
+        if len(gp) == 0 or isinstance(gp, h5py._hl.dataset.Dataset):
+            continue
+        elif isinstance(gp, h5py._hl.group.Group):
+            gp_headers = _read_h5_headers(group[k])
+            if len(gp_headers):
+                headers[k] = gp_headers
+        else:
+            headers[k] = gp
+    
+    return headers
+
+
+def _read_h5_starttime(h5_file):
+    try:
+        stime = h5_file['Acquisition/Raw[0]/RawData'].\
+            attrs['PartStartTime'].decode('ascii')
+    except KeyError:
+        try:
+            stime = h5_file['Acquisition'].\
+                attrs['MeasurementStartTime'].decode('ascii')
+        except KeyError:
+            try:
+                stime = h5_file['Acquisition/Raw[0]/RawDataTime/'][0]
+            except KeyError:
+                return 0
+
+    if isinstance(stime, str):
+        if len(stime) > 26:
+            stime = DASDateTime.strptime(stime, '%Y-%m-%dT%H:%M:%S.%f%z')
+        else:
+            stime = DASDateTime.strptime(stime, '%Y-%m-%dT%H:%M:%S.%f')
+    else:
+        stime = DASDateTime.fromtimestamp(stime / 1e6)
+
+    return stime
+
+
 def _read_h5(fname, **kwargs):
     with h5py.File(fname, 'r') as h5_file:
-        nch = h5_file['Acquisition'].attrs['NumberOfLoci']
+        # read headers
+
+        try:
+            nch = h5_file['Acquisition'].attrs['NumberOfLoci']
+        except KeyError:
+            nch = len(h5_file['Acquisition/Raw[0]/RawData/'])
+
         ch1 = kwargs.pop('ch1', 0)
         ch2 = kwargs.pop('ch2', nch)
 
@@ -78,27 +126,20 @@ def _read_h5(fname, **kwargs):
             data = h5_file['Acquisition/Raw[0]/RawData/'][:, ch1:ch2].T
 
         # read metadata
-        fs = h5_file['Acquisition/Raw[0]'].attrs['OutputDataRate']
-        headers = dict(h5_file['Acquisition'].attrs)
-        dx = headers.pop('SpatialSamplingInterval')
-        gauge_length = headers.pop('GaugeLength')
+        try:
+            fs = h5_file['Acquisition/Raw[0]'].attrs['OutputDataRate']
+        except KeyError:
+            time_arr = h5_file['Acquisition/Raw[0]/RawDataTime/']
+            fs = 1 / (np.diff(time_arr).mean() / 1e6)
+        
+        dx = h5_file['Acquisition']['attrs']['SpatialSamplingInterval']
+        gauge_length = h5_file['Acquisition'].attrs['GaugeLength']
         metadata = {'fs': fs, 'dx': dx, 'start_channel': ch1,
                     'start_distance': ch1 * dx, 'gauge_length': gauge_length,
                     }
-        if 'MeasurementStartTime' in headers.keys():
-            stime_str = headers.pop('MeasurementStartTime').decode('ascii')
-            stime = DASDateTime.strptime(
-                stime_str[:-6], '%Y-%m-%dT%H:%M:%S.%f')
-            tz_hours, tz_minutes = int(stime_str[-6:-3]), int(stime_str[-2:])
-            tz = timezone(timedelta(hours=tz_hours, minutes=tz_minutes))
-            stime.replace(tzinfo=tz)
-            metadata['start_time'] = stime
 
-        if 'Custom' in h5_file['Acquisition'].keys():
-            headers['refractive_index'] = h5_file['Acquisition/Custom'].\
-                attrs['Fibre Refractive Index']
-
-        metadata['headers'] = headers
+        metadata['start_time'] = _read_h5_starttime(h5_file)
+        metadata['headers'] = _read_h5_headers(h5_file)
 
     return data, metadata
 

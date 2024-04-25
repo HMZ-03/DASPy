@@ -92,26 +92,26 @@ class Section(object):
         if isinstance(other, Section):
             if other.dx != self.dx:
                 if self.dx is None:
-                    self.dx = other.dx
+                    out.dx = other.dx
                 elif other.dx is not None:
                     raise ValueError('These two Sections have different dx, '
                                      'please check.')
-            elif other.fs != self.fs:
+            if other.fs != self.fs:
                 if self.fs is None:
-                    self.fs = other.fs
+                    out.fs = other.fs
                 elif other.fs is not None:
                     raise ValueError('These two Sections have different fs, '
                                      'please check.')
-            elif isinstance(self.end_time, DASDateTime) and \
-                    isinstance(other.start_time, DASDateTime):
-                if abs(other.start_time - self.end_time) > 1 / other.fs:
-                    if abs(other.end_time - self.start_time) <= 1 / other.fs:
-                        out = other.copy()
-                        other = self.copy()
-                    else:
-                        warnings.warn('The start time of the second Section is '
-                                      'inconsistent with the end time of the '
-                                      'first Section')
+            if abs(other.start_time - self.end_time - self.dt) > self.dt:
+                if abs(other.end_time - self.start_time - self.dt) <= self.dt:
+                    warnings.warn('According to the time information of the two'
+                                  ' Sections, the order of addition is '
+                                  'reversed.')
+                    return other + self
+                else:
+                    warnings.warn('The start time of the second Section is '
+                                  'inconsistent with the end time of the first '
+                                  'Section.')
             data = other.data
         elif isinstance(other, np.ndarray):
             data = other
@@ -138,6 +138,10 @@ class Section(object):
         return self.data.shape
 
     @property
+    def dt(self):
+        return 1 / self.fs
+
+    @property
     def nch(self):
         return len(self.data)
 
@@ -155,7 +159,7 @@ class Section(object):
 
     @property
     def end_time(self):
-        return self.start_time + self.nt / self.fs
+        return self.start_time + (self.nt - 1) / self.fs
 
     def copy(self):
         return deepcopy(self)
@@ -265,7 +269,7 @@ class Section(object):
 
         plot(data, dx, fs, obj=obj, **kwargs)
 
-    def phase2strain(self, lam, e, n=None, gl=None):
+    def phase2strain(self, lam, e, n, gl=None):
         """
         Convert the optical phase shift in radians to strain, or phase change
         rate to strain rate.
@@ -277,22 +281,16 @@ class Section(object):
         :paran gl: float. Gauge length. Required if self.gauge_length has not
             been set.
         """
-        if n:
-            if hasattr(self, 'headers'):
-                self.headers['refractive_index'] = n
-            else:
-                self.headers = {'refractive_index': n}
         if gl:
             self.gauge_length = gl
-        self.data = phase2strain(self.data, lam, e,
-                                 self.headers['refractive_index'],
-                                 self.gauge_length)
+        self.data = phase2strain(self.data, lam, e, n, self.gauge_length)
         if hasattr(self, 'data_type'):
             if 'phase' not in self.data_type:
                 warnings.warn('The data type is {}, not phase shift. But it' +
                               'still takes effect.'.format(self.data_type))
             else:
-                self.data_type = self.data_type.replace('phase shift', 'strain')
+                self.data_type = self.data_type.replace(
+                    'phase shift', 'strain')
                 self.data_type = self.data_type.replace('phase change rate',
                                                         'strain rate')
         return self
@@ -711,7 +709,7 @@ class Section(object):
                                  'coordinate data should be given.')
         else:
             output = turning_points(self.data, data_type=data_type, **kwargs)
-    
+
         if isinstance(output, tuple):
             output = np.array(list(set(output[0]) | set(output[1])))
         output += + self.start_channel
