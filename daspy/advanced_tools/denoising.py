@@ -90,21 +90,15 @@ def _noise_level(data, nbscales=None, nbangles=16, percentile=95):
     return E_noise
 
 
-def _knee_points(data, nbscales=None, nbangles=16, factor=0.25):
+def _knee_points(C, factor=0.2):
     """
     Find threshold for curvelet denoising without noise record.
 
-    :param data: numpy.ndarray. Data to denoise.
-    :param nbscales: int. Number of scales including the coarsest wavelet level.
-        Default set to ceil(log2(min(M,N)) - 3).
-    :param nbangles: int. Number of angles at the 2nd coarsest level,
-        minimum 8, must be a multiple of 4.
+    :param C: 2-D list of np.ndarray. Array of curvelet coefficients.
     :param factor: float. Multiplication factor from 0 to 1. Small factor
         corresponds to conservative strategy.
     :return: 2-D list. Threshold for curvelet coefficients.
     """
-    C = fdct_wrapping(data, is_real=False, finest=2, nbscales=nbscales,
-                      nbangles_coarse=nbangles)
     E_knee = []
     for s in range(len(C)):
         E_knee.append([])
@@ -170,9 +164,9 @@ def _mask_factor(velocity, vmin, vmax, flag=None, mode='remove'):
 
 
 def curvelet_denoising(data, choice=0, pad=0.3, noise=None, noise_perc=95,
-                       knee_fac=0.25, soft_thresh=True, 
-                       v_range=None, flag=None, dx=None, fs=None, mode='remove',
-                       scale_begin=3, nbscales=None, nbangles=16):
+                       knee_fac=0.2, soft_thresh=True, v_range=None, flag=None,
+                       dx=None, fs=None, mode='remove', scale_begin=3,
+                       nbscales=None, nbangles=16):
     """
     Use curevelet transform to filter stochastic or/and cooherent noise.
     Modified from
@@ -221,8 +215,7 @@ def curvelet_denoising(data, choice=0, pad=0.3, noise=None, noise_perc=95,
     if choice in (0, 2):
         # define threshold
         if noise is None:
-            E = _knee_points(data_pd, nbscales=nbscales, nbangles=nbangles,
-                             factor=knee_fac)
+            E = _knee_points(C, factor=knee_fac)
         else:
             if not isinstance(noise, np.ndarray):
                 noise = noise.data
