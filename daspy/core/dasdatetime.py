@@ -1,9 +1,9 @@
 # Purpose: Module for handling DASDateTime objects.
 # Author: Minzhe Hu
-# Date: 2024.4.15
+# Date: 2024.4.25
 # Email: hmz2018@mail.ustc.edu.cn
-from typing import Iterable
 import time
+from typing import Iterable
 from datetime import datetime, timedelta, timezone
 
 
@@ -34,11 +34,11 @@ class DASDateTime(datetime):
             return out
         elif isinstance(other, datetime):
             if self.tzinfo and not other.tzinfo:
-                return (super().__sub__(other.replace(tzinfo=local_tz
-                                                      ))).total_seconds()
+                return super().__sub__(other.replace(tzinfo=self.tzinfo)).\
+                    total_seconds()
             elif not self.tzinfo and other.tzinfo:
                 return - (other - self)
-            return (super().__sub__(other)).total_seconds()
+            return super().__sub__(other).total_seconds()
         elif not isinstance(other, timedelta):
             other = timedelta(seconds=other)
         return super().__sub__(other)
