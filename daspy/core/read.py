@@ -69,7 +69,7 @@ def _read_h5_headers(group):
         headers['attrs'] = dict(group.attrs)
     for k in group.keys():
         gp = group[k]
-        if len(gp) == 0 or isinstance(gp, h5py._hl.dataset.Dataset):
+        if isinstance(gp, h5py._hl.dataset.Dataset):
             continue
         elif isinstance(gp, h5py._hl.group.Group):
             gp_headers = _read_h5_headers(group[k])
@@ -132,7 +132,7 @@ def _read_h5(fname, **kwargs):
             time_arr = h5_file['Acquisition/Raw[0]/RawDataTime/']
             fs = 1 / (np.diff(time_arr).mean() / 1e6)
         
-        dx = h5_file['Acquisition']['attrs']['SpatialSamplingInterval']
+        dx = h5_file['Acquisition'].attrs['SpatialSamplingInterval']
         gauge_length = h5_file['Acquisition'].attrs['GaugeLength']
         metadata = {'fs': fs, 'dx': dx, 'start_channel': ch1,
                     'start_distance': ch1 * dx, 'gauge_length': gauge_length,
