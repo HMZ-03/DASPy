@@ -5,7 +5,6 @@
 import numpy as np
 from scipy.ndimage import median_filter
 from scipy.interpolate import interp1d
-from daspy import Section
 from daspy.basic_tools.preprocessing import padding
 from daspy.advanced_tools.fdct import fdct_wrapping, ifdct_wrapping
 
@@ -215,7 +214,7 @@ def curvelet_denoising(data, choice=0, pad=0.3, noise=None, soft_thresh=True,
         if noise is None:
             E = _knee_points(data_pd, nbscales=nbscales, nbangles=nbangles)
         else:
-            if isinstance(noise, Section):
+            if not isinstance(noise, np.ndarray):
                 noise = noise.data
             noise_pd = padding(noise,
                                np.array(data_pd.shape) - np.array(noise.shape))
