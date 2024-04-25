@@ -1,10 +1,11 @@
 # Purpose: Remove noise from data
 # Author: Minzhe Hu, Zefeng Li
-# Date: 2024.4.14
+# Date: 2024.4.25
 # Email: hmz2018@mail.ustc.edu.cn
 import numpy as np
 from scipy.ndimage import median_filter
 from scipy.interpolate import interp1d
+from daspy import Section
 from daspy.basic_tools.preprocessing import padding
 from daspy.advanced_tools.fdct import fdct_wrapping, ifdct_wrapping
 
@@ -182,7 +183,7 @@ def curvelet_denoising(data, choice=0, pad=0.3, noise=None, soft_thresh=True,
     :param pad: float or sequence of floats. Each float means padding percentage
         before FFT for corresponding dimension. If set to 0.1 will pad 5% before
         the beginning and after the end.
-    :param noise: numpy.ndarray. Noise record as reference.
+    :param noise: numpy.ndarray or daspy.Section. Noise record as reference.
     :param soft_thresh: bool. True for soft thresholding and False for hard
         thresholding.
     :param vrange: tuple or list. (vmin vmax) for filter out cooherent noise of
@@ -214,6 +215,8 @@ def curvelet_denoising(data, choice=0, pad=0.3, noise=None, soft_thresh=True,
         if noise is None:
             E = _knee_points(data_pd, nbscales=nbscales, nbangles=nbangles)
         else:
+            if isinstance(noise, Section):
+                noise = noise.data
             noise_pd = padding(noise,
                                np.array(data_pd.shape) - np.array(noise.shape))
             E = _noise_level(noise_pd, nbscales=nbscales, nbangles=nbangles)
