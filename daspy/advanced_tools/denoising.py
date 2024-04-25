@@ -64,7 +64,7 @@ def common_mode_noise_removal(data, method='median'):
     return data_dn
 
 
-def _noise_level(data, percentile=95, nbscales=None, nbangles=16):
+def _noise_level(data, nbscales=None, nbangles=16, percentile=95):
     """
     Find threshold for curvelet denoising with noise record.
 
@@ -73,6 +73,8 @@ def _noise_level(data, percentile=95, nbscales=None, nbangles=16):
         Default set to ceil(log2(min(M,N)) - 3).
     :param nbangles: int. Number of angles at the 2nd coarsest level,
         minimum 8, must be a multiple of 4.
+    :param percentile: number. The threshold is taken as this percentile of the
+        curvelet coefficient of the noise record
     :return: 2-D list. Threshold for curvelet coefficients.
     """
     C = fdct_wrapping(data, is_real=False, finest=2, nbscales=nbscales,
@@ -88,17 +90,17 @@ def _noise_level(data, percentile=95, nbscales=None, nbangles=16):
     return E_noise
 
 
-def _knee_points(data, factor=0.25, nbscales=None, nbangles=16):
+def _knee_points(data, nbscales=None, nbangles=16, factor=0.25):
     """
     Find threshold for curvelet denoising without noise record.
 
     :param data: numpy.ndarray. Data to denoise.
-    :param facetor: float. Multiplication factor from 0 to 1. Small factor
-        corresponds to conservative strategy.
     :param nbscales: int. Number of scales including the coarsest wavelet level.
         Default set to ceil(log2(min(M,N)) - 3).
     :param nbangles: int. Number of angles at the 2nd coarsest level,
         minimum 8, must be a multiple of 4.
+    :param factor: float. Multiplication factor from 0 to 1. Small factor
+        corresponds to conservative strategy.
     :return: 2-D list. Threshold for curvelet coefficients.
     """
     C = fdct_wrapping(data, is_real=False, finest=2, nbscales=nbscales,
@@ -167,7 +169,8 @@ def _mask_factor(velocity, vmin, vmax, flag=None, mode='remove'):
         return 1 - factors
 
 
-def curvelet_denoising(data, choice=0, pad=0.3, noise=None, soft_thresh=True,
+def curvelet_denoising(data, choice=0, pad=0.3, noise=None, noise_perc=95,
+                       knee_fac=0.25, soft_thresh=True, 
                        v_range=None, flag=None, dx=None, fs=None, mode='remove',
                        scale_begin=3, nbscales=None, nbangles=16):
     """
@@ -183,6 +186,12 @@ def curvelet_denoising(data, choice=0, pad=0.3, noise=None, soft_thresh=True,
         before FFT for corresponding dimension. If set to 0.1 will pad 5% before
         the beginning and after the end.
     :param noise: numpy.ndarray or daspy.Section. Noise record as reference.
+    :param noise_perc: number. The threshold is taken as this percentile of the
+        curvelet coefficient of the noise record. (only used when noise is
+        specified)
+    :param knee_fac: float. Multiplication factor from 0 to 1. Small factor
+        corresponds to conservative strategy. (only used when noise is not
+        specified)
     :param soft_thresh: bool. True for soft thresholding and False for hard
         thresholding.
     :param vrange: tuple or list. (vmin vmax) for filter out cooherent noise of
@@ -210,15 +219,17 @@ def curvelet_denoising(data, choice=0, pad=0.3, noise=None, soft_thresh=True,
 
     # apply Gaussian denoising
     if choice in (0, 2):
-        # define soft threshold
+        # define threshold
         if noise is None:
-            E = _knee_points(data_pd, nbscales=nbscales, nbangles=nbangles)
+            E = _knee_points(data_pd, nbscales=nbscales, nbangles=nbangles,
+                             factor=knee_fac)
         else:
             if not isinstance(noise, np.ndarray):
                 noise = noise.data
             noise_pd = padding(noise,
                                np.array(data_pd.shape) - np.array(noise.shape))
-            E = _noise_level(noise_pd, nbscales=nbscales, nbangles=nbangles)
+            E = _noise_level(noise_pd, nbscales=nbscales, nbangles=nbangles,
+                             percentile=noise_perc)
         for s in range(1, len(C)):
             for w in range(len(C[s])):
                 # first do a hard threshold
