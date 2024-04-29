@@ -234,8 +234,7 @@ def curvelet_denoising(data, choice=0, pad=0.3, noise=None, noise_perc=95,
     # apply velocity filtering
     if choice in (1, 2):
         if dx is None or fs is None:
-            msg = 'Please set both dx and fs.'
-            raise ValueError(msg)
+            raise ValueError('Please set both dx and fs.')
 
         vmin, vmax = v_range
         for s in range(scale_begin - 1, len(C) - 1):
