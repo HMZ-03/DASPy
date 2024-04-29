@@ -1,16 +1,18 @@
 # Purpose: Plot data
 # Author: Minzhe Hu
-# Date: 2024.4.17
+# Date: 2024.4.29
 # Email: hmz2018@mail.ustc.edu.cn
 import numpy as np
 import matplotlib.pyplot as plt
+from collections.abc import Sequence
 
 
 def plot(data, dx=None, fs=None, ax=None, obj='waveform', dpi=150, title=None,
          transpose=False, t0=0, x0=0, pick=None, f=None, k=None, t=None, c=None,
          cmap=None, vmin=None, vmax=None, xmode='distance', tmode='time',
          xlim=None, ylim=None, xlog=False, ylog=False, xinv=False, yinv=False,
-         xaxis=True, yaxis=True, colorbar=True):
+         xlabel=True, ylabel=True, xticklabels=True, yticklabels=True,
+         colorbar=True):
     """
     Plot several types of 2-D seismological data.
 
@@ -38,8 +40,11 @@ def plot(data, dx=None, fs=None, ax=None, obj='waveform', dpi=150, title=None,
     :param tmode: str. 'time' or 'sampling'.
     :param xlim, ylim: Set the x-axis and y-axis view limits.
     :param xlog, ylog: bool. If True, set the x-axis' or y-axis' scale as log.
-    :param xinv, yinv: bool. If True, invert x-axis or y-axis.
-    :param xaxis, yaxis: bool. Show ticks and labels for x-axis or y-axis.
+    :param xlabel, yinv: bool. If True, invert x-axis or y-axis.
+    :param xlabel, ylabel: bool or str. Whether to plot a label or what label to
+        plot for x-axis or y-axis.
+    :param xticklabels, yticklabels: bool or sequence of str. Whether to plot
+        ticklabels or what ticklabels to plot for x-axis or y-axis.
     :param colorbar: bool, str or Matplotlib.axes.Axes. Bool means plot colorbar
         or not. Str means the location of colorbar. Axes means the Axes into
         which the colorbar will be drawn.
@@ -52,24 +57,21 @@ def plot(data, dx=None, fs=None, ax=None, obj='waveform', dpi=150, title=None,
         show = False
 
     if obj in ['waveform', 'phasepick']:
-        if not cmap:
-            cmap = 'RdBu'
-        if vmax is None:
-            vmax = np.percentile(abs(data), 80)
-        if vmin is None:
-            vmin = -vmax
+        cmap = 'RdBu' if cmap is None else cmap
+        vmax = np.percentile(abs(data), 80) if vmax is None else vmax
+        vmin = -vmax if vmin is None else vmin
         origin = 'upper'
         if fs is None or tmode == 'sampling':
-            ylabel = 'Sampling points'
+            ylabel_default = 'Sampling points'
             fs = 1
         elif tmode == 'time':
-            ylabel = 'Time (s)'
+            ylabel_default = 'Time (s)'
 
         if dx is None or xmode == 'channel':
-            xlabel = 'Channel'
+            xlabel_default = 'Channel'
             extent = [x0, x0 + nch, t0 + nt / fs, t0]
         elif xmode == 'distance':
-            xlabel = 'Disitance (km)'
+            xlabel_default = 'Disitance (km)'
             extent = [x0 * 1e-3, (x0 + nch * dx) * 1e-3, t0 + nt / fs, t0]
 
         if obj == 'phasepick':
@@ -89,37 +91,34 @@ def plot(data, dx=None, fs=None, ax=None, obj='waveform', dpi=150, title=None,
     if obj in ['spectrum', 'spectrogram', 'fk', 'dispersion']:
         if isinstance(data[0, 0], complex):
             data = abs(data)
-        if not cmap:
-            cmap = 'jet'
-        if vmax is None:
-            vmax = np.percentile(data, 80)
-        if vmin is None:
-            vmin = np.percentile(data, 20)
+        cmap = 'jet' if not cmap is None else cmap
+        vmax = np.percentile(abs(data), 80) if vmax is None else vmax
+        vmin = np.percentile(abs(data), 20) if vmin is None else vmin
         if obj == 'spectrum':
             origin = 'lower'
             if dx is None or xmode == 'channel':
-                xlabel = 'Channel'
+                xlabel_default = 'Channel'
                 extent = [x0, x0 + nch, f.min(), f.max()]
             elif xmode == 'distance':
-                xlabel = 'Disitance (km)'
+                xlabel_default = 'Disitance (km)'
                 extent = [x0 * 1e-3, (x0 + nch * dx) * 1e-3, f.min(), f.max()]
-            ylabel = 'Frequency (Hz)'
+            ylabel_default = 'Frequency (Hz)'
         elif obj == 'spectrogram':
             data = data.T
             origin = 'lower'
-            xlabel = 'Time (s)'
-            ylabel = 'Frequency (Hz)'
+            xlabel_default = 'Time (s)'
+            ylabel_default = 'Frequency (Hz)'
             extent = [t0 + min(t), t0 + max(t), min(f), max(f)]
         elif obj == 'fk':
             origin = 'lower'
-            xlabel = 'Wavenumber (m$^{-1}$)'
-            ylabel = 'Frequency (Hz)'
+            xlabel_default = 'Wavenumber (m$^{-1}$)'
+            ylabel_default = 'Frequency (Hz)'
             extent = [min(k), max(k), min(f), max(f)]
         elif obj == 'dispersion':
             data = data.T
             origin = 'lower'
-            xlabel = 'Frequency (Hz)'
-            ylabel = 'Phase Velocity (m/s)'
+            xlabel_default = 'Frequency (Hz)'
+            ylabel_default = 'Phase Velocity (m/s)'
             extent = [min(f), max(f), min(c), max(c)]
 
     if transpose:
@@ -128,20 +127,28 @@ def plot(data, dx=None, fs=None, ax=None, obj='waveform', dpi=150, title=None,
         else:
             origin = 'lower'
             extent = [extent[3], extent[2], extent[0], extent[1]]
-        (xlabel, ylabel) = (ylabel, xlabel)
+        (xlabel_default, ylabel_default) = (ylabel_default, xlabel_default)
         data = data.T
+
+    xlabel = xlabel if isinstance(xlabel, str) else \
+            xlabel_default if xlabel else None
+    ylabel = ylabel if isinstance(ylabel, str) else \
+            ylabel_default if ylabel else None
 
     bar = ax.imshow(data.T, vmin=vmin, vmax=vmax, extent=extent, aspect='auto',
                     origin=origin, cmap=cmap)
     if title:
         ax.set_title(title)
-    if xaxis:
-        ax.set_xlabel(xlabel)
-    else:
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    if isinstance(xticklabels, Sequence):
+        ax.set_xticklabels(xticklabels)
+    elif not xticklabels:
         ax.set_xticklabels([])
-    if yaxis:
-        ax.set_ylabel(ylabel)
-    else:
+    
+    if isinstance(yticklabels, Sequence):
+        ax.set_yticklabels(yticklabels)
+    elif not yticklabels:
         ax.set_yticklabels([])
     if xinv:
         ax.invert_xaxis()
@@ -158,7 +165,7 @@ def plot(data, dx=None, fs=None, ax=None, obj='waveform', dpi=150, title=None,
     if colorbar:
         if colorbar is True:
             plt.colorbar(bar, ax=ax, location='right')
-        elif isinstance(colorbar, (str, bool)):
+        elif isinstance(colorbar, str):
             plt.colorbar(bar, ax=ax, location=colorbar)
         else:
             plt.colorbar(bar, cax=colorbar)
