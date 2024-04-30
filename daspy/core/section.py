@@ -802,7 +802,13 @@ class Section(object):
         output = fk_filter(self.data, self.dx, self.fs, mode=mode,
                            verbose=verbose, **kwargs)
         if mode == 'decompose':
-            return output
+            sec1 = self.copy()
+            sec2 = self.copy()
+            sec1.data, sec2.data = output[:2]
+            if verbose:
+                return sec1, sec2, *output[2:]
+            else:
+                return sec1, sec2
         elif verbose:
             self.data = output[0]
             return output
@@ -833,7 +839,10 @@ class Section(object):
         output = curvelet_windowing(self.data, self.dx, self.fs, mode=mode,
                                     **kwargs)
         if mode == 'decompose':
-            return output
+            sec1 = self.copy()
+            sec2 = self.copy()
+            sec1.data, sec2.data = output
+            return sec1, sec2
         else:
             self.data = output
             return self

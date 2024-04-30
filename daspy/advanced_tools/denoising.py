@@ -3,6 +3,7 @@
 # Date: 2024.4.29
 # Email: hmz2018@mail.ustc.edu.cn
 import numpy as np
+from copy import deepcopy
 from scipy.ndimage import median_filter
 from scipy.interpolate import interp1d
 from daspy.basic_tools.preprocessing import padding
@@ -140,7 +141,7 @@ def _velocity_bin(nbangles, fs, dx):
     return velocity
 
 
-def _mask_factor(velocity, vmin, vmax, flag=None):
+def _mask_factor(velocity, vmin, vmax, flag=0):
     if flag:
         if flag == -1:
             vmin = -vmax
@@ -163,7 +164,7 @@ def _mask_factor(velocity, vmin, vmax, flag=None):
 
 def curvelet_denoising(data, choice=0, pad=0.3, noise=None, noise_perc=95,
                        knee_fac=0.2, soft_thresh=True, vmin=0, vmax=np.inf,
-                       flag=None, dx=None, fs=None, mode='remove',
+                       flag=0, dx=None, fs=None, mode='remove',
                        scale_begin=3, nbscales=None, nbangles=16):
     """
     Use curevelet transform to filter stochastic or/and cooherent noise.
@@ -192,8 +193,8 @@ def curvelet_denoising(data, choice=0, pad=0.3, noise=None, noise_perc=95,
         apparent velocities.
     :param dx: Channel interval in m.
     :param fs: Sampling rate in Hz.
-    :param mode: str. 'remove' for denoising, 'retain' for extraction, and
-        'decompose' for decomposition.
+    :param mode: str. Only available when choice in (1,2). 'remove' for
+        denoising, 'retain' for extraction, and 'decompose' for decomposition.
     :param scale_begin: int. The beginning scale to do coherent denoising.
     :param nbscales: int. Number of scales including the coarsest wavelet level.
         Default set to ceil(log2(min(M,N)) - 3).
@@ -235,7 +236,7 @@ def curvelet_denoising(data, choice=0, pad=0.3, noise=None, noise_perc=95,
             raise ValueError('Please set both dx and fs.')
 
         if mode == 'decompose':
-            C_rt = C
+            C_rt = deepcopy(C)
 
         for s in range(scale_begin - 1, len(C) - 1):
             nbangles = len(C[s])

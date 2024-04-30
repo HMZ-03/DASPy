@@ -131,8 +131,9 @@ def fk_filter(data, dx, fs, taper=(0.02, 0.05), pad='default', mode='decompose',
             return data_flt
 
 
-def curvelet_windowing(data, dx, fs, vmin=None, vmax=None, flag=None, pad=0.3,
-                       scale_begin=3, nbscales=None, nbangles=16):
+def curvelet_windowing(data, dx, fs, mode='decompose', vmin=0, vmax=np.inf,
+                       flag=None, pad=0.3, scale_begin=3, nbscales=None,
+                       nbangles=16):
     """
     Use curevelet transform to keep cooherent signal with certain velocity
     range. {Atterholt et al., 2022 , Geophys. J. Int.}
@@ -140,6 +141,8 @@ def curvelet_windowing(data, dx, fs, vmin=None, vmax=None, flag=None, pad=0.3,
     :param data: numpy.ndarray. Data to decomposite.
     :param dx: Channel interval in m.
     :param fs: Sampling rate in Hz.
+    :param mode: str. 'remove' for denoising, 'retain' for extraction, and
+        'decompose' for decomposition.
     :param vmin, vmax: float. Velocity range in m/s.
     :param flag: -1 keep only negative apparent velocities, 0 keep both postive
         and negative apparent velocities, 1 keep only positive apparent
@@ -154,11 +157,7 @@ def curvelet_windowing(data, dx, fs, vmin=None, vmax=None, flag=None, pad=0.3,
         minimum 8, must be a multiple of 4.
     :return: numpy.ndarray. Denoised data.
     """
-    if vmin is None:
-        vmin = 0
-    if vmax is None:
-        vmax = np.inf
     return curvelet_denoising(data, choice=1, pad=pad, vmin=vmin, vmax=vmax,
-                              flag=flag, dx=dx, fs=fs, mode='decompose',
+                              flag=flag, dx=dx, fs=fs, mode=mode,
                               scale_begin=scale_begin, nbscales=nbscales,
                               nbangles=nbangles)
