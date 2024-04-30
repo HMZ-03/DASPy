@@ -653,11 +653,13 @@ class Section(object):
         """
         return fk_transform(self.data, self.dx, self.fs, **kwargs)
 
-    def channel_checking(self, **kwargs):
+    def channel_checking(self, use=False, **kwargs):
         """
         Use the energy of each channel to determine which channels are bad.
 
-        :param deg: int. Degree of the fitting polynomial
+        :param use: bool. If True, only keep the data of good channels in
+            self.data and return self.
+        :param deg: int. Degree of the fitting polynomial.
         :param thresh: int or float. The MAD multiple of bad channel energy
             lower than good channels.
         :param continuity: bool. Perform continuity checks on bad channels and
@@ -668,9 +670,16 @@ class Section(object):
             each channel (including itself) in the continuity check.
         :param plot: bool or str. False means no plotting. Str or True means
             plotting while str gives a non-default filename.
-        :return: Good channels and bad channels.
+        :return: self or Good channels and bad channels.
         """
-        return channel_checking(self.data, **kwargs)
+        good_chn, bad_chn = channel_checking(self.data, **kwargs)
+        if use:
+            self.data = self.data[good_chn]
+            self.start_channel += good_chn[0]
+            self.start_distance += good_chn[0] * self.dx
+            return self
+        else:
+            return good_chn, bad_chn
 
     def turning_points(self, data_type='waveform', **kwargs):
         """
@@ -740,23 +749,23 @@ class Section(object):
         """
         Use curevelet transform to filter stochastic or/and cooherent noise.
 
-        :param choice: int. 0 for Gaussian denoising using soft thresholding, 1 for
-            velocity filtering using the standard FK methodology and 2 for both.
-        :param pad: float or sequence of floats. Each float means padding percentage
-            before FFT for corresponding dimension. If set to 0.1 will pad 5% before
-            the beginning and after the end.
+        :param choice: int. 0 for Gaussian denoising using soft thresholding, 1
+            for velocity filtering using the standard FK methodology and 2 for
+            both.
+        :param pad: float or sequence of floats. Each float means padding
+            percentage before FFT for corresponding dimension. If set to 0.1
+            will pad 5% before the beginning and after the end.
         :param noise: numpy.ndarray. Noise record as reference.
         :param soft_thresh: bool. True for soft thresholding and False for hard
             thresholding.
-        :param vrange: tuple or list. (vmin vmax) for filter out cooherent noise of
-            velocity between vmin and vmax m/s.
+        :param vmin, vmax: float. Velocity range in m/s.
         :param flag: -1 choose only negative apparent velocities, 0 choose both
             postive and negative apparent velocities, 1 choose only positive
             apparent velocities.
         :param mode: str. 'remove' for denoising and 'retain' for decomposition.
         :param scale_begin: int. The beginning scale to do coherent denoising.
-        :param nbscales: int. Number of scales including the coarsest wavelet level.
-            Default set to ceil(log2(min(M,N)) - 3).
+        :param nbscales: int. Number of scales including the coarsest wavelet
+            level. Default set to ceil(log2(min(M,N)) - 3).
         :param nbangles: int. Number of angles at the 2nd coarsest level,
             minimum 8, must be a multiple of 4.
         """
@@ -764,13 +773,15 @@ class Section(object):
                                        **kwargs)
         return self
 
-    def fk_filter(self, verbose=False, **kwargs):
+    def fk_filter(self, mode='retain', verbose=False, **kwargs):
         """
         Transform the data to the f-k domain using 2-D Fourier transform method,
         and transform back to the x-t domain after filtering.
 
-        :param verbose: If True, return f-k spectrum, frequency sequence,
-            wavenumber sequence and f-k mask.
+        :param mode: str. 'remove' for denoising, 'retain' for extraction, and
+            'decompose' for decomposition and not update self.data.
+        :param verbose: If True, return filtered data, f-k spectrum,
+            frequency sequence, wavenumber sequence and f-k mask.
         :param taper: float or sequence of floats. Each float means decimal
             percentage of Tukey taper for corresponding dimension (ranging from
             0 to 1). Default is 0.1 which tapers 5% from the beginning and 5%
@@ -786,38 +797,46 @@ class Section(object):
         :param edge: float. The width of fan mask taper edge.
         :param flag: -1 keep only negative apparent velocities, 0 keep both
             postive and negative apparent velocities, 1 keep only positive
-            pparent velocities.
-        :param izero: Whether rezero anything that was zero before the filter.
+            apparent velocities.
         """
-        if verbose:
-            data_flt, fk, f, k, mask = fk_filter(self.data, self.dx, self.fs,
-                                                 verbose=True, **kwargs)
-            self.data = data_flt
-            return fk, f, k, mask
+        output = fk_filter(self.data, self.dx, self.fs, mode=mode,
+                           verbose=verbose, **kwargs)
+        if mode == 'decompose':
+            return output
+        elif verbose:
+            self.data = output[0]
+            return output
         else:
-            self.data = fk_filter(self.data, self.dx, self.fs, **kwargs)
+            self.data = output
             return self
 
-    def curvelet_windowing(self, **kwargs):
+    def curvelet_windowing(self, mode='retain', **kwargs):
         """
         Use curevelet transform to keep cooherent signal with certain velocity
         range.
 
+        :param mode: str. 'remove' for denoising, 'retain' for extraction, and
+            'decompose' for decomposition and not update self.data.
         :param vmin, vmax: float. Velocity range in m/s.
-        :param flag: -1 keep only negative apparent velocities, 0 keep both postive
-            and negative apparent velocities, 1 keep only positive apparent
-            velocities.
-        :param pad: float or sequence of floats. Each float means padding percentage
-            before FFT for corresponding dimension. If set to 0.1 will pad 5% before
-            the beginning and after the end.
+        :param flag: -1 keep only negative apparent velocities, 0 keep both
+            postive and negative apparent velocities, 1 keep only positive
+            apparent velocities.
+        :param pad: float or sequence of floats. Each float means padding
+            percentage before FFT for corresponding dimension. If set to 0.1
+            will pad 5% before the beginning and after the end.
         :param scale_begin: int. The beginning scale to do coherent denoising.
-        :param nbscales: int. Number of scales including the coarsest wavelet level.
-            Default set to ceil(log2(min(M,N)) - 3).
+        :param nbscales: int. Number of scales including the coarsest wavelet
+            level. Default set to ceil(log2(min(M,N)) - 3).
         :param nbangles: int. Number of angles at the 2nd coarsest level,
             minimum 8, must be a multiple of 4.
         """
-        self.data = curvelet_windowing(self.data, self.dx, self.fs, **kwargs)
-        return self
+        output = curvelet_windowing(self.data, self.dx, self.fs, mode=mode,
+                                    **kwargs)
+        if mode == 'decompose':
+            return output
+        else:
+            self.data = output
+            return self
 
     def _strain2vel_attr(self):
         if hasattr(self, 'data_type'):
@@ -905,7 +924,8 @@ class Section(object):
         :param turning: Sequence of int. Channel number of turning points. If
             self.turning exists, it will be used by default unless the parameter
             turning is set to False.
-        :param L: int. the number of adjacent channels over which slowness is estimated
+        :param L: int. the number of adjacent channels over which slowness is
+            estimated.
         :param slm: float. Slowness x max
         :param sls: float. slowness step
         :param freqmin: Pass band low corner frequency.

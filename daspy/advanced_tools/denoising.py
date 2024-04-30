@@ -1,6 +1,6 @@
 # Purpose: Remove noise from data
 # Author: Minzhe Hu, Zefeng Li
-# Date: 2024.4.25
+# Date: 2024.4.29
 # Email: hmz2018@mail.ustc.edu.cn
 import numpy as np
 from scipy.ndimage import median_filter
@@ -140,7 +140,7 @@ def _velocity_bin(nbangles, fs, dx):
     return velocity
 
 
-def _mask_factor(velocity, vmin, vmax, flag=None, mode='remove'):
+def _mask_factor(velocity, vmin, vmax, flag=None):
     if flag:
         if flag == -1:
             vmin = -vmax
@@ -157,16 +157,14 @@ def _mask_factor(velocity, vmin, vmax, flag=None, mode='remove'):
                 factors[i] = 1
             else:
                 factors[i] = np.divide(v2 - v1, v_high - v_low)
-    if mode == 'retain':
-        return factors
-    elif mode == 'remove':
-        return 1 - factors
+
+    return factors
 
 
 def curvelet_denoising(data, choice=0, pad=0.3, noise=None, noise_perc=95,
-                       knee_fac=0.2, soft_thresh=True, v_range=None, flag=None,
-                       dx=None, fs=None, mode='remove', scale_begin=3,
-                       nbscales=None, nbangles=16):
+                       knee_fac=0.2, soft_thresh=True, vmin=0, vmax=np.inf,
+                       flag=None, dx=None, fs=None, mode='remove',
+                       scale_begin=3, nbscales=None, nbangles=16):
     """
     Use curevelet transform to filter stochastic or/and cooherent noise.
     Modified from
@@ -188,14 +186,14 @@ def curvelet_denoising(data, choice=0, pad=0.3, noise=None, noise_perc=95,
         specified)
     :param soft_thresh: bool. True for soft thresholding and False for hard
         thresholding.
-    :param vrange: tuple or list. (vmin vmax) for filter out cooherent noise of
-        velocity between vmin and vmax m/s.
+    :param vmin, vmax: float. Velocity range in m/s.
     :param flag: -1 choose only negative apparent velocities, 0 choose both
         postive and negative apparent velocities, 1 choose only positive
         apparent velocities.
     :param dx: Channel interval in m.
     :param fs: Sampling rate in Hz.
-    :param mode: str. 'remove' for denoising and 'retain' for decomposition.
+    :param mode: str. 'remove' for denoising, 'retain' for extraction, and
+        'decompose' for decomposition.
     :param scale_begin: int. The beginning scale to do coherent denoising.
     :param nbscales: int. Number of scales including the coarsest wavelet level.
         Default set to ceil(log2(min(M,N)) - 3).
@@ -236,15 +234,27 @@ def curvelet_denoising(data, choice=0, pad=0.3, noise=None, noise_perc=95,
         if dx is None or fs is None:
             raise ValueError('Please set both dx and fs.')
 
-        vmin, vmax = v_range
+        if mode == 'decompose':
+            C_rt = C
+
         for s in range(scale_begin - 1, len(C) - 1):
             nbangles = len(C[s])
             velocity = _velocity_bin(nbangles, fs, dx)
-            factors = _mask_factor(velocity, vmin, vmax, flag=flag, mode=mode)
+            factors = _mask_factor(velocity, vmin, vmax, flag=flag)
             for w in range(nbangles):
-                C[s][w] *= factors[w]
+                if mode == 'retain':
+                    C[s][w] *= factors[w]
+                elif mode == 'remove':
+                    C[s][w] *= 1 - factors[w]
+                elif mode == 'decompose':
+                    C[s][w] *= factors[w]
+                    C_rt[s][w] *= 1 - factors[w]
 
     # perform the inverse curvelet transform
-    data_dn = ifdct_wrapping(C, is_real=True)
-
-    return padding(data_dn, dn, reverse=True)
+    data_dn = padding(ifdct_wrapping(C, is_real=True), dn, reverse=True)
+    
+    if mode == 'decompose':
+        data_n = padding(ifdct_wrapping(C_rt, is_real=True), dn, reverse=True)
+        return data_dn, data_n
+    else:
+        return data_dn
