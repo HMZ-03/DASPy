@@ -180,6 +180,12 @@ class Section(object):
         """
         return self.data[int(ch - self.start_channel)]
 
+    def channel_filter(self, use_channel):
+        self.data = self.data[use_channel]
+        self.start_channel += use_channel[0]
+        self.start_distance += use_channel[0] * self.dx
+        return self
+
     def plot(self, xmode='distance', tmode='origin', obj='waveform',
              kwargs_pro={}, **kwargs):
         """
@@ -242,7 +248,7 @@ class Section(object):
         else:
             data = kwargs.pop('data')
 
-        if 'title' not in kwargs.keys():
+        if 'ax' not in kwargs.keys() and 'title' not in kwargs.keys():
             kwargs['title'] = obj
             if hasattr(self, 'data_type'):
                 kwargs['title'] += f' ({self.data_type})'
@@ -264,8 +270,6 @@ class Section(object):
 
             if tmode == 'origin' and hasattr(self, 'origin_time'):
                 kwargs['t0'] -= self.origin_time
-            elif obj == 'spectrogram':
-                kwargs['t'] = [self.start_time + t for t in kwargs['t']]
 
         plot(data, dx, fs, obj=obj, **kwargs)
 
@@ -674,9 +678,7 @@ class Section(object):
         """
         good_chn, bad_chn = channel_checking(self.data, **kwargs)
         if use:
-            self.data = self.data[good_chn]
-            self.start_channel += good_chn[0]
-            self.start_distance += good_chn[0] * self.dx
+            self.channel_filter(good_chn)
             return self
         else:
             return good_chn, bad_chn
