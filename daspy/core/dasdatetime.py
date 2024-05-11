@@ -1,6 +1,6 @@
 # Purpose: Module for handling DASDateTime objects.
 # Author: Minzhe Hu
-# Date: 2024.4.25
+# Date: 2024.5.8
 # Email: hmz2018@mail.ustc.edu.cn
 import time
 from typing import Iterable
@@ -8,10 +8,7 @@ from datetime import datetime, timedelta, timezone
 
 
 utc = timezone.utc
-_tz_str = time.strftime('%z', time.localtime())
-_tz_h = int(_tz_str[:3])
-_tz_m = int(_tz_str[0] + _tz_str[3:5])
-local_tz = timezone(timedelta(hours=_tz_h, minutes=_tz_m))
+local_tz = timezone(timedelta(seconds=-time.altzone))
 
 
 class DASDateTime(datetime):
@@ -34,7 +31,7 @@ class DASDateTime(datetime):
             return out
         elif isinstance(other, datetime):
             if self.tzinfo and not other.tzinfo:
-                return super().__sub__(other.replace(tzinfo=self.tzinfo)).\
+                return super().__sub__(other.astimezone(tz=self.tzinfo)).\
                     total_seconds()
             elif not self.tzinfo and other.tzinfo:
                 return - (other - self)
@@ -42,6 +39,12 @@ class DASDateTime(datetime):
         elif not isinstance(other, timedelta):
             other = timedelta(seconds=other)
         return super().__sub__(other)
+
+    def local(self):
+        return self.astimezone(tz=local_tz)
+
+    def utc(self):
+        return self.astimezone(tz=utc)
 
     def convert_to_datetime(self):
         return datetime.fromtimestamp(self.timestamp())
