@@ -1,6 +1,6 @@
 # Purpose: Convert strain rate data to velocity
 # Author: Minzhe Hu
-# Date: 2024.4.14
+# Date: 2024.5.13
 # Email: hmz2018@mail.ustc.edu.cn
 import numpy as np
 from numpy.fft import irfft2, ifftshift
@@ -117,7 +117,7 @@ def curvelet_conversion(data, dx, fs, pad=0.3, scale_begin=2, nbscales=None,
         dn = np.round(np.array(pad) * data.shape).astype(int)
         data_pd = padding(data, dn)
 
-        C = fdct_wrapping(data_pd, is_real=False, finest=1, nbscales=nbscales,
+        C = fdct_wrapping(data_pd, is_real=True, finest=1, nbscales=nbscales,
                         nbangles_coarse=nbangles)
 
         # rescale with velocity
