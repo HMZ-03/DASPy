@@ -147,7 +147,12 @@ def _mask_factor(velocity, vmin, vmax, flag=0):
             vmin = -vmax
             vmax = -vmin
     else:
-        velocity = abs(velocity)
+        half = len(velocity) // 8
+        for i in range(half):
+            velocity[i] = -1 * velocity[i][::-1]
+            velocity[3 * half + i] = -1 * velocity[3 * half + i][::-1]
+            velocity[4 * half + i] = -1 * velocity[4 * half + i][::-1]
+            velocity[7 * half + i] = -1 * velocity[7 * half + i][::-1]
 
     factors = np.zeros(len(velocity))
     for i, (v_low, v_high) in enumerate(velocity):
@@ -207,7 +212,7 @@ def curvelet_denoising(data, choice=0, pad=0.3, noise=None, noise_perc=95,
     dn = np.round(np.array(pad) * data.shape).astype(int)
     data_pd = padding(data, dn)
 
-    C = fdct_wrapping(data_pd, is_real=False, finest=2, nbscales=nbscales,
+    C = fdct_wrapping(data_pd, is_real=True, finest=2, nbscales=nbscales,
                       nbangles_coarse=nbangles)
 
     # apply Gaussian denoising
@@ -236,6 +241,10 @@ def curvelet_denoising(data, choice=0, pad=0.3, noise=None, noise_perc=95,
             raise ValueError('Please set both dx and fs.')
 
         if mode == 'decompose':
+            lst = list(range(scale_begin - 1)) + [len(C) - 1]
+            for s in lst:
+                for w in range(len(C[s])):
+                    C[s][w] /= 2
             C_rt = deepcopy(C)
 
         for s in range(scale_begin - 1, len(C) - 1):
