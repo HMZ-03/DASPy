@@ -1,6 +1,6 @@
 # Purpose: Remove noise from data
 # Author: Minzhe Hu, Zefeng Li
-# Date: 2024.4.29
+# Date: 2024.5.13
 # Email: hmz2018@mail.ustc.edu.cn
 import numpy as np
 from copy import deepcopy
@@ -65,7 +65,7 @@ def common_mode_noise_removal(data, method='median'):
     return data_dn
 
 
-def _noise_level(data, nbscales=None, nbangles=16, percentile=95):
+def _noise_level(data, finest=2, nbscales=None, nbangles=16, percentile=95):
     """
     Find threshold for curvelet denoising with noise record.
 
@@ -78,7 +78,7 @@ def _noise_level(data, nbscales=None, nbangles=16, percentile=95):
         curvelet coefficient of the noise record
     :return: 2-D list. Threshold for curvelet coefficients.
     """
-    C = fdct_wrapping(data, is_real=False, finest=2, nbscales=nbscales,
+    C = fdct_wrapping(data, is_real=True, finest=finest, nbscales=nbscales,
                       nbangles_coarse=nbangles)
 
     E_noise = []
@@ -170,7 +170,7 @@ def _mask_factor(velocity, vmin, vmax, flag=0):
 def curvelet_denoising(data, choice=0, pad=0.3, noise=None, noise_perc=95,
                        knee_fac=0.2, soft_thresh=True, vmin=0, vmax=np.inf,
                        flag=0, dx=None, fs=None, mode='remove',
-                       scale_begin=3, nbscales=None, nbangles=16):
+                       scale_begin=3, nbscales=None, nbangles=16, finest=2):
     """
     Use curevelet transform to filter stochastic or/and cooherent noise.
     Modified from
@@ -205,6 +205,8 @@ def curvelet_denoising(data, choice=0, pad=0.3, noise=None, noise_perc=95,
         Default set to ceil(log2(min(M,N)) - 3).
     :param nbangles: int. Number of angles at the 2nd coarsest level,
         minimum 8, must be a multiple of 4.
+    :param finest: int. Objects at the finest scale. 1 for curvelets, 2 for
+        wavelets. Curvelets are more precise while wavelets are more efficient.
     :return: numpy.ndarray. Denoised data.
     """
     if pad is None or pad is False:
@@ -212,7 +214,7 @@ def curvelet_denoising(data, choice=0, pad=0.3, noise=None, noise_perc=95,
     dn = np.round(np.array(pad) * data.shape).astype(int)
     data_pd = padding(data, dn)
 
-    C = fdct_wrapping(data_pd, is_real=True, finest=2, nbscales=nbscales,
+    C = fdct_wrapping(data_pd, is_real=True, finest=finest, nbscales=nbscales,
                       nbangles_coarse=nbangles)
 
     # apply Gaussian denoising
@@ -225,8 +227,8 @@ def curvelet_denoising(data, choice=0, pad=0.3, noise=None, noise_perc=95,
                 noise = noise.data
             noise_pd = padding(noise,
                                np.array(data_pd.shape) - np.array(noise.shape))
-            E = _noise_level(noise_pd, nbscales=nbscales, nbangles=nbangles,
-                             percentile=noise_perc)
+            E = _noise_level(noise_pd, finest=finest, nbscales=nbscales,
+                             nbangles=nbangles, percentile=noise_perc)
         for s in range(1, len(C)):
             for w in range(len(C[s])):
                 # first do a hard threshold
@@ -241,13 +243,15 @@ def curvelet_denoising(data, choice=0, pad=0.3, noise=None, noise_perc=95,
             raise ValueError('Please set both dx and fs.')
 
         if mode == 'decompose':
-            lst = list(range(scale_begin - 1)) + [len(C) - 1]
+            lst = list(range(scale_begin - 1)) 
+            if finest == 2:
+                lst.append(len(C) - 1)
             for s in lst:
                 for w in range(len(C[s])):
                     C[s][w] /= 2
             C_rt = deepcopy(C)
 
-        for s in range(scale_begin - 1, len(C) - 1):
+        for s in range(scale_begin - 1, len(C) - finest + 1):
             nbangles = len(C[s])
             velocity = _velocity_bin(nbangles, fs, dx)
             factors = _mask_factor(velocity, vmin, vmax, flag=flag)
@@ -261,10 +265,12 @@ def curvelet_denoising(data, choice=0, pad=0.3, noise=None, noise_perc=95,
                     C_rt[s][w] *= 1 - factors[w]
 
     # perform the inverse curvelet transform
-    data_dn = padding(ifdct_wrapping(C, is_real=True), dn, reverse=True)
+    data_dn = padding(ifdct_wrapping(C, is_real=True, size=data_pd.shape), dn,
+                      reverse=True)
     
     if mode == 'decompose':
-        data_n = padding(ifdct_wrapping(C_rt, is_real=True), dn, reverse=True)
+        data_n = padding(ifdct_wrapping(C_rt, is_real=True, size=data_pd.shape),
+                         dn, reverse=True)
         return data_dn, data_n
     else:
         return data_dn

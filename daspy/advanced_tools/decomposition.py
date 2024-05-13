@@ -1,6 +1,6 @@
 # Purpose: Waveform decomposition
 # Author: Minzhe Hu
-# Date: 2024.4.29
+# Date: 2024.5.13
 # Email: hmz2018@mail.ustc.edu.cn
 import numpy as np
 from numpy.fft import irfft2, ifftshift
@@ -133,7 +133,7 @@ def fk_filter(data, dx, fs, taper=(0.02, 0.05), pad='default', mode='decompose',
 
 def curvelet_windowing(data, dx, fs, mode='decompose', vmin=0, vmax=np.inf,
                        flag=None, pad=0.3, scale_begin=3, nbscales=None,
-                       nbangles=16):
+                       nbangles=16, finest=1):
     """
     Use curevelet transform to keep cooherent signal with certain velocity
     range. {Atterholt et al., 2022 , Geophys. J. Int.}
@@ -155,9 +155,11 @@ def curvelet_windowing(data, dx, fs, mode='decompose', vmin=0, vmax=np.inf,
         Default set to ceil(log2(min(M,N)) - 3).
     :param nbangles: int. Number of angles at the 2nd coarsest level,
         minimum 8, must be a multiple of 4.
-    :return: numpy.ndarray. Denoised data.
+    :param finest: int. Objects at the finest scale. 1 for curvelets, 2 for
+        wavelets. Curvelets are more precise while wavelets are more efficient.
+    :return: numpy.ndarray. Decomposed data.
     """
     return curvelet_denoising(data, choice=1, pad=pad, vmin=vmin, vmax=vmax,
                               flag=flag, dx=dx, fs=fs, mode=mode,
                               scale_begin=scale_begin, nbscales=nbscales,
-                              nbangles=nbangles)
+                              nbangles=nbangles, finest=finest)
