@@ -1,6 +1,6 @@
 # Purpose: Plot data
 # Author: Minzhe Hu
-# Date: 2024.4.29
+# Date: 2024.5.14
 # Email: hmz2018@mail.ustc.edu.cn
 import numpy as np
 import matplotlib.pyplot as plt
@@ -88,10 +88,10 @@ def plot(data, dx=None, fs=None, ax=None, obj='waveform', dpi=150, title=None,
                     ax.scatter((x0 + i * dx) * 1e-3, t0 + np.array(pk) / fs,
                                marker=',', s=0.1, c='black')
 
-    if obj in ['spectrum', 'spectrogram', 'fk', 'dispersion']:
+    elif obj in ['spectrum', 'spectrogram', 'fk', 'dispersion']:
         if isinstance(data[0, 0], complex):
             data = abs(data)
-        cmap = 'jet' if not cmap is None else cmap
+        cmap = 'jet' if cmap is None else cmap
         vmax = np.percentile(abs(data), 80) if vmax is None else vmax
         vmin = np.percentile(abs(data), 20) if vmin is None else vmin
         if obj == 'spectrum':

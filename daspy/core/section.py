@@ -1,6 +1,6 @@
 # Purpose: Module for handling Section objects.
 # Author: Minzhe Hu
-# Date: 2024.4.25
+# Date: 2024.5.14
 # Email: hmz2018@mail.ustc.edu.cn
 import warnings
 import pickle
@@ -192,8 +192,8 @@ class Section(object):
         Plot several types of 2-D seismological data.
 
         :param xmode: str. 'distance' or 'channel'.
-        :param tmode: str. 'origin', 'time' or 'sampling'. If origin_time is not
-            defined, 'origin' and 'time' is the same.
+        :param tmode: str. 'origin', 'start', 'time' or 'sampling'. If
+            origin_time is not defined, 'origin' and 'start' is the same.
         :param obj: str. Type of data to plot. It should be one of 'waveform',
             'phasepick', 'spectrum', 'spectrogram', 'fk', or 'dispersion'.
         :param kwargs_pro: dict. If obj is one of 'spectrum', 'spectrogram',
@@ -231,7 +231,7 @@ class Section(object):
         """
         if 'data' not in kwargs.keys():
             if obj == 'waveform':
-                data = self.data
+                data = deepcopy(self.data)
             elif obj == 'spectrum':
                 data, f = self.spectrum(**kwargs_pro)
                 kwargs['f'] = f
@@ -254,24 +254,25 @@ class Section(object):
                 kwargs['title'] += f' ({self.data_type})'
 
         if xmode == 'channel':
-            dx = None
             if 'x0' not in kwargs.keys() and hasattr(self, 'start_channel'):
                 kwargs['x0'] = self.start_channel
         elif xmode == 'distance':
-            dx = self.dx
             if 'x0' not in kwargs.keys() and hasattr(self, 'start_distance'):
                 kwargs['x0'] = self.start_distance
-        if tmode == 'sampling':
-            fs = None
-        elif tmode in ['origin', 'time']:
-            fs = self.fs
-            if 't0' not in kwargs.keys() and hasattr(self, 'start_time'):
+        if tmode in ['origin', 'start', 'time']:
+            if 't0' not in kwargs.keys():
                 kwargs['t0'] = self.start_time
+            if tmode == 'origin':
+                if hasattr(self, 'origin_time'):
+                    kwargs['t0'] -= self.origin_time
+                else:
+                    tmode == 'start'
+            if tmode == 'start':
+                kwargs['t0'] -= self.start_time
+            tmode = 'time'
 
-            if tmode == 'origin' and hasattr(self, 'origin_time'):
-                kwargs['t0'] -= self.origin_time
-
-        plot(data, dx, fs, obj=obj, **kwargs)
+        plot(data, self.dx, self.fs, obj=obj, xmode=xmode, tmode=tmode,
+             **kwargs)
 
     def phase2strain(self, lam, e, n, gl=None):
         """
