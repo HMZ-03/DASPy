@@ -182,9 +182,11 @@ class Section(object):
         return self.data[int(ch - self.start_channel)]
 
     def channel_filter(self, use_channel):
-        self.data = self.data[use_channel]
-        self.start_channel += use_channel[0]
-        self.start_distance += use_channel[0] * self.dx
+        channel = deepcopy(use_channel)
+        channel -= self.start_channel
+        self.data = self.data[channel]
+        self.start_channel += channel[0]
+        self.start_distance += channel[0] * self.dx
         return self
 
     def plot(self, xmode='distance', tmode='origin', obj='waveform',
