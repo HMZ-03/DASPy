@@ -1,6 +1,6 @@
 # Purpose: Analyze frequency attribute and transform in frequency domain
 # Author: Minzhe Hu
-# Date: 2024.4.1
+# Date: 2024.5.16
 # Email: hmz2018@mail.ustc.edu.cn
 import numpy as np
 from numpy.fft import rfft, rfft2, fftshift, fftfreq, rfftfreq
@@ -48,7 +48,7 @@ def spectrum(data, fs, taper=0.05, nfft='default'):
 
 
 def spectrogram(data, fs, nperseg=256, noverlap=None, nfft=None, detrend=False,
-                boundary='odd'):
+                boundary='zeros'):
     """
     Computes the spectrogram of the given data.
 
