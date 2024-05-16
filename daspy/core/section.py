@@ -1,6 +1,6 @@
 # Purpose: Module for handling Section objects.
 # Author: Minzhe Hu
-# Date: 2024.5.14
+# Date: 2024.5.16
 # Email: hmz2018@mail.ustc.edu.cn
 import warnings
 import pickle
@@ -102,16 +102,17 @@ class Section(object):
                 elif other.fs is not None:
                     raise ValueError('These two Sections have different fs, '
                                      'please check.')
-            if abs(other.start_time - self.end_time - self.dt) > self.dt:
-                if abs(other.end_time - self.start_time - self.dt) <= self.dt:
+            if abs(other.start_time - self.end_time - self.dt) > 0.1:
+                if abs(other.end_time - self.start_time - self.dt) <= 0.1:
                     warnings.warn('According to the time information of the two'
                                   ' Sections, the order of addition is '
                                   'reversed.')
                     return other + self
                 else:
-                    warnings.warn('The start time of the second Section is '
-                                  'inconsistent with the end time of the first '
-                                  'Section.')
+                    warnings.warn('The start time of the second Section '
+                                  f'({other.start_time}) is inconsistent with '
+                                  'the end time of the first Section ('
+                                  f'{self.end_time}).')
             data = other.data
         elif isinstance(other, np.ndarray):
             data = other
