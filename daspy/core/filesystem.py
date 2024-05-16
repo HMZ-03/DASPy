@@ -64,6 +64,7 @@ class FileSystem(object):
             sec = read(filelist[0])
             for f in filelist[1:]:
                 sec += read(f)
+            sec.trimming(tmin=stime, tmax=etime)
             return sec
         else:
             return filelist
