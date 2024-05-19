@@ -5,6 +5,7 @@
 import warnings
 import pickle
 import numpy as np
+from collections.abc import Sequence
 from copy import deepcopy
 from daspy.core.dasdatetime import DASDateTime
 from daspy.basic_tools.visualization import plot
@@ -954,11 +955,11 @@ class Section(object):
             channel = list(range(self.nch))
         elif isinstance(channel, int):
             channel = [channel - self.start_channel]
-        else:
+        elif isinstance(channel, Sequence):
             channel = np.array(channel) - self.start_channel
 
-        self.start_channel += channel
-        self.start_distance += channel * self.dx
+        self.start_channel += channel[0]
+        self.start_distance += channel[0] * self.dx
         self.data = slant_stacking(self.data, self.dx, self.fs, channel=channel,
                                    turning=turning, **kwargs)
         self._strain2vel_attr()
