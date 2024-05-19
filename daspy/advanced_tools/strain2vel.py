@@ -118,7 +118,7 @@ def curvelet_conversion(data, dx, fs, pad=0.3, scale_begin=2, nbscales=None,
         data_pd = padding(data, dn)
 
         C = fdct_wrapping(data_pd, is_real=True, finest=1, nbscales=nbscales,
-                        nbangles_coarse=nbangles)
+                          nbangles_coarse=nbangles)
 
         # rescale with velocity
         np.seterr(divide='ignore')
