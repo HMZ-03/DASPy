@@ -1,6 +1,6 @@
 # Purpose: Module for handling Section objects.
 # Author: Minzhe Hu
-# Date: 2024.5.16
+# Date: 2024.5.19
 # Email: hmz2018@mail.ustc.edu.cn
 import warnings
 import pickle
@@ -175,19 +175,20 @@ class Section(object):
 
         return self
 
-    def single_chn_data(self, ch):
+    def channel_data(self, use_channel, replace=False):
         """
-        Extract data from one of the channels
+        Extract data of one channel or several channels.
         """
-        return self.data[int(ch - self.start_channel)]
-
-    def channel_filter(self, use_channel):
         channel = deepcopy(use_channel)
         channel -= self.start_channel
-        self.data = self.data[channel]
-        self.start_channel += channel[0]
-        self.start_distance += channel[0] * self.dx
-        return self
+        data = self.data[channel]
+        if replace:
+            self.data = data
+            self.start_channel += channel[0]
+            self.start_distance += channel[0] * self.dx
+            return self
+        else:
+            return data
 
     def plot(self, xmode='distance', tmode='origin', obj='waveform',
              kwargs_pro={}, **kwargs):
@@ -682,7 +683,7 @@ class Section(object):
         """
         good_chn, bad_chn = channel_checking(self.data, **kwargs)
         if use:
-            self.channel_filter(good_chn)
+            self.channel_data(good_chn, replace=True)
             return self
         else:
             return good_chn, bad_chn
