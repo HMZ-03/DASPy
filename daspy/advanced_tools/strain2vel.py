@@ -1,6 +1,6 @@
 # Purpose: Convert strain rate data to velocity
 # Author: Minzhe Hu
-# Date: 2024.5.13
+# Date: 2024.5.19
 # Email: hmz2018@mail.ustc.edu.cn
 import numpy as np
 from numpy.fft import irfft2, ifftshift
@@ -215,7 +215,7 @@ def slant_stacking(data, dx, fs, L=None, slm=0.01,
         L = round(50 / dx)
 
     nch, nt = data.shape
-    if channel == 'all':
+    if isinstance(channel, str) and channel == 'all':
         channel = list(range(nch))
     elif isinstance(channel, int):
         channel = [channel]
@@ -233,6 +233,8 @@ def slant_stacking(data, dx, fs, L=None, slm=0.01,
                 data_vel = np.vstack((data_vel, d_vel))
 
     else:
+        if data.ndim == 1:
+            data = data[np.newaxis, :]
         data_ex = padding(data, (2 * L, 0))
         swin = int(max((1 / frqhigh * fs) // 2, 1))
         data_vel = np.zeros((len(channel), nt))

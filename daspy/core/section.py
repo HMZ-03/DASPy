@@ -951,12 +951,12 @@ class Section(object):
         if hasattr(self, 'turning_channels') and turning is None:
             turning = np.array(self.turning_channels) - self.start_channel
 
-        if channel == 'all':
-            channel = list(range(self.nch))
-        elif isinstance(channel, int):
+        if isinstance(channel, int):
             channel = [channel - self.start_channel]
         elif isinstance(channel, Sequence):
             channel = np.array(channel) - self.start_channel
+        elif isinstance(channel, str) and channel == 'all':
+            channel = list(range(self.nch))
 
         self.start_channel += channel[0]
         self.start_distance += channel[0] * self.dx
