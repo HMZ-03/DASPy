@@ -231,10 +231,7 @@ def slant_stacking(data, dx, fs, L=None, slm=0.01,
                                        frqlow=frqlow, frqhigh=frqhigh,
                                        turning=None, channel=channel_seg)
                 data_vel = np.vstack((data_vel, d_vel))
-
     else:
-        if data.ndim == 1:
-            data = data[np.newaxis, :]
         data_ex = padding(data, (2 * L, 0))
         swin = int(max((1 / frqhigh * fs) // 2, 1))
         data_vel = np.zeros((len(channel), nt))

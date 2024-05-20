@@ -5,7 +5,7 @@
 import warnings
 import pickle
 import numpy as np
-from collections.abc import Sequence
+from typing import Iterable
 from copy import deepcopy
 from daspy.core.dasdatetime import DASDateTime
 from daspy.basic_tools.visualization import plot
@@ -953,7 +953,7 @@ class Section(object):
 
         if isinstance(channel, int):
             channel = [channel - self.start_channel]
-        elif isinstance(channel, Sequence):
+        elif isinstance(channel, Iterable):
             channel = np.array(channel) - self.start_channel
         elif isinstance(channel, str) and channel == 'all':
             channel = list(range(self.nch))
