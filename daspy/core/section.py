@@ -153,7 +153,7 @@ class Section(object):
 
     @property
     def end_channel(self):
-        return self.start_channel + self.nch
+        return self.start_channel + self.nch - 1
 
     @property
     def end_distance(self):
