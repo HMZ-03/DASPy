@@ -1,6 +1,6 @@
 # Purpose: Plot data
 # Author: Minzhe Hu
-# Date: 2024.5.14
+# Date: 2024.5.26
 # Email: hmz2018@mail.ustc.edu.cn
 import numpy as np
 import matplotlib.pyplot as plt
@@ -98,10 +98,10 @@ def plot(data, dx=None, fs=None, ax=None, obj='waveform', dpi=150, title=None,
             origin = 'lower'
             if dx is None or xmode == 'channel':
                 xlabel_default = 'Channel'
-                extent = [x0, x0 + nch, f.min(), f.max()]
+                extent = [x0, x0 + nch, min(f), max(f)]
             elif xmode == 'distance':
                 xlabel_default = 'Disitance (km)'
-                extent = [x0 * 1e-3, (x0 + nch * dx) * 1e-3, f.min(), f.max()]
+                extent = [x0 * 1e-3, (x0 + nch * dx) * 1e-3, min(f), max(f)]
             ylabel_default = 'Frequency (Hz)'
         elif obj == 'spectrogram':
             data = data.T
