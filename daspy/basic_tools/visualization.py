@@ -1,9 +1,10 @@
 # Purpose: Plot data
 # Author: Minzhe Hu
-# Date: 2024.5.26
+# Date: 2024.5.30
 # Email: hmz2018@mail.ustc.edu.cn
 import numpy as np
 import matplotlib.pyplot as plt
+from typing import Iterable
 from collections.abc import Sequence
 
 
@@ -79,11 +80,12 @@ def plot(data, dx=None, fs=None, ax=None, obj='waveform', dpi=150, title=None,
                 raise ValueError(
                     "Number of picks must be the same as channels.")
             for i, pk in enumerate(pick):
-                if isinstance(pk, (tuple, list, np.ndarray)):
+                if isinstance(pk, Iterable):
                     n = len(pk)
                     if n != 0:
-                        ax.scatter(n * [(x0 + i * dx) * 1e-3], t0 + np.array(pk)
-                                   / fs, marker=',', s=0.1, c='black')
+                        ax.scatter(n * [(x0 + i * dx) * 1e-3],
+                                   t0 + np.array(pk) / fs, marker=',', s=0.1,
+                                   c='black')
                 else:
                     ax.scatter((x0 + i * dx) * 1e-3, t0 + np.array(pk) / fs,
                                marker=',', s=0.1, c='black')

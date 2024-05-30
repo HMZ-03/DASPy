@@ -62,8 +62,8 @@ def bandpass(data, fs, freqmin, freqmax, corners=4, zerophase=True,
     if low > 1:
         msg = 'Selected low corner frequency is above Nyquist.'
         raise ValueError(msg)
-    z, p, k = iirfilter(corners, [low, high], btype='band',
-                        ftype='butter', output='zpk')
+    z, p, k = iirfilter(corners, [low, high], btype='band', ftype='butter',
+                        output='zpk')
     sos = zpk2sos(z, p, k)
     data_flt = sosfilt(sos, data)
     if zerophase:
