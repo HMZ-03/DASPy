@@ -729,7 +729,9 @@ class Section(object):
 
         if isinstance(output, tuple):
             output = np.array(list(set(output[0]) | set(output[1])))
-        output += + self.start_channel
+        else:
+            output = np.array(output)
+        output += self.start_channel
         self.turning_channels = output
         return output
 
