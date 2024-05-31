@@ -1,6 +1,6 @@
 # Purpose: Plot data
 # Author: Minzhe Hu
-# Date: 2024.5.30
+# Date: 2024.5.31
 # Email: hmz2018@mail.ustc.edu.cn
 import numpy as np
 import matplotlib.pyplot as plt
@@ -13,7 +13,7 @@ def plot(data, dx=None, fs=None, ax=None, obj='waveform', dpi=150, title=None,
          cmap=None, vmin=None, vmax=None, xmode='distance', tmode='time',
          xlim=None, ylim=None, xlog=False, ylog=False, xinv=False, yinv=False,
          xlabel=True, ylabel=True, xticklabels=True, yticklabels=True,
-         colorbar=True):
+         colorbar=True, savefig=None):
     """
     Plot several types of 2-D seismological data.
 
@@ -49,6 +49,8 @@ def plot(data, dx=None, fs=None, ax=None, obj='waveform', dpi=150, title=None,
     :param colorbar: bool, str or Matplotlib.axes.Axes. Bool means plot colorbar
         or not. Str means the location of colorbar. Axes means the Axes into
         which the colorbar will be drawn.
+    :param savefig: str or bool. Figure name to save if needed. If True,
+        it will be set to parameter obj.
     """
     nch, nt = data.shape
     if ax is None:
@@ -172,7 +174,13 @@ def plot(data, dx=None, fs=None, ax=None, obj='waveform', dpi=150, title=None,
         else:
             plt.colorbar(bar, cax=colorbar)
 
-    if show:
+    if savefig:
+        if not isinstance(savefig, str):
+            savefig = obj + '.png'
+        plt.tight_layout()
+        plt.savefig(savefig)
+        plt.close()
+    elif show:
         plt.show()
     else:
         return ax

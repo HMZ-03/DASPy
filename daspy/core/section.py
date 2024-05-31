@@ -1,6 +1,6 @@
 # Purpose: Module for handling Section objects.
 # Author: Minzhe Hu
-# Date: 2024.5.19
+# Date: 2024.5.31
 # Email: hmz2018@mail.ustc.edu.cn
 import warnings
 import pickle
@@ -233,6 +233,8 @@ class Section(object):
             specified.
         :param t: Time sequence. Required if obj=='spectrogram' and data is
             specified.
+        :param savefig: str or bool. Figure name to save if needed. If True,
+            it will be set to parameter obj.
         """
         if 'data' not in kwargs.keys():
             if obj == 'waveform':
