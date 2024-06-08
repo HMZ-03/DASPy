@@ -1,6 +1,6 @@
 # Purpose: Module for handling Section objects.
 # Author: Minzhe Hu
-# Date: 2024.5.31
+# Date: 2024.6.8
 # Email: hmz2018@mail.ustc.edu.cn
 import warnings
 import pickle
@@ -29,7 +29,8 @@ from daspy.advanced_tools.strain2vel import (slant_stacking, fk_rescaling,
 
 
 class Section(object):
-    def __init__(self, data, dx, fs, **kwargs):
+    def __init__(self, data, dx, fs, start_channel=0, start_distance=0,
+                 start_time=0, **kwargs):
         """
         :param data: numpy.ndarray. Data recorded by DAS.
         :param dx: number. Channel interval in m.
@@ -56,13 +57,13 @@ class Section(object):
         self.data = data
         self.dx = dx
         self.fs = fs
-        opt_attrs = ['start_channel', 'start_distance', 'start_time',
-                     'origin_time', 'gauge_length', 'data_type', 'scale',
+        self.start_channel = start_channel
+        self.start_distance = start_distance
+        self.start_time = start_time
+        opt_attrs = ['origin_time', 'gauge_length', 'data_type', 'scale',
                      'geometry', 'turning_channels', 'headers']
         for attr in opt_attrs:
-            if attr.startswith('start'):
-                setattr(self, attr, kwargs.pop(attr, 0))
-            elif attr in kwargs:
+            if attr in kwargs:
                 setattr(self, attr, kwargs.pop(attr))
 
     def __str__(self):
@@ -691,7 +692,7 @@ class Section(object):
         else:
             return good_chn, bad_chn
 
-    def turning_points(self, data_type='waveform', **kwargs):
+    def turning_points(self, data_type='default', **kwargs):
         """
         Seek turning points in the DAS channel.
 
@@ -714,6 +715,9 @@ class Section(object):
             default.
         :return: list. Channel index of turning points.
         """
+        if data_type == 'default':
+            data_type = 'coordinate' if hasattr(self, 'geometry') else \
+                'waveform'
         if data_type == 'coordinate':
             if hasattr(self, 'gauge_length') and 'channel_gap' not in \
                     kwargs.items():
