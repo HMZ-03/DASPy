@@ -93,7 +93,7 @@ def plot(data, dx=None, fs=None, ax=None, obj='waveform', dpi=150, title=None,
                                marker=',', s=0.1, c='black')
 
     elif obj in ['spectrum', 'spectrogram', 'fk', 'dispersion']:
-        if isinstance(data[0, 0], complex):
+        if isinstance(data[0, 0], (complex, np.complex64)):
             data = abs(data)
         cmap = 'jet' if cmap is None else cmap
         vmax = np.percentile(abs(data), 80) if vmax is None else vmax

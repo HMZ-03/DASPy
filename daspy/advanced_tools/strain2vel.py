@@ -1,6 +1,6 @@
 # Purpose: Convert strain rate data to velocity
 # Author: Minzhe Hu
-# Date: 2024.5.19
+# Date: 2024.6.8
 # Email: hmz2018@mail.ustc.edu.cn
 import numpy as np
 from numpy.fft import irfft2, ifftshift
@@ -40,7 +40,7 @@ def fk_rescaling(data, dx, fs, taper=(0.02, 0.05), pad='default', fmax=None,
         sequence, wavenumber sequence and f-k mask.
     :return: Converted data and some variables in the process if verbose==True.
     """
-    if turning:
+    if turning is not None:
         data_vel = np.zeros_like(data)
         start_ch = [0, *turning]
         end_ch = [*turning, len(data)]
@@ -102,7 +102,8 @@ def curvelet_conversion(data, dx, fs, pad=0.3, scale_begin=2, nbscales=None,
     :param turning: Sequence of int. Channel number of turning points.
     :return: numpy.ndarray. Converted data.
     """
-    if turning:
+    if turning is not None:
+        print(1)
         data_vel = np.zeros_like(data)
         start_ch = [0, *turning]
         end_ch = [*turning, len(data)]
@@ -220,7 +221,7 @@ def slant_stacking(data, dx, fs, L=None, slm=0.01,
     elif isinstance(channel, int):
         channel = [channel]
 
-    if turning:
+    if turning is not None:
         data_vel = np.zeros((0, len(data[0])))
         start_ch = [0, *turning]
         end_ch = [*turning, len(data)]
