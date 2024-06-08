@@ -1,6 +1,6 @@
 # Purpose: Analyze frequency attribute and transform in frequency domain
 # Author: Minzhe Hu
-# Date: 2024.5.16
+# Date: 2024.6.8
 # Email: hmz2018@mail.ustc.edu.cn
 import numpy as np
 from numpy.fft import rfft, rfft2, fftshift, fftfreq, rfftfreq
@@ -73,7 +73,7 @@ def spectrogram(data, fs, nperseg=256, noverlap=None, nfft=None, detrend=False,
         detrend = detrending
     elif detrend in ['constant', 'demean']:
         detrend = demeaning
-    if len(data.shape) == 1:
+    if data.ndim == 1:
         f, t, Zxx = stft(data, fs=fs, nperseg=nperseg, noverlap=noverlap,
                          nfft=nfft, detrend=detrend, boundary=boundary)
     elif len(data) == 1:
