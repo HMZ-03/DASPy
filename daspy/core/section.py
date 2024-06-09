@@ -89,6 +89,8 @@ class Section(object):
                 describe += '{}: {}\n'.format(key.rjust(n), value)
         return describe
 
+    __repr__ = __str__
+
     def __add__(self, other):
         """
         Join two sections in time.
@@ -169,6 +171,25 @@ class Section(object):
 
     def copy(self):
         return deepcopy(self)
+
+    @classmethod
+    def from_dascore_patch(cls, patch):
+        """
+        Construct a Section from a dascore.core.patch.Patch.
+
+        :param patch: dascore.core.patch.Patch. An instance of
+            dascore.core.patch.Patch for construction.
+        """
+        data = patch.data
+        dx = patch.coords.coord_map['distance'].step
+        fs = np.timedelta64(1, 's') / patch.coords.coord_map['time'].step
+        start_time = DASDateTime.fromtimestamp(patch.coords.coord_map['time']
+                                               .start.astype(DASDateTime) / 1e9)
+        gauge_length = patch.attrs.gauge_length
+        sec = cls(data, dx, fs, start_time=start_time,
+                  gauge_length=gauge_length, headers=patch.attrs)
+        return sec
+
 
     def save(self, fname=None):
         """
