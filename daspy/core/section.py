@@ -1,12 +1,15 @@
 # Purpose: Module for handling Section objects.
 # Author: Minzhe Hu
-# Date: 2024.6.8
+# Date: 2024.6.9
 # Email: hmz2018@mail.ustc.edu.cn
 import warnings
 import pickle
+import h5py
 import numpy as np
-from typing import Iterable
+from shutil import copyfile
 from copy import deepcopy
+from typing import Iterable
+from datetime import datetime
 from daspy.core.dasdatetime import DASDateTime
 from daspy.basic_tools.visualization import plot
 from daspy.basic_tools.preprocessing import (phase2strain, normalization,
@@ -61,7 +64,7 @@ class Section(object):
         self.start_distance = start_distance
         self.start_time = start_time
         opt_attrs = ['origin_time', 'gauge_length', 'data_type', 'scale',
-                     'geometry', 'turning_channels', 'headers']
+                     'geometry', 'turning_channels', 'headers', 'filename']
         for attr in opt_attrs:
             if attr in kwargs:
                 setattr(self, attr, kwargs.pop(attr))
@@ -167,13 +170,36 @@ class Section(object):
     def copy(self):
         return deepcopy(self)
 
-    def save(self, fname='section.pkl'):
+    def save(self, fname=None):
         """
-        Save the instance as a pickle file (pickle files can be read as
-        daspy.Section using daspy.read)
+        Save the instance as a pickle file or update the raw file and resave as
+        new file.
+
+        :param fname: str or pathlib.PosixPath. Path of new DAS data file to
+            save.
         """
-        with open(fname, 'wb') as f:
-            pickle.dump(self.__dict__, f)
+        if fname is None:
+            if hasattr(self, 'filename'):
+                fname_list = self.filename.split('.')
+                fname_list[-2] += '_new'
+                fname = '.'.join(fname_list)
+            else:
+                fname = 'section.pkl'
+        elif not hasattr(self, 'filename'):
+            raise KeyError('Please set self.filename to the source file name')
+
+        if fname.lower().endswith('.pkl'):
+            with open(fname, 'wb') as f:
+                pickle.dump(self.__dict__, f)
+        else:
+            fun_map = {'tdms': _update_tdms, 'h5': _update_h5,
+                       'hdf5': _update_h5, 'segy': _update_segy,
+                       'sgy': _update_segy}
+            ftype = self.filename.lower().split('.')[-1]
+            if fname.lower().split('.')[-1] != ftype:
+                raise KeyError('Format of new_fname and raw_fname should be '
+                               'same.')
+            fun_map[ftype](self.filename, fname, self)
 
         return self
 
@@ -972,3 +998,50 @@ class Section(object):
                                    turning=turning, **kwargs)
         self._strain2vel_attr()
         return self
+
+
+def _update_tdms(raw_fname, new_fname, sec: Section):
+    print('Saving to \'.tdms\' format is not supported yet, please save as '
+          '\'.pkl\'')
+    return None
+
+
+def _update_h5_dataset(h5_file, path, name, data):
+    attrs = h5_file[path + name].attrs
+    del h5_file[path + name]
+    h5_file.get(path).create_dataset(name, data=data)
+    for key, value in attrs.items():
+        h5_file[path + name].attrs[key] = value
+    return None
+
+
+def _update_h5(raw_fname, new_fname, sec: Section):
+    copyfile(raw_fname, new_fname)
+    with h5py.File('mod.h5', 'r+') as h5_file:
+        h5_file['Acquisition'].attrs['NumberOfLoci'] = sec.nch
+        _update_h5_dataset(h5_file, 'Acquisition/Raw[0]/', 'RawData', sec.data)
+        if isinstance(sec.start_time, datetime):
+            h5_file['Acquisition/Raw[0]/RawData'].attrs['PartStartTime'] = \
+                np.bytes_(sec.start_time.strftime('%Y-%m-%dT%H:%M:%S.%f%z'))
+            stime = sec.start_time.timestamp() * 1e6
+            _update_h5_dataset(h5_file, 'Acquisition/Raw[0]/', 'RawDataTime',
+                               np.arange(stime, stime + sec.nt / sec.fs,
+                                         1 / sec.fs))
+        else:
+            # stime = .encode('ascii')
+            h5_file['Acquisition/Raw[0]/RawData'].attrs['PartStartTime'] = \
+                np.bytes_(str(sec.start_time))
+            _update_h5_dataset(h5_file, 'Acquisition/Raw[0]/', 'RawDataTime',
+                               sec.start_time + np.arange(0, sec.nt / sec.fs,
+                                                          1 / sec.fs))
+
+        h5_file['Acquisition/Raw[0]'].attrs['OutputDataRate'] = sec.fs
+        h5_file['Acquisition'].attrs['SpatialSamplingInterval'] = sec.dx
+        h5_file['Acquisition'].attrs['GaugeLength'] = sec.gauge_length
+    return None
+
+
+def _update_segy(raw_fname, new_fname, sec: Section):
+    print('Saving to \'.segy\' format is not supported yet, please save as '
+          '\'.pkl\'')
+    return None
