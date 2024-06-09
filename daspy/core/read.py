@@ -1,6 +1,6 @@
 # Purpose: Module for reading DAS data.
 # Author: Minzhe Hu
-# Date: 2024.6.8
+# Date: 2024.6.9
 # Email: hmz2018@mail.ustc.edu.cn
 # Modified from
 # https://github.com/RobbinLuo/das-toolkit/blob/main/DasTools/DasPrep.py
@@ -18,6 +18,8 @@ from daspy.core.dasdatetime import DASDateTime
 
 def read(fname=None, output_type='section', **kwargs):
     """
+    Read a .pkl/.pickle, .tdms, .h5/.hdf5, .segy/.sgy file.
+
     :param fname: str or pathlib.PosixPath. Path of DAS data file.
     :param output_type: str. 'Section' means return an instance of
         daspy.Section, 'array' means return numpy.array for data and a
@@ -27,8 +29,9 @@ def read(fname=None, output_type='section', **kwargs):
     :return: An instance of daspy.Section, or numpy.array for data and a
         dictionary for metadata.
     """
-    fun_map = {'pkl': _read_pkl, 'tdms': _read_tdms, 'h5': _read_h5,
-               'segy': _read_segy, 'sgy': _read_segy}
+    fun_map = {'pkl': _read_pkl, 'pickle': _read_pkl, 'tdms': _read_tdms,
+               'h5': _read_h5, 'hdf5': _read_h5, 'segy': _read_segy,
+               'sgy': _read_segy}
     if fname is None:
         data, metadata = _read_pkl(Path(__file__).parent / 'example.pkl')
     else:
@@ -40,6 +43,7 @@ def read(fname=None, output_type='section', **kwargs):
             print('Please set Section.dx manually.')
         if metadata['fs'] is None:
             print('Please set Section.fs manually.')
+        metadata['filename'] = fname
         return Section(data.astype(float), **metadata)
     elif output_type.lower() == 'array':
         return data, metadata
@@ -78,7 +82,7 @@ def _read_h5_headers(group):
                 headers[k] = gp_headers
         else:
             headers[k] = gp
-    
+
     return headers
 
 
@@ -132,7 +136,7 @@ def _read_h5(fname, **kwargs):
         except KeyError:
             time_arr = h5_file['Acquisition/Raw[0]/RawDataTime/']
             fs = 1 / (np.diff(time_arr).mean() / 1e6)
-        
+
         dx = h5_file['Acquisition'].attrs['SpatialSamplingInterval']
         gauge_length = h5_file['Acquisition'].attrs['GaugeLength']
         metadata = {'fs': fs, 'dx': dx, 'start_channel': ch1,
@@ -158,9 +162,9 @@ def _read_tdms(fname, **kwargs):
 
         # read metadata
         headers = tdms_file.properties
-        fs = headers.pop('SamplingFrequency[Hz]')
-        dx = headers.pop('SpatialResolution[m]')
-        gauge_length = headers.pop('GaugeLength')
+        dx = headers['SpatialResolution[m]']
+        fs = headers['SamplingFrequency[Hz]']
+        gauge_length = headers['GaugeLength']
 
     metadata = {'fs': fs, 'dx': dx, 'start_channel': ch1,
                 'start_distance': ch1 * dx, 'gauge_length': gauge_length,
@@ -190,6 +194,8 @@ def _read_segy(fname, **kwargs):
 
 def read_json(fname, output_type='dict'):
     """
+    Read .json metadata file. See {Lai et al. , 2024, Seismol. Res. Lett.}
+
     :param fname: str or pathlib.PosixPath. Path of json file.
     :param output_type: str. 'dict' means return a dictionary, and 'Section'
         means return a empty daspy.Section instance with metadata.
@@ -206,23 +212,19 @@ def read_json(fname, output_type='dict'):
             sec_num = len(headers['Overview']['Interrogator'])
             sec = []
             for interrogator in headers['Overview']['Interrogator']:
-                nch = interrogator['Acquisition'][0]['Attributes']\
-                    ['number_of_channels']
+                nch = interrogator['Acquisition'][0]['Attributes']['number_of_channels']
                 data = np.zeros((nch, 0))
-                dx = interrogator['Acquisition'][0]['Attributes']\
-                    ['spatial_sampling_interval']
-                fs = interrogator['Acquisition'][0]['Attributes']\
-                    ['acquisition_sample_rate']
-                gauge_length = interrogator['Acquisition'][0]\
-                    ['Attributes']['gauge_length']
+                dx = interrogator['Acquisition'][0]['Attributes']['spatial_sampling_interval']
+                fs = interrogator['Acquisition'][0]['Attributes']['acquisition_sample_rate']
+                gauge_length = interrogator['Acquisition'][0]['Attributes']['gauge_length']
                 sec.append(Section(data, dx, fs, gauge_length=gauge_length,
                                    headers=headers))
         elif len(headers['Overview']['Interrogator'][0]['Acquisition']) > 1:
             case_type = 'Active survey'
-            sec_num = len(headers['Overview']['Interrogator'][0]['Acquisition'])
+            sec_num = len(
+                headers['Overview']['Interrogator'][0]['Acquisition'])
             sec = []
-            for acquisition in headers['Overview']['Interrogator'][0]\
-                ['Acquisition']:
+            for acquisition in headers['Overview']['Interrogator'][0]['Acquisition']:
                 nch = acquisition['Attributes']['number_of_channels']
                 data = np.zeros((nch, 0))
                 dx = acquisition['Attributes']['spatial_sampling_interval']
@@ -242,14 +244,10 @@ def read_json(fname, output_type='dict'):
                     case_type = 'Dark fiber'
                 elif env in ['wireline', 'outside borehole casing']:
                     case_type = 'Borehole cable'
-            nch = headers['Overview']['Interrogator'][0]['Acquisition'][0]\
-                ['Attributes']['number_of_channels']
-            dx = headers['Overview']['Interrogator'][0]['Acquisition'][0]\
-                ['Attributes']['spatial_sampling_interval']
-            fs = headers['Overview']['Interrogator'][0]['Acquisition'][0]\
-                ['Attributes']['acquisition_sample_rate']
-            gauge_length = headers['Overview']['Interrogator'][0]\
-                ['Acquisition'][0]['Attributes']['gauge_length']
+            nch = headers['Overview']['Interrogator'][0]['Acquisition'][0]['Attributes']['number_of_channels']
+            dx = headers['Overview']['Interrogator'][0]['Acquisition'][0]['Attributes']['spatial_sampling_interval']
+            fs = headers['Overview']['Interrogator'][0]['Acquisition'][0]['Attributes']['acquisition_sample_rate']
+            gauge_length = headers['Overview']['Interrogator'][0]['Acquisition'][0]['Attributes']['gauge_length']
             data = np.zeros((nch, 0))
             sec = Section(data, dx, fs, gauge_length=gauge_length,
                           headers=headers)
