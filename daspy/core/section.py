@@ -1,16 +1,13 @@
 # Purpose: Module for handling Section objects.
 # Author: Minzhe Hu
-# Date: 2024.6.9
+# Date: 2024.6.11
 # Email: hmz2018@mail.ustc.edu.cn
 import warnings
-import pickle
-import h5py
 import numpy as np
-from shutil import copyfile
 from copy import deepcopy
 from typing import Iterable
-from datetime import datetime
 from daspy.core.dasdatetime import DASDateTime
+from daspy.core.write import write_pkl, update
 from daspy.basic_tools.visualization import plot
 from daspy.basic_tools.preprocessing import (phase2strain, normalization,
                                              demeaning, detrending, stacking,
@@ -210,17 +207,9 @@ class Section(object):
             raise KeyError('Please set self.filename to the source file name')
 
         if fname.lower().endswith('.pkl'):
-            with open(fname, 'wb') as f:
-                pickle.dump(self.__dict__, f)
+            write_pkl(fname, self)
         else:
-            fun_map = {'tdms': _update_tdms, 'h5': _update_h5,
-                       'hdf5': _update_h5, 'segy': _update_segy,
-                       'sgy': _update_segy}
-            ftype = self.filename.lower().split('.')[-1]
-            if fname.lower().split('.')[-1] != ftype:
-                raise KeyError('Format of new_fname and raw_fname should be '
-                               'same.')
-            fun_map[ftype](self.filename, fname, self)
+            update(self.filename, fname, self)
 
         return self
 
@@ -388,8 +377,12 @@ class Section(object):
         :param N: int. N adjacent channels stacked into 1.
         :param step: int. Interval of data stacking.
         """
+        if step is None:
+            step = N
         self.data = stacking(self.data, N, step=step)
-        self.dx *= (step, N)[step is None]
+        self.dx *= step
+        if hasattr(self, 'gauge_length'):
+            self.gauge_length += self.dx * (N - 1)
         return self
 
     def cosine_taper(self, p=0.1):
@@ -419,6 +412,8 @@ class Section(object):
                                  filter=filter)
         if xint:
             self.dx *= xint
+            if hasattr(self, 'gauge_length'):
+                self.gauge_length += self.dx * (xint - 1)
         if tint:
             self.fs /= tint
         return self
@@ -1019,50 +1014,3 @@ class Section(object):
                                    turning=turning, **kwargs)
         self._strain2vel_attr()
         return self
-
-
-def _update_tdms(raw_fname, new_fname, sec: Section):
-    print('Saving to \'.tdms\' format is not supported yet, please save as '
-          '\'.pkl\'')
-    return None
-
-
-def _update_h5_dataset(h5_file, path, name, data):
-    attrs = h5_file[path + name].attrs
-    del h5_file[path + name]
-    h5_file.get(path).create_dataset(name, data=data)
-    for key, value in attrs.items():
-        h5_file[path + name].attrs[key] = value
-    return None
-
-
-def _update_h5(raw_fname, new_fname, sec: Section):
-    copyfile(raw_fname, new_fname)
-    with h5py.File('mod.h5', 'r+') as h5_file:
-        h5_file['Acquisition'].attrs['NumberOfLoci'] = sec.nch
-        _update_h5_dataset(h5_file, 'Acquisition/Raw[0]/', 'RawData', sec.data)
-        if isinstance(sec.start_time, datetime):
-            h5_file['Acquisition/Raw[0]/RawData'].attrs['PartStartTime'] = \
-                np.bytes_(sec.start_time.strftime('%Y-%m-%dT%H:%M:%S.%f%z'))
-            stime = sec.start_time.timestamp() * 1e6
-            _update_h5_dataset(h5_file, 'Acquisition/Raw[0]/', 'RawDataTime',
-                               np.arange(stime, stime + sec.nt / sec.fs,
-                                         1 / sec.fs))
-        else:
-            # stime = .encode('ascii')
-            h5_file['Acquisition/Raw[0]/RawData'].attrs['PartStartTime'] = \
-                np.bytes_(str(sec.start_time))
-            _update_h5_dataset(h5_file, 'Acquisition/Raw[0]/', 'RawDataTime',
-                               sec.start_time + np.arange(0, sec.nt / sec.fs,
-                                                          1 / sec.fs))
-
-        h5_file['Acquisition/Raw[0]'].attrs['OutputDataRate'] = sec.fs
-        h5_file['Acquisition'].attrs['SpatialSamplingInterval'] = sec.dx
-        h5_file['Acquisition'].attrs['GaugeLength'] = sec.gauge_length
-    return None
-
-
-def _update_segy(raw_fname, new_fname, sec: Section):
-    print('Saving to \'.segy\' format is not supported yet, please save as '
-          '\'.pkl\'')
-    return None
