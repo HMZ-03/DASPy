@@ -1,6 +1,6 @@
 # Purpose: Module for reading DAS data.
 # Author: Minzhe Hu
-# Date: 2024.6.9
+# Date: 2024.6.11
 # Email: hmz2018@mail.ustc.edu.cn
 # Modified from
 # https://github.com/RobbinLuo/das-toolkit/blob/main/DasTools/DasPrep.py
@@ -157,18 +157,23 @@ def _read_tdms(fname, **kwargs):
         ch2 = kwargs.pop('ch2', nch)
 
         # read data
-        data = np.asarray([tdms_file['Measurement'][str(i)]
-                           for i in range(ch1, ch2)])
+        data = np.asarray([tdms_file['Measurement'][str(ch)]
+                           for ch in range(ch1, ch2)])
 
         # read metadata
         headers = tdms_file.properties
         dx = headers['SpatialResolution[m]']
         fs = headers['SamplingFrequency[Hz]']
         gauge_length = headers['GaugeLength']
+        min_ch = min(int(channel.name) for channel in
+                     tdms_file['Measurement'].channels())
+        start_distance = headers['Start Distance (m)'] + dx * (ch1 - min_ch)
+        start_time = DASDateTime.strptime(
+            tdms_file.properties['ISO8601 Timestamp'], '%Y-%m-%dT%H:%M:%S.%f%z')
 
     metadata = {'fs': fs, 'dx': dx, 'start_channel': ch1,
-                'start_distance': ch1 * dx, 'gauge_length': gauge_length,
-                'headers': headers}
+                'start_distance': start_distance, 'start_time': start_time,
+                'gauge_length': gauge_length, 'headers': headers}
 
     return data, metadata
 
