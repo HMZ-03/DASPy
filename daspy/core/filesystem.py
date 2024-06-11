@@ -1,6 +1,6 @@
-# Purpose: Module for handling Section objects.
+# Purpose: Module for handling FileSystem objects.
 # Author: Minzhe Hu
-# Date: 2024.5.8
+# Date: 2024.6.9
 # Email: hmz2018@mail.ustc.edu.cn
 import warnings
 import numpy as np
