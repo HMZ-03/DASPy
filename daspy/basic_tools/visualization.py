@@ -1,6 +1,6 @@
 # Purpose: Plot data
 # Author: Minzhe Hu
-# Date: 2024.5.31
+# Date: 2024.6.11
 # Email: hmz2018@mail.ustc.edu.cn
 import numpy as np
 import matplotlib.pyplot as plt
@@ -13,7 +13,7 @@ def plot(data, dx=None, fs=None, ax=None, obj='waveform', dpi=150, title=None,
          cmap=None, vmin=None, vmax=None, xmode='distance', tmode='time',
          xlim=None, ylim=None, xlog=False, ylog=False, xinv=False, yinv=False,
          xlabel=True, ylabel=True, xticklabels=True, yticklabels=True,
-         colorbar=True, savefig=None):
+         colorbar=True, colorbar_label=None, savefig=None):
     """
     Plot several types of 2-D seismological data.
 
@@ -168,11 +168,13 @@ def plot(data, dx=None, fs=None, ax=None, obj='waveform', dpi=150, title=None,
         ax.set_yscale('log')
     if colorbar:
         if colorbar is True:
-            plt.colorbar(bar, ax=ax, location='right')
+            cbar = plt.colorbar(bar, ax=ax, location='right')
         elif isinstance(colorbar, str):
-            plt.colorbar(bar, ax=ax, location=colorbar)
+            cbar = plt.colorbar(bar, ax=ax, location=colorbar)
         else:
-            plt.colorbar(bar, cax=colorbar)
+            cbar = plt.colorbar(bar, cax=colorbar)
+        if colorbar_label is not None:
+            cbar.set_label(colorbar_label)
 
     if savefig:
         if not isinstance(savefig, str):
