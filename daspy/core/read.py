@@ -211,7 +211,7 @@ def read_json(fname, output_type='dict'):
         headers = json.load(fcc_file)
     if output_type.lower() == 'dict':
         return headers
-    elif output_type.lower() == 'section':
+    elif output_type.lower() in ['section', 'sec']:
         if len(headers['Overview']['Interrogator']) > 1:
             case_type = 'Multiple interrogators, single cable'
             sec_num = len(headers['Overview']['Interrogator'])
