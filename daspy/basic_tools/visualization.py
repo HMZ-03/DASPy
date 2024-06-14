@@ -1,6 +1,6 @@
 # Purpose: Plot data
 # Author: Minzhe Hu
-# Date: 2024.6.11
+# Date: 2024.6.13
 # Email: hmz2018@mail.ustc.edu.cn
 import numpy as np
 import matplotlib.pyplot as plt
@@ -70,10 +70,10 @@ def plot(data, dx=None, fs=None, ax=None, obj='waveform', dpi=150, title=None,
         elif tmode == 'time':
             ylabel_default = 'Time (s)'
 
-        if dx is None or xmode == 'channel':
+        if dx is None or xmode.lower() == 'channel':
             xlabel_default = 'Channel'
             extent = [x0, x0 + nch, t0 + nt / fs, t0]
-        elif xmode == 'distance':
+        elif xmode.lower() == 'distance':
             xlabel_default = 'Disitance (km)'
             extent = [x0 * 1e-3, (x0 + nch * dx) * 1e-3, t0 + nt / fs, t0]
 
@@ -100,10 +100,10 @@ def plot(data, dx=None, fs=None, ax=None, obj='waveform', dpi=150, title=None,
         vmin = np.percentile(abs(data), 20) if vmin is None else vmin
         if obj == 'spectrum':
             origin = 'lower'
-            if dx is None or xmode == 'channel':
+            if dx is None or xmode.lower() == 'channel':
                 xlabel_default = 'Channel'
                 extent = [x0, x0 + nch, min(f), max(f)]
-            elif xmode == 'distance':
+            elif xmode.lower() == 'distance':
                 xlabel_default = 'Disitance (km)'
                 extent = [x0 * 1e-3, (x0 + nch * dx) * 1e-3, min(f), max(f)]
             ylabel_default = 'Frequency (Hz)'

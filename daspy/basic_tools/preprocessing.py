@@ -1,6 +1,6 @@
 # Purpose: Some preprocess methods
 # Author: Minzhe Hu
-# Date: 2024.4.11
+# Date: 2024.6.13
 # Email: hmz2018@mail.ustc.edu.cn
 import numpy as np
 from scipy.signal import detrend
@@ -78,6 +78,8 @@ def stacking(data, N, step=None):
     :param step: int. Interval of data stacking.
     :return: Stacked data.
     """
+    if N == 1:
+        return data
     if step is None:
         step = N
     nch, nt = data.shape
@@ -125,12 +127,12 @@ def downsampling(data, xint=None, tint=None, stack=True, filter=True):
     :return: Downsampled data.
     """
     data_ds = data.copy()
-    if xint:
+    if xint and xint > 1:
         if stack:
             data_ds = stacking(data, xint)
         else:
             data_ds = data_ds[::xint]
-    if tint:
+    if tint and tint > 1:
         if filter:
             data_ds = lowpass_cheby_2(detrending(data_ds), 1, 1 / 2 / tint)
         if len(data_ds.shape) == 1:

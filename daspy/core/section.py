@@ -1,6 +1,6 @@
 # Purpose: Module for handling Section objects.
 # Author: Minzhe Hu
-# Date: 2024.6.11
+# Date: 2024.6.13
 # Email: hmz2018@mail.ustc.edu.cn
 import warnings
 import numpy as np
@@ -410,11 +410,11 @@ class Section(object):
         """
         self.data = downsampling(self.data, xint=xint, tint=tint, stack=stack,
                                  filter=filter)
-        if xint:
+        if xint and xint > 1:
             self.dx *= xint
             if hasattr(self, 'gauge_length'):
                 self.gauge_length += self.dx * (xint - 1)
-        if tint:
+        if tint and tint > 1:
             self.fs /= tint
         return self
 
