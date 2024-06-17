@@ -11,11 +11,9 @@ Here's a quick guide:
  3. Push to your fork and submit a pull request.
  4. Wait for our review. We may suggest some changes or improvements or alternatives.
 
-# DASPy Coding Style Guide
+## DASPy Coding Style Guide
 
 Like most Python projects, we try to adhere to [PEP 8](https://peps.python.org/pep-0008/) (Style Guide for Python Code) and [PEP 257](https://peps.python.org/pep-0257/) (Docstring Conventions) with the modifications documented here. Be sure to read all documents if you intend to contribute code to DASPy.
-
-## Naming
 
 ### Names to Avoid
 
