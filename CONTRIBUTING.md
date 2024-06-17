@@ -15,6 +15,8 @@ Here's a quick guide:
 
 Like most Python projects, we try to adhere to [PEP 8](https://peps.python.org/pep-0008/) (Style Guide for Python Code) and [PEP 257](https://peps.python.org/pep-0257/) (Docstring Conventions) with the modifications documented here. Be sure to read all documents if you intend to contribute code to DASPy.
 
+## Naming
+
 ### Names to Avoid
 
 * single character names except for counters or iterators
