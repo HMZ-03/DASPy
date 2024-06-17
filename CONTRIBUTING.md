@@ -1,12 +1,28 @@
+# Contributing to DASPy
+
+We hope you to submit your changes through Git's Pull Request feature.
+
+## Submit a Pull Request
+
+Here's a quick guide:
+
+ 1. Fork the repo.
+ 2. Make a new branch based at `main`.
+ 3. Push to your fork and submit a pull request.
+ 4. Wait for our review. We may suggest some changes or improvements or alternatives.
+
 # DASPy Coding Style Guide
 
 Like most Python projects, we try to adhere to [PEP 8](https://peps.python.org/pep-0008/) (Style Guide for Python Code) and [PEP 257](https://peps.python.org/pep-0257/) (Docstring Conventions) with the modifications documented here. Be sure to read all documents if you intend to contribute code to DASPy.
 
 ## Naming
+
 ### Names to Avoid
+
 * single character names except for counters or iterators
 * dashes (-) in any package/module name
 * **__double_leading_and_trailing_underscore__** names (reserved by Python)
+
 ### Naming Convention
 
 * Use meaningful variable/function/method names; these will help other people a lot when reading your code.
