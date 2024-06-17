@@ -52,6 +52,7 @@ class Section(object):
         :param turning_channels: sequnce of channel numbers. Channel numbers of
             turning points.
         :param headers: dict. Other headers.
+        :param raw_file: str. Path to the source file.
         """
         if data.ndim == 1:
             data = data[np.newaxis, :]
@@ -62,7 +63,7 @@ class Section(object):
         self.start_distance = start_distance
         self.start_time = start_time
         opt_attrs = ['origin_time', 'gauge_length', 'data_type', 'scale',
-                     'geometry', 'turning_channels', 'headers', 'filename']
+                     'geometry', 'turning_channels', 'headers', 'raw_file']
         for attr in opt_attrs:
             if attr in kwargs:
                 setattr(self, attr, kwargs.pop(attr))
@@ -197,18 +198,18 @@ class Section(object):
             save.
         """
         if fname is None:
-            if hasattr(self, 'filename'):
-                fname_list = self.filename.split('.')
+            if hasattr(self, 'raw_file'):
+                fname_list = self.raw_file.split('.')
                 fname_list[-2] += '_new'
                 fname = '.'.join(fname_list)
             else:
                 fname = 'section.pkl'
 
         raw_fname = None
-        if hasattr(self, 'filename'):
-            if os.path.isfile(self.filename) and fname.lower().split(
-                    '.')[-1] == self.filename.lower().split('.')[-1]:
-                raw_fname = self.filename
+        if hasattr(self, 'raw_file'):
+            if os.path.isfile(self.raw_file) and fname.lower().split(
+                    '.')[-1] == self.raw_file.lower().split('.')[-1]:
+                raw_fname = self.raw_file
 
         write(self, fname, raw_fname=raw_fname)
         return self

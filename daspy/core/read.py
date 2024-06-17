@@ -1,6 +1,6 @@
 # Purpose: Module for reading DAS data.
 # Author: Minzhe Hu
-# Date: 2024.6.11
+# Date: 2024.6.17
 # Email: hmz2018@mail.ustc.edu.cn
 # Modified from
 # https://github.com/RobbinLuo/das-toolkit/blob/main/DasTools/DasPrep.py
@@ -43,7 +43,7 @@ def read(fname=None, output_type='section', **kwargs):
             print('Please set Section.dx manually.')
         if metadata['fs'] is None:
             print('Please set Section.fs manually.')
-        metadata['filename'] = fname
+        metadata['raw_file'] = fname
         return Section(data.astype(float), **metadata)
     elif output_type.lower() == 'array':
         return data, metadata
