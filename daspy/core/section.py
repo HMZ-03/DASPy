@@ -1,13 +1,14 @@
 # Purpose: Module for handling Section objects.
 # Author: Minzhe Hu
-# Date: 2024.6.13
+# Date: 2024.6.17
 # Email: hmz2018@mail.ustc.edu.cn
 import warnings
+import os
 import numpy as np
 from copy import deepcopy
 from typing import Iterable
 from daspy.core.dasdatetime import DASDateTime
-from daspy.core.write import write_pkl, update
+from daspy.core.write import write
 from daspy.basic_tools.visualization import plot
 from daspy.basic_tools.preprocessing import (phase2strain, normalization,
                                              demeaning, detrending, stacking,
@@ -187,7 +188,6 @@ class Section(object):
                   gauge_length=gauge_length, headers=patch.attrs)
         return sec
 
-
     def save(self, fname=None):
         """
         Save the instance as a pickle file or update the raw file and resave as
@@ -203,14 +203,14 @@ class Section(object):
                 fname = '.'.join(fname_list)
             else:
                 fname = 'section.pkl'
-        elif not hasattr(self, 'filename'):
-            raise KeyError('Please set self.filename to the source file name')
 
-        if fname.lower().endswith('.pkl'):
-            write_pkl(fname, self)
-        else:
-            update(self.filename, fname, self)
+        raw_fname = None
+        if hasattr(self, 'filename'):
+            if os.path.isfile(self.filename) and fname.lower().split(
+                    '.')[-1] == self.filename.lower().split('.')[-1]:
+                raw_fname = self.filename
 
+        write(self, fname, raw_fname=raw_fname)
         return self
 
     def channel_data(self, use_channel, replace=False):
