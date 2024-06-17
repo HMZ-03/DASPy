@@ -1,6 +1,6 @@
 # Purpose: Filter the waveform
 # Author: Minzhe Hu
-# Date: 2024.3.26
+# Date: 2024.6.17
 # Email: hmz2018@mail.ustc.edu.cn
 # Modified from https://docs.obspy.org/_modules/obspy/signal/filter.html
 import warnings
@@ -24,7 +24,7 @@ def _preprocessing(data, detrend, taper):
 
 
 def bandpass(data, fs, freqmin, freqmax, corners=4, zerophase=True,
-             detrend=True, taper=True):
+             detrend=True, taper=False):
     """
     Filter data from 'freqmin' to 'freqmax' using Butterworth bandpass filter of
     'corners' corners.
@@ -75,7 +75,7 @@ def bandpass(data, fs, freqmin, freqmax, corners=4, zerophase=True,
 
 
 def bandstop(data, fs, freqmin, freqmax, corners=4, zerophase=False,
-             detrend=True, taper=True):
+             detrend=True, taper=False):
     """
     Filter data removing data between frequencies 'freqmin' and 'freqmax' using
     Butterworth bandstop filter of 'corners' corners.
@@ -124,7 +124,7 @@ def bandstop(data, fs, freqmin, freqmax, corners=4, zerophase=False,
 
 
 def lowpass(data, fs, freq, corners=4, zerophase=False, detrend=True,
-            taper=True):
+            taper=False):
     """
     Filter data removing data over certain frequency 'freq' using Butterworth
     lowpass filter of 'corners' corners.
