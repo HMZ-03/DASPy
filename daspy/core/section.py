@@ -1,13 +1,13 @@
 # Purpose: Module for handling Section objects.
 # Author: Minzhe Hu
-# Date: 2024.6.17
+# Date: 2024.6.18
 # Email: hmz2018@mail.ustc.edu.cn
 import warnings
 import os
 import numpy as np
 from copy import deepcopy
 from typing import Iterable
-from daspy.core.dasdatetime import DASDateTime
+from daspy.core.dasdatetime import DASDateTime, utc
 from daspy.core.write import write
 from daspy.basic_tools.visualization import plot
 from daspy.basic_tools.preprocessing import (phase2strain, normalization,
@@ -52,7 +52,8 @@ class Section(object):
         :param turning_channels: sequnce of channel numbers. Channel numbers of
             turning points.
         :param headers: dict. Other headers.
-        :param raw_file: str. Path to the source file.
+        :param source: str or pathlib.PosixPath or type. Raw source of instance.
+            It should be path to the source file or raw type it converted from.
         """
         if data.ndim == 1:
             data = data[np.newaxis, :]
@@ -63,7 +64,7 @@ class Section(object):
         self.start_distance = start_distance
         self.start_time = start_time
         opt_attrs = ['origin_time', 'gauge_length', 'data_type', 'scale',
-                     'geometry', 'turning_channels', 'headers', 'raw_file']
+                     'geometry', 'turning_channels', 'headers', 'source']
         for attr in opt_attrs:
             if attr in kwargs:
                 setattr(self, attr, kwargs.pop(attr))
@@ -108,8 +109,8 @@ class Section(object):
                 elif other.fs is not None:
                     raise ValueError('These two Sections have different fs, '
                                      'please check.')
-            if abs(other.start_time - self.end_time - self.dt) > 0.1:
-                if abs(other.end_time - self.start_time - self.dt) <= 0.1:
+            if abs(other.start_time - self.end_time) > 0.1:
+                if abs(other.end_time - self.start_time) <= 0.1:
                     warnings.warn('According to the time information of the two'
                                   ' Sections, the order of addition is '
                                   'reversed.')
@@ -166,28 +167,177 @@ class Section(object):
 
     @property
     def end_time(self):
-        return self.start_time + (self.nt - 1) / self.fs
+        return self.start_time + self.nt / self.fs
 
     def copy(self):
         return deepcopy(self)
 
     @classmethod
+    def from_obspy_stream(cls, st):
+        """
+        Construct a Section from a obspy.core.stream.Stream instance.
+
+        :param patch: obspy.core.stream.Stream. An instance of
+            obspy.core.stream.Stream for construction.
+        """
+        for tr in st[1:]:
+            for key in ['sampling_rate', 'delta', 'starttime', 'endtime',
+                        'npts', 'calib']:
+                if getattr(tr.stats, key) != getattr(st[0].stats, key):
+                    raise ValueError(f'The {key} of all traces in a stream '
+                                     'should be the same.')
+        nch = len(st)
+        nt = st[0].stats.npts
+        fs = st[0].stats.sampling_rate
+        dx = 1
+        warnings.warn('obspy.core.stream.Stream doesn\'t include channel '
+                      'interval. Set dx to 1.')
+        start_time = DASDateTime.from_datetime(st[0].stats.starttime.datetime).\
+            replace(tzinfo=utc)
+        start_time
+        scale = st[0].stats.calib
+        source = type(st)
+        data = np.zeros((nch, nt)).astype(st[0].data.dtype)
+
+        if str.isdigit(st[0].stats.channel):
+            channel_no = np.zeros(nch)
+            for i, tr in enumerate(st):
+                channel_no[i] = int(tr.stats.channel)
+            if sum(np.diff(np.sort(channel_no)) - 1) > 0:
+                channel_no = np.arange(nch)
+        else:
+            channel_no = np.arange(nch)
+        start_channel = min(channel_no)
+        channel_no -= start_channel
+        for i, tr in enumerate(st):
+            data[channel_no[i]] = tr.data
+
+        return cls(data, dx, fs, start_channel=start_channel,
+                   start_time=start_time, scale=scale, source=source)
+
+    @classmethod
     def from_dascore_patch(cls, patch):
         """
-        Construct a Section from a dascore.core.patch.Patch.
+        Construct a Section from a dascore.core.patch.Patch instance.
 
         :param patch: dascore.core.patch.Patch. An instance of
             dascore.core.patch.Patch for construction.
+        :return: daspy.Section.
         """
-        data = patch.data
-        dx = patch.coords.coord_map['distance'].step
-        fs = np.timedelta64(1, 's') / patch.coords.coord_map['time'].step
-        start_time = DASDateTime.fromtimestamp(patch.coords.coord_map['time']
-                                               .start.astype(DASDateTime) / 1e9)
-        gauge_length = patch.attrs.gauge_length
+        kwargs = {}
+        if patch.dims == ('time', 'distance'):
+            data = patch.data.T
+            dx = patch.coords.coord_map['distance'].step
+            kwargs['start_distance'] = patch.coords.coord_map['distance'].start
+        elif patch.dims == ('time', 'channel'):
+            data = patch.data.T
+            dx = 1
+            warnings.warn('This dascore.core.patch.Patch instance doesn\'t '
+                          'include channel interval. Set dx to 1.')
+            kwargs['start_channel'] = patch.coords.coord_map['channel'].start
+        elif patch.dims == ('distance', 'time'):
+            data = patch.data
+            dx = patch.coords.coord_map['distance'].step
+            kwargs['start_distance'] = patch.coords.coord_map['distance'].start
+        elif patch.dim == ('channel', 'time'):
+            data = patch.data
+            dx = 1
+            warnings.warn('This dascore.core.patch.Patch instance doesn\'t '
+                          'include channel interval. Set dx to 1.')
+            kwargs['start_channel'] = patch.coords.coord_map['channel'].start
+
+        if isinstance(patch.coords.coord_map['time'].step, np.timedelta64):
+            start_time = DASDateTime.fromtimestamp(
+                patch.coords.coord_map['time'].start.item() / 1e9, tz=utc)
+            fs = np.timedelta64(1, 's') / patch.coords.coord_map['time'].step
+        else:
+            start_time = patch.coords.coord_map['time'].start
+            fs = patch.coords.coord_map['time'].step
+
+        if hasattr(patch.attrs, 'gauge_length'):
+            kwargs['gauge_length'] = patch.attrs.gauge_length
+        if patch.attrs.data_type:
+            kwargs['data_type'] = ' '.join(patch.attrs.data_type.split('_'))
         sec = cls(data, dx, fs, start_time=start_time,
-                  gauge_length=gauge_length, headers=patch.attrs)
+                  headers=patch.attrs, source=type(patch), **kwargs)
         return sec
+
+    def to_obspy_stream(self):
+        """
+        Construct an instance of obspy.core.stream.Stream.
+
+        :return: obspy.core.stream.Stream.
+        """
+        from obspy import Stream, Trace, UTCDateTime
+        st = Stream()
+        header = {'sampling_rate': self.fs,
+                  'starttime': UTCDateTime(self.start_time.timestamp())}
+        if hasattr(self, 'scale'):
+            header['calib'] = self.scale
+        for i in range(self.nch):
+            header_tr = deepcopy(header)
+            header_tr['channel'] = str(self.start_channel + i)
+            tr = Trace(self.data[i], header_tr)
+            st += tr
+
+        warnings.warn('obspy.core.stream.Stream doesn\'t include channel '
+                      'interval.')
+        return st
+
+    def to_dascore_patch(self):
+        """
+        Construct an instance of dascore.core.patch.Patch.
+
+        :return: dascore.core.patch.Patch.
+        """
+        from pint import Quantity
+        from datetime import datetime
+        from dascore.core import Patch, CoordManager
+        from dascore.core.coords import CoordRange
+        from dascore.utils.mapping import FrozenDict
+
+        dims = ('time', 'distance')
+        if isinstance(self.start_time, datetime):
+            if self.start_time.tzinfo:
+                stime = np.datetime64(self.start_time.astimezone(utc).
+                                      replace(tzinfo=None))
+                etime = np.datetime64(self.end_time.astimezone(utc).
+                                      replace(tzinfo=None))
+            else:
+                stime = np.datetime64(self.start_time.replace(tzinfo=None))
+                etime = np.datetime64(self.end_time.replace(tzinfo=None))
+
+            time_range = CoordRange(units=(Quantity(1, 'second')),
+                                    step=np.timedelta64(int(self.dt * 1e9),
+                                                        'ns'),
+                                    start=stime, stop=etime)
+        else:
+            stime = self.start_time
+            etime = self.end_time
+            time_range = CoordRange(units=(Quantity(1, 'second')), step=self.dt,
+                                    start=stime, stop=etime)
+
+        dist_range = CoordRange(units=(Quantity(1, 'meter')), step=self.dx,
+                                start=self.start_distance,
+                                stop=self.end_distance)
+        coord_map = FrozenDict({'time': time_range, 'distance': dist_range})
+        dim_map = FrozenDict({'time': ('time',), 'distance': ('distance', )})
+        coords = CoordManager(dims=dims, coord_map=coord_map,
+                              dim_map=dim_map)
+
+        if self.source == Patch:
+            attrs = self.headers
+        else:
+            from dascore.io.prodml.core import ProdMLPatchAttrs
+            attrs = ProdMLPatchAttrs(coords=coords)
+            kwargs = {}
+            if hasattr(self, 'data_type'):
+                kwargs['data_type'] = '_'.join(self.data_type.split(' '))
+            if hasattr(self, 'gauge_length'):
+                kwargs['gauge_length'] = self.gauge_length
+                kwargs['gauge_length_units'] = Quantity(1, 'meter')
+
+        return Patch(self.data.T, coords, dims, attrs)
 
     def save(self, fname=None):
         """
@@ -198,18 +348,18 @@ class Section(object):
             save.
         """
         if fname is None:
-            if hasattr(self, 'raw_file'):
-                fname_list = self.raw_file.split('.')
+            if hasattr(self, 'source'):
+                fname_list = self.source.split('.')
                 fname_list[-2] += '_new'
                 fname = '.'.join(fname_list)
             else:
                 fname = 'section.pkl'
 
         raw_fname = None
-        if hasattr(self, 'raw_file'):
-            if os.path.isfile(self.raw_file) and fname.lower().split(
-                    '.')[-1] == self.raw_file.lower().split('.')[-1]:
-                raw_fname = self.raw_file
+        if hasattr(self, 'source'):
+            if os.path.isfile(self.source) and str(fname).lower().split(
+                    '.')[-1] == str(self.source).lower().split('.')[-1]:
+                raw_fname = self.source
 
         write(self, fname, raw_fname=raw_fname)
         return self
@@ -299,14 +449,11 @@ class Section(object):
                 kwargs['title'] += f' ({self.data_type})'
 
         if xmode == 'channel':
-            if 'x0' not in kwargs.keys() and hasattr(self, 'start_channel'):
-                kwargs['x0'] = self.start_channel
+            kwargs.setdefault('x0', self.start_channel)
         elif xmode == 'distance':
-            if 'x0' not in kwargs.keys() and hasattr(self, 'start_distance'):
-                kwargs['x0'] = self.start_distance
+            kwargs.setdefault('x0', self.start_distance)
         if tmode in ['origin', 'start', 'time']:
-            if 't0' not in kwargs.keys():
-                kwargs['t0'] = self.start_time
+            kwargs.setdefault('t0', self.start_time)
             if tmode == 'origin':
                 if hasattr(self, 'origin_time'):
                     kwargs['t0'] -= self.origin_time
@@ -762,10 +909,10 @@ class Section(object):
             data_type = 'coordinate' if hasattr(self, 'geometry') else \
                 'waveform'
         if data_type == 'coordinate':
-            if hasattr(self, 'gauge_length') and 'channel_gap' not in \
-                    kwargs.items():
-                kwargs['channel_gap'] = self.gauge_length / self.dx / 2
-            if 'data' in kwargs.items():
+            if hasattr(self, 'gauge_length'):
+                kwargs.setdefault(
+                    'channel_gap', self.gauge_length / self.dx / 2)
+            if 'data' in kwargs.keys():
                 output = turning_points(data_type=data_type, **kwargs)
             elif hasattr(self, 'geometry'):
                 output = turning_points(self.geometry, data_type=data_type,

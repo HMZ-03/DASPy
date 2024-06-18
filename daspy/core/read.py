@@ -1,6 +1,6 @@
 # Purpose: Module for reading DAS data.
 # Author: Minzhe Hu
-# Date: 2024.6.17
+# Date: 2024.6.18
 # Email: hmz2018@mail.ustc.edu.cn
 # Modified from
 # https://github.com/RobbinLuo/das-toolkit/blob/main/DasTools/DasPrep.py
@@ -35,15 +35,11 @@ def read(fname=None, output_type='section', **kwargs):
     if fname is None:
         data, metadata = _read_pkl(Path(__file__).parent / 'example.pkl')
     else:
-        ftype = fname.lower().split('.')[-1]
+        ftype = str(fname).lower().split('.')[-1]
         data, metadata = fun_map[ftype](fname, **kwargs)
 
     if output_type.lower() == 'section':
-        if metadata['dx'] is None:
-            print('Please set Section.dx manually.')
-        if metadata['fs'] is None:
-            print('Please set Section.fs manually.')
-        metadata['raw_file'] = fname
+        metadata['source'] = Path(fname)
         return Section(data.astype(float), **metadata)
     elif output_type.lower() == 'array':
         return data, metadata
@@ -182,7 +178,8 @@ def _read_segy(fname, **kwargs):
     # https://github.com/equinor/segyio-notebooks/blob/master/notebooks/basic/02_segy_quicklook.ipynb
 
     with segyio.open(fname, ignore_geometry=True) as segy_file:
-        warnings.warn('This data format doesn\'t include channel interval.')
+        warnings.warn('This data format doesn\'t include channel interval. Set '
+                      'dx to 1')
         nch = segy_file.tracecount
         ch1 = kwargs.pop('ch1', 0)
         ch2 = kwargs.pop('ch2', nch)
@@ -192,7 +189,7 @@ def _read_segy(fname, **kwargs):
 
         # read metadata:
         fs = 1 / (segyio.tools.dt(segy_file) / 1e6)
-        metadata = {'fs': fs, 'dx': None, 'start_channel': ch1}
+        metadata = {'fs': fs, 'dx': 1, 'start_channel': ch1}
 
         return data, metadata
 
