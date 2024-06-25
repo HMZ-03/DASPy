@@ -1,6 +1,6 @@
 # Purpose: Module for handling Section objects.
 # Author: Minzhe Hu
-# Date: 2024.6.18
+# Date: 2024.6.25
 # Email: hmz2018@mail.ustc.edu.cn
 import warnings
 import os
@@ -129,7 +129,7 @@ class Section(object):
             raise TypeError('The input should be Section or np.ndarray.')
 
         if len(data) != self.nch:
-            if len(data[0] == self.nch):
+            if len(data[0]) == self.nch:
                 data = data.T
             else:
                 raise ValueError('These two Sections have different number of '
