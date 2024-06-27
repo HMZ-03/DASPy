@@ -31,7 +31,7 @@ class DASDateTime(datetime):
             return out
         elif isinstance(other, datetime):
             if self.tzinfo and not other.tzinfo:
-                return super().__sub__(other.astimezone(tz=self.tzinfo)).\
+                return super().__sub__(other.replace(tzinfo=self.tzinfo)).\
                     total_seconds()
             elif not self.tzinfo and other.tzinfo:
                 return - (other - self)

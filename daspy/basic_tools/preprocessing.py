@@ -1,6 +1,6 @@
 # Purpose: Some preprocess methods
 # Author: Minzhe Hu
-# Date: 2024.6.13
+# Date: 2024.6.27
 # Email: hmz2018@mail.ustc.edu.cn
 import numpy as np
 from scipy.signal import detrend
@@ -69,13 +69,14 @@ def detrending(data):
     return detrend(data, type='linear')
 
 
-def stacking(data, N, step=None):
+def stacking(data: np.ndarray, N: int, step: int = None, average: bool = False):
     """
     Stack several channels to increase the signal-noise ratio(SNR).
 
     :param data: numpy.ndarray. Data to stack.
     :param N: int. N adjacent channels stacked into 1.
     :param step: int. Interval of data stacking.
+    :param average: bool. True for calculating the average.
     :return: Stacked data.
     """
     if N == 1:
@@ -88,7 +89,9 @@ def stacking(data, N, step=None):
     nx1 = len(begin)
     data_stacked = np.zeros((nx1, nt))
     for i in range(nx1):
-        data_stacked[i, :] = np.mean(data[begin[i]:end[i], :], axis=0)
+        data_stacked[i, :] = sum(data[begin[i]:end[i], :], axis=0)
+    if average:
+        data_stacked /= N
     return data_stacked
 
 
