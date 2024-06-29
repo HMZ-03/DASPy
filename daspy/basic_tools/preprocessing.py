@@ -89,7 +89,7 @@ def stacking(data: np.ndarray, N: int, step: int = None, average: bool = False):
     nx1 = len(begin)
     data_stacked = np.zeros((nx1, nt))
     for i in range(nx1):
-        data_stacked[i, :] = sum(data[begin[i]:end[i], :], axis=0)
+        data_stacked[i, :] = np.sum(data[begin[i]:end[i], :], axis=0)
     if average:
         data_stacked /= N
     return data_stacked
