@@ -47,8 +47,8 @@ sec.plot()
 
 ### Contributing
 
-Please see details on how to contribute to the project [here](CONTRIBUTING.md) and [here](CodingStyleGuide.md)
+Please see details on how to contribute to the project [here](CONTRIBUTING.md) and [here](CodingStyleGuide.md).
 
 ### References
 
-  * Minzhe Hu, Zefeng Li (2010), [DASPy: A Python Toolbox for DAS Seismology](document/Hu_and_Li_DASPy.pdf), _SRL_, accepted
+  * Minzhe Hu, Zefeng Li (2010), [DASPy: A Python Toolbox for DAS Seismology](document/Hu_and_Li_DASPy.pdf), _SRL_, accepted.
