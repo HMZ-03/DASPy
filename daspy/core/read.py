@@ -33,10 +33,12 @@ def read(fname=None, output_type='section', **kwargs):
                'h5': _read_h5, 'hdf5': _read_h5, 'segy': _read_segy,
                'sgy': _read_segy}
     if fname is None:
-        data, metadata = _read_pkl(Path(__file__).parent / 'example.pkl')
+        fname = Path(__file__).parent / 'example.pkl'
+        ftype = 'pkl'
     else:
         ftype = str(fname).lower().split('.')[-1]
-        data, metadata = fun_map[ftype](fname, **kwargs)
+
+    data, metadata = fun_map[ftype](fname, **kwargs)
 
     if output_type.lower() == 'section':
         metadata['source'] = Path(fname)
