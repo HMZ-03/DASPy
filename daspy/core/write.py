@@ -1,6 +1,6 @@
 # Purpose: Module for writing DAS data.
 # Author: Minzhe Hu
-# Date: 2024.6.17
+# Date: 2024.8.7
 # Email: hmz2018@mail.ustc.edu.cn
 import warnings
 import pickle
@@ -20,7 +20,7 @@ def write(sec, fname, raw_fname=None):
         write_pkl(sec, fname)
     else:
         if raw_fname is not None:
-            if raw_fname.lower().split('.')[-1] != ftype:
+            if str(raw_fname).lower().split('.')[-1] != ftype:
                 raise KeyError('Format of new_fname and raw_fname should be '
                                'same.')
         fun_map[ftype](sec, fname, raw_fname=raw_fname)
@@ -35,33 +35,68 @@ def write_pkl(sec, fname):
 
 def _write_tdms(sec, fname, raw_fname=None):
     if raw_fname is None:
-        original_prop = {}
+        key = 'Measurement'
+        file_prop = {}
+        group_prop = {}
     else:
         original_file = TdmsFile(raw_fname)
-        original_prop = original_file.properties
+        group_name = [group.name for group in original_file.groups()]
+        if 'Measurement' in group_name:
+            key = 'Measurement'
+        elif 'DAS' in group_name:
+            key = 'DAS'
+        else:
+            key = group_name[0]
+        file_prop = original_file.properties
+        group_prop = original_file[key].properties
 
-    original_prop['SpatialResolution[m]'] = sec.dx
-    original_prop['SamplingFrequency[Hz]'] = sec.fs
-    original_prop['Start Distance (m)'] = sec.start_distance
-    if isinstance(sec.start_time, datetime):
-        original_prop['ISO8601 Timestamp'] = \
-            sec.start_time.strftime('%Y-%m-%dT%H:%M:%S.%f%z')
+    if 'Spatial Resolution' in group_prop.keys():
+        group_prop['Spatial Resolution'] = sec.dx
     else:
-        original_prop['ISO8601 Timestamp'] = \
-            datetime.fromtimestamp(sec.start_time)
+        file_prop['SpatialResolution[m]'] = sec.dx
+
+    if 'Time Base' in group_prop.keys():
+        group_prop['Time Base'] = 1. / sec.fs
+    else:
+        file_prop['SamplingFrequency[Hz]'] = sec.fs
+
+    if 'Total Channels' in group_prop.keys():
+        group_prop['Total Channels'] = sec.nch
+
+    if 'Initial Channel' in group_prop.keys():
+        group_prop['Initial Channel'] = sec.start_channel
+
+    file_prop['Start Distance (m)'] = sec.start_distance
+    if isinstance(sec.start_time, datetime):
+        start_time = sec.start_time
+    else:
+        start_time = datetime.fromtimestamp(sec.start_time)
+
+    if 'Trigger Time' in group_prop.keys():
+        group_prop['Trigger Time'] = np.datetime64(
+            start_time.replace(tzinfo=None))
+    else:
+        file_prop['ISO8601 Timestamp'] = start_time.strftime(
+            '%Y-%m-%dT%H:%M:%S.%f%z')
+
     if hasattr(sec, 'gauge_length'):
-        original_prop['GaugeLength'] = sec.gauge_length
+        file_prop['GaugeLength'] = sec.gauge_length
 
     with TdmsWriter(fname) as tdms_file:
-        root_object = RootObject(original_prop)
-        group_object = GroupObject('Measurement', properties={})
-        channel_list = []
-        for ch, d in enumerate(sec.data):
-            channel_list.append(ChannelObject('Measurement',
-                                              str(ch + sec.start_channel), d,
-                                              properties={}))
+        root_object = RootObject(file_prop)
+        group_object = GroupObject(key, properties=group_prop)
+        if raw_fname and len(original_file[key]) == 1:
+            channel = ChannelObject(key, original_file[key].channels()[0].name,
+                                    sec.data.flatten(), properties={})
+            tdms_file.write_segment([root_object, group_object, channel])
+        else:
+            channel_list = []
+            for ch, d in enumerate(sec.data):
+                channel_list.append(ChannelObject(key,
+                                                  str(ch + sec.start_channel),
+                                                  d, properties={}))
 
-        tdms_file.write_segment([root_object, group_object] + channel_list)
+            tdms_file.write_segment([root_object, group_object] + channel_list)
     return None
 
 

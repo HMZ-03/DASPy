@@ -1,6 +1,6 @@
 # Purpose: Module for reading DAS data.
 # Author: Minzhe Hu
-# Date: 2024.6.18
+# Date: 2024.8.7
 # Email: hmz2018@mail.ustc.edu.cn
 # Modified from
 # https://github.com/RobbinLuo/das-toolkit/blob/main/DasTools/DasPrep.py
@@ -138,8 +138,7 @@ def _read_h5(fname, **kwargs):
         dx = h5_file['Acquisition'].attrs['SpatialSamplingInterval']
         gauge_length = h5_file['Acquisition'].attrs['GaugeLength']
         metadata = {'fs': fs, 'dx': dx, 'start_channel': ch1,
-                    'start_distance': ch1 * dx, 'gauge_length': gauge_length,
-                    }
+                    'start_distance': ch1 * dx, 'gauge_length': gauge_length}
 
         metadata['start_time'] = _read_h5_starttime(h5_file)
         metadata['headers'] = _read_h5_headers(h5_file)
@@ -150,28 +149,74 @@ def _read_h5(fname, **kwargs):
 def _read_tdms(fname, **kwargs):
     # https://nptdms.readthedocs.io/en/stable/quickstart.html
     with TdmsFile.read(fname) as tdms_file:
-        nch = len(tdms_file['Measurement'])
-        ch1 = kwargs.pop('ch1', 0)
-        ch2 = kwargs.pop('ch2', nch)
+        group_name = [group.name for group in tdms_file.groups()]
+        if 'Measurement' in group_name:
+            key = 'Measurement'
+        elif 'DAS' in group_name:
+            key = 'DAS'
+        else:
+            key = group_name[0]
 
+        headers = {**tdms_file.properties, **tdms_file[key].properties}
+        nch = len(tdms_file[key])
         # read data
-        data = np.asarray([tdms_file['Measurement'][str(ch)]
-                           for ch in range(ch1, ch2)])
+        if nch > 1:
+            start_channel = min(int(channel.name) for channel in
+                                tdms_file[key].channels())
+            ch1 = max(kwargs.pop('ch1', start_channel), start_channel)
+            ch2 = min(kwargs.pop('ch2', start_channel + nch),
+                      start_channel + nch)
+            data = np.asarray([tdms_file[key][str(ch)]
+                              for ch in range(ch1, ch2)])
+        elif nch == 1:
+            try:
+                start_channel = int(headers['Initial Channel'])
+            except KeyError:
+                start_channel = 0
+
+            ch1 = max(kwargs.pop('ch1', start_channel), start_channel)
+            nch = int(headers['Total Channels'])
+            ch2 = min(kwargs.pop('ch2', start_channel + nch),
+                      start_channel + nch)
+            data = np.asarray(tdms_file[key].channels()[0]).reshape((nch, -1))
+            data = data[ch1 - start_channel: ch2 - start_channel]
 
         # read metadata
-        headers = tdms_file.properties
-        dx = headers['SpatialResolution[m]']
-        fs = headers['SamplingFrequency[Hz]']
-        gauge_length = headers['GaugeLength']
-        min_ch = min(int(channel.name) for channel in
-                     tdms_file['Measurement'].channels())
-        start_distance = headers['Start Distance (m)'] + dx * (ch1 - min_ch)
-        start_time = DASDateTime.strptime(
-            tdms_file.properties['ISO8601 Timestamp'], '%Y-%m-%dT%H:%M:%S.%f%z')
+        try:
+            dx = headers['SpatialResolution[m]']
+        except KeyError:
+            try:
+                dx = headers['Spatial Resolution']
+            except KeyError:
+                dx = None
 
-    metadata = {'fs': fs, 'dx': dx, 'start_channel': ch1,
-                'start_distance': start_distance, 'start_time': start_time,
-                'gauge_length': gauge_length, 'headers': headers}
+        try:
+            fs = headers['SamplingFrequency[Hz]']
+        except KeyError:
+            try:
+                fs = 1 / headers['Time Base']
+            except KeyError:
+                fs = None
+
+        try:
+            start_distance = headers['Start Distance (m)'] + \
+                dx * (ch1 - start_channel)
+        except KeyError:
+            start_distance = dx * ch1
+
+        try:
+            start_time = DASDateTime.strptime(
+                headers['ISO8601 Timestamp'], '%Y-%m-%dT%H:%M:%S.%f%z')
+        except KeyError:
+            start_time = DASDateTime.from_datetime(
+                headers['Trigger Time'].item())
+
+        metadata = {'fs': fs, 'dx': dx, 'start_channel': ch1,
+                    'start_distance': start_distance, 'start_time': start_time,
+                    'headers': headers}
+
+        if 'GaugeLength' in headers.keys():
+            metadata['gauge_length'] = headers['GaugeLength']
 
     return data, metadata
 
