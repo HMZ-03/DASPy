@@ -1,6 +1,6 @@
 # Purpose: Module for reading DAS data.
 # Author: Minzhe Hu
-# Date: 2024.8.7
+# Date: 2024.8.8
 # Email: hmz2018@mail.ustc.edu.cn
 # Modified from
 # https://github.com/RobbinLuo/das-toolkit/blob/main/DasTools/DasPrep.py
@@ -178,7 +178,7 @@ def _read_tdms(fname, **kwargs):
             nch = int(headers['Total Channels'])
             ch2 = min(kwargs.pop('ch2', start_channel + nch),
                       start_channel + nch)
-            data = np.asarray(tdms_file[key].channels()[0]).reshape((nch, -1))
+            data = np.asarray(tdms_file[key].channels()[0]).reshape((-1, nch)).T
             data = data[ch1 - start_channel: ch2 - start_channel]
 
         # read metadata

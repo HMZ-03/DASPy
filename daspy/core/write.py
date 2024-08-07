@@ -1,6 +1,6 @@
 # Purpose: Module for writing DAS data.
 # Author: Minzhe Hu
-# Date: 2024.8.7
+# Date: 2024.8.8
 # Email: hmz2018@mail.ustc.edu.cn
 import warnings
 import pickle
@@ -87,7 +87,7 @@ def _write_tdms(sec, fname, raw_fname=None):
         group_object = GroupObject(key, properties=group_prop)
         if raw_fname and len(original_file[key]) == 1:
             channel = ChannelObject(key, original_file[key].channels()[0].name,
-                                    sec.data.flatten(), properties={})
+                                    sec.data.T.flatten(), properties={})
             tdms_file.write_segment([root_object, group_object, channel])
         else:
             channel_list = []
