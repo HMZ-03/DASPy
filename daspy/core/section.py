@@ -1,6 +1,6 @@
 # Purpose: Module for handling Section objects.
 # Author: Minzhe Hu
-# Date: 2024.6.25
+# Date: 2024.8.27
 # Email: hmz2018@mail.ustc.edu.cn
 import warnings
 import os
@@ -155,7 +155,7 @@ class Section(object):
 
     @property
     def nt(self):
-        return len(self.data[0])
+        return self.data.shape[1]
 
     @property
     def end_channel(self):
@@ -579,8 +579,8 @@ class Section(object):
             if tmin is not None:
                 tmin = round((tmin - self.start_time) * self.fs)
                 if tmin < 0:
-                    warnings.warn('tmin is earlier than start_time. Set tmin'
-                                  'to 0.')
+                    warnings.warn('tmin is earlier than start_time. Set tmin '
+                                  'to start_time.')
                     tmin = 0
                 elif tmin >= self.nt:
                     raise ValueError('tmin is later than end_time.')
@@ -593,7 +593,7 @@ class Section(object):
                     raise ValueError('tmax is earlier than start_time.')
                 if tmax > self.nt:
                     warnings.warn('tmax is later than end_time. Set tmax to the'
-                                  'data duration.')
+                                  ' end_time.')
                     tmax = self.nt
 
             if xmin is not None:
