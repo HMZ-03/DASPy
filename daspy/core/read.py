@@ -53,7 +53,7 @@ def _read_pkl(fname, **kwargs):
         if isinstance(pkl_data, np.ndarray):
             ch1 = kwargs.pop('ch1', 0)
             ch2 = kwargs.pop('ch2', len(pkl_data))
-            return pkl_data[ch1:ch2], {}
+            return pkl_data[ch1:ch2], {'dx': None, 'fs': None}
         elif isinstance(pkl_data, dict):
             data = pkl_data.pop('data')
             if 'ch1' in kwargs.keys() or 'ch2' in kwargs.keys():
@@ -250,7 +250,7 @@ def _read_npy(fname, **kwargs):
     data = np.load(fname)
     ch1 = kwargs.pop('ch1', 0)
     ch2 = kwargs.pop('ch2', len(data))
-    return data[ch1:ch2], {}
+    return data[ch1:ch2], {'dx': None, 'fs': None}
 
 
 def read_json(fname, output_type='dict'):

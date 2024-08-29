@@ -83,7 +83,7 @@ class FileSystem(object):
             etime = self.timelist[-1] + self.dt
 
         filelist = [self.filelist[i] for i in range(len(self))
-                    if (stime - self.dt) <= self.timelist[i] <= etime]
+                    if (stime - self.dt) < self.timelist[i] <= etime]
         if readsec:
             sec = read(filelist[0], **kwargs)
             for f in filelist[1:]:
