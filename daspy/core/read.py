@@ -1,6 +1,6 @@
 # Purpose: Module for reading DAS data.
 # Author: Minzhe Hu
-# Date: 2024.8.8
+# Date: 2024.8.27
 # Email: hmz2018@mail.ustc.edu.cn
 # Modified from
 # https://github.com/RobbinLuo/das-toolkit/blob/main/DasTools/DasPrep.py
@@ -31,7 +31,7 @@ def read(fname=None, output_type='section', **kwargs):
     """
     fun_map = {'pkl': _read_pkl, 'pickle': _read_pkl, 'tdms': _read_tdms,
                'h5': _read_h5, 'hdf5': _read_h5, 'segy': _read_segy,
-               'sgy': _read_segy}
+               'sgy': _read_segy, 'npy': _read_npy}
     if fname is None:
         fname = Path(__file__).parent / 'example.pkl'
         ftype = 'pkl'
@@ -239,6 +239,13 @@ def _read_segy(fname, **kwargs):
         metadata = {'fs': fs, 'dx': 1, 'start_channel': ch1}
 
         return data, metadata
+
+
+def _read_npy(fname, **kwargs):
+    data = np.load(fname)
+    ch1 = kwargs.pop('ch1', 0)
+    ch2 = kwargs.pop('ch2', len(data))
+    return data[ch1:ch2], {}
 
 
 def read_json(fname, output_type='dict'):
