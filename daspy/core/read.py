@@ -1,6 +1,6 @@
 # Purpose: Module for reading DAS data.
 # Author: Minzhe Hu
-# Date: 2024.8.27
+# Date: 2024.8.29
 # Email: hmz2018@mail.ustc.edu.cn
 # Modified from
 # https://github.com/RobbinLuo/das-toolkit/blob/main/DasTools/DasPrep.py
@@ -49,21 +49,26 @@ def read(fname=None, output_type='section', **kwargs):
 
 def _read_pkl(fname, **kwargs):
     with open(fname, 'rb') as f:
-        sec_dict = pickle.load(f)
-
-    data = sec_dict.pop('data')
-    if 'ch1' in kwargs.keys() or 'ch2' in kwargs.keys():
-        if 'start_channel' in sec_dict.keys():
-            s_chn = sec_dict['start_channel']
-            print(f'Data is start with channel {s_chn}.')
+        pkl_data = pickle.load(f)
+        if isinstance(pkl_data, np.ndarray):
+            ch1 = kwargs.pop('ch1', 0)
+            ch2 = kwargs.pop('ch2', len(pkl_data))
+            return pkl_data[ch1:ch2], {}
+        elif isinstance(pkl_data, dict):
+            data = pkl_data.pop('data')
+            if 'ch1' in kwargs.keys() or 'ch2' in kwargs.keys():
+                if 'start_channel' in pkl_data.keys():
+                    s_chn = pkl_data['start_channel']
+                    print(f'Data is start with channel {s_chn}.')
+                else:
+                    s_chn = 0
+                ch1 = kwargs.pop('ch1', s_chn)
+                ch2 = kwargs.pop('ch2', s_chn + len(data))
+                data = data[ch1 - s_chn:ch2 - s_chn, :]
+                pkl_data['start_channel'] = ch1
+            return data, pkl_data
         else:
-            s_chn = 0
-        ch1 = kwargs.pop('ch1', s_chn)
-        ch2 = kwargs.pop('ch2', s_chn + len(data))
-        data = data[ch1 - s_chn:ch2 - s_chn, :]
-        sec_dict['start_channel'] = ch1
-
-    return data, sec_dict
+            raise TypeError('Unknown data type.')
 
 
 def _read_h5_headers(group):
