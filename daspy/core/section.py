@@ -1,6 +1,6 @@
 # Purpose: Module for handling Section objects.
 # Author: Minzhe Hu
-# Date: 2024.8.27
+# Date: 2024.8.30
 # Email: hmz2018@mail.ustc.edu.cn
 import warnings
 import os
@@ -577,7 +577,10 @@ class Section(object):
         """
         if mode == 1:
             if tmin is not None:
-                tmin = round((tmin - self.start_time) * self.fs)
+                try:
+                    tmin = round((tmin - self.start_time) * self.fs)
+                except TypeError:
+                    tmin = round(tmin * self.fs)
                 if tmin < 0:
                     warnings.warn('tmin is earlier than start_time. Set tmin '
                                   'to start_time.')
@@ -588,7 +591,10 @@ class Section(object):
                 tmin = 0
 
             if tmax is not None:
-                tmax = round((tmax - self.start_time) * self.fs)
+                try:
+                    tmax = round((tmax - self.start_time) * self.fs)
+                except TypeError:
+                    tmax = round(tmax * self.fs)
                 if tmax <= 0:
                     raise ValueError('tmax is earlier than start_time.')
                 if tmax > self.nt:
