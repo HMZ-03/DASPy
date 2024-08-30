@@ -1,3 +1,1 @@
 *.pyc
-daspy/core/make_example.py
-daspy/core/*.h5
