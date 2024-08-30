@@ -1,6 +1,6 @@
 # Purpose: Some preprocess methods
 # Author: Minzhe Hu
-# Date: 2024.6.27
+# Date: 2024.8.30
 # Email: hmz2018@mail.ustc.edu.cn
 import numpy as np
 from scipy.signal import detrend
@@ -38,13 +38,13 @@ def normalization(data, method='z-score'):
         raise ValueError("Data should be 1-D or 2-D array")
     nt = len(data[0])
     if method == 'max':
-        amp = np.tile(np.max(abs(data), 1), (nt, 1)).T
+        amp = np.max(abs(data), 1, keepdims=True)
         amp[amp == 0] = amp[amp > 0].min()
         return data / amp
 
     if method == 'z-score':
-        mean = np.tile(np.mean(data, axis=1), (nt, 1)).T
-        std = np.tile(np.std(data, axis=1), (nt, 1)).T
+        mean = np.mean(data, axis=1, keepdims=True)
+        std = np.std(data, axis=1, keepdims=True)
         std[std == 0] = std[std > 0].min()
         return (data - mean) / std
 
