@@ -242,8 +242,13 @@ def _read_tdms(fname, **kwargs):
             start_time = DASDateTime.strptime(
                 headers['ISO8601 Timestamp'], '%Y-%m-%dT%H:%M:%S.%f%z')
         except KeyError:
-            start_time = DASDateTime.from_datetime(
-                headers['Trigger Time'].item())
+            start_time = 0
+            for key in ['GPSTimeStamp', 'CPUTimeStamp', 'Trigger Time']:
+                if key in headers.keys():
+                    if headers[key]:
+                        start_time = DASDateTime.from_datetime(headers[key].
+                                                               item())
+                        break
 
         metadata = {'fs': fs, 'dx': dx, 'start_channel': ch1,
                     'start_distance': start_distance, 'start_time': start_time,

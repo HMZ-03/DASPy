@@ -72,12 +72,21 @@ def _write_tdms(sec, fname, raw_fname=None):
     else:
         start_time = datetime.fromtimestamp(sec.start_time)
 
-    if 'Trigger Time' in group_prop.keys():
+    if raw_fname is None:
+        file_prop['ISO8601 Timestamp'] = start_time.strftime(
+            '%Y-%m-%dT%H:%M:%S.%f%z')
         group_prop['Trigger Time'] = np.datetime64(
             start_time.replace(tzinfo=None))
     else:
-        file_prop['ISO8601 Timestamp'] = start_time.strftime(
-            '%Y-%m-%dT%H:%M:%S.%f%z')
+        if 'ISO8601 Timestamp' in file_prop.keys():
+            file_prop['ISO8601 Timestamp'] = start_time.strftime(
+                '%Y-%m-%dT%H:%M:%S.%f%z')
+        else:
+            for key in ['GPSTimeStamp', 'CPUTimeStamp', 'Trigger Time']:
+                if 'key' in group_prop.keys():
+                    group_prop[key] = np.datetime64(
+                        start_time.replace(tzinfo=None))
+                    break
 
     if hasattr(sec, 'gauge_length'):
         file_prop['GaugeLength'] = sec.gauge_length
