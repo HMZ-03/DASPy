@@ -20,7 +20,7 @@ class DASDateTime(datetime):
                 out.append(self + t)
             return out
         elif not isinstance(other, timedelta):
-            other = timedelta(seconds=other)
+            other = timedelta(seconds=float(other))
         return super().__add__(other)
 
     def __sub__(self, other):
