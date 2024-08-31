@@ -1,6 +1,6 @@
 # Purpose: Module for reading DAS data.
 # Author: Minzhe Hu
-# Date: 2024.8.29
+# Date: 2024.8.31
 # Email: hmz2018@mail.ustc.edu.cn
 # Modified from
 # https://github.com/RobbinLuo/das-toolkit/blob/main/DasTools/DasPrep.py
@@ -117,35 +117,64 @@ def _read_h5_starttime(h5_file):
 def _read_h5(fname, **kwargs):
     with h5py.File(fname, 'r') as h5_file:
         # read headers
+        group = list(h5_file.keys())[0]
+        if group == 'Acuisition':
+            # read data
+            try:
+                nch = h5_file['Acquisition'].attrs['NumberOfLoci']
+            except KeyError:
+                nch = len(h5_file['Acquisition/Raw[0]/RawData/'])
+            ch1 = kwargs.pop('ch1', 0)
+            ch2 = kwargs.pop('ch2', nch)
+            array_shape = h5_file['Acquisition/Raw[0]/RawData/'].shape
+            if array_shape[0] == nch:
+                data = h5_file['Acquisition/Raw[0]/RawData/'][ch1:ch2, :]
+            else:
+                data = h5_file['Acquisition/Raw[0]/RawData/'][:, ch1:ch2].T
 
-        try:
-            nch = h5_file['Acquisition'].attrs['NumberOfLoci']
-        except KeyError:
-            nch = len(h5_file['Acquisition/Raw[0]/RawData/'])
+            # read metadata
+            try:
+                fs = h5_file['Acquisition/Raw[0]'].attrs['OutputDataRate']
+            except KeyError:
+                time_arr = h5_file['Acquisition/Raw[0]/RawDataTime/']
+                fs = 1 / (np.diff(time_arr).mean() / 1e6)
 
-        ch1 = kwargs.pop('ch1', 0)
-        ch2 = kwargs.pop('ch2', nch)
+            dx = h5_file['Acquisition'].attrs['SpatialSamplingInterval']
+            gauge_length = h5_file['Acquisition'].attrs['GaugeLength']
+            metadata = {'fs': fs, 'dx': dx, 'start_channel': ch1,
+                        'start_distance': ch1 * dx,
+                        'gauge_length': gauge_length}
 
-        # read data
-        array_shape = h5_file['Acquisition/Raw[0]/RawData/'].shape
-        if array_shape[0] == nch:
-            data = h5_file['Acquisition/Raw[0]/RawData/'][ch1:ch2, :]
+            metadata['start_time'] = _read_h5_starttime(h5_file)
+            metadata['headers'] = _read_h5_headers(h5_file)
         else:
-            data = h5_file['Acquisition/Raw[0]/RawData/'][:, ch1:ch2].T
+            acquisition = list(h5_file[f'{group}/Source1/Zone1'].keys())[0]
+            # read data
+            start_channel = int(h5_file[f'{group}/Source1/Zone1'].
+                                attrs['Extent'][0])
+            nch = h5_file[f'{group}/Source1/Zone1/{acquisition}'].shape[-1]
+            ch1 = kwargs.pop('ch1', start_channel)
+            ch2 = kwargs.pop('ch2', start_channel + nch)
+            data = h5_file[f'{group}/Source1/Zone1/{acquisition}']\
+                [:, :, ch1-start_channel:ch2-start_channel].T.reshape((ch2-ch1,
+                                                                       -1))
 
-        # read metadata
-        try:
-            fs = h5_file['Acquisition/Raw[0]'].attrs['OutputDataRate']
-        except KeyError:
-            time_arr = h5_file['Acquisition/Raw[0]/RawDataTime/']
-            fs = 1 / (np.diff(time_arr).mean() / 1e6)
-
-        dx = h5_file['Acquisition'].attrs['SpatialSamplingInterval']
-        gauge_length = h5_file['Acquisition'].attrs['GaugeLength']
-        metadata = {'fs': fs, 'dx': dx, 'start_channel': ch1,
-                    'start_distance': ch1 * dx, 'gauge_length': gauge_length}
-
-        metadata['start_time'] = _read_h5_starttime(h5_file)
+            # read metadata
+            dx = h5_file[f'{group}/Source1/Zone1'].attrs['Spacing'][0]
+            try:
+                fs = float(h5_file[f'{group}/Source1/Zone1'].attrs['FreqRes'])
+            except KeyError:
+                fs = h5_file[f'{group}/Source1/Zone1'].attrs['SamplingRate'][0]
+            start_distance = h5_file[f'{group}/Source1/Zone1'].attrs['Origin'][0]
+            start_time = DASDateTime.fromtimestamp(
+                h5_file[f'{group}/Source1/time'][0, 0])
+            gauge_length = h5_file[f'{group}/Source1/Zone1'].\
+                attrs['GaugeLength'][0]
+            metadata = {'fs': fs, 'dx': dx, 'start_channel': ch1,
+                        'start_distance': start_distance + 
+                                            (ch1 - start_channel) * dx,
+                        'start_time': start_time, 'gauge_length': gauge_length}
+            
         metadata['headers'] = _read_h5_headers(h5_file)
 
     return data, metadata
