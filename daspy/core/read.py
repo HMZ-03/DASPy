@@ -53,6 +53,8 @@ def _read_pkl(fname, **kwargs):
         if isinstance(pkl_data, np.ndarray):
             ch1 = kwargs.pop('ch1', 0)
             ch2 = kwargs.pop('ch2', len(pkl_data))
+            warnings.warn('This data doesn\'t include channel interval and '
+                          'sampling rate. Please set manually')
             return pkl_data[ch1:ch2], {'dx': None, 'fs': None}
         elif isinstance(pkl_data, dict):
             data = pkl_data.pop('data')
@@ -146,7 +148,16 @@ def _read_h5(fname, **kwargs):
                         'gauge_length': gauge_length}
 
             metadata['start_time'] = _read_h5_starttime(h5_file)
-            metadata['headers'] = _read_h5_headers(h5_file)
+        elif group == 'raw':
+            nch = len(h5_file['raw'])
+            ch1 = kwargs.pop('ch1', 0)
+            ch2 = kwargs.pop('ch2', nch)
+            data = h5_file['raw'][ch1:ch2, :]
+            fs = int(1 / np.diff(h5_file['timestamp']).mean())
+            start_time = DASDateTime.fromtimestamp(h5_file['timestamp'][0])
+            warnings.warn('This data format doesn\'t include channel interval. '
+                          'Please set manually')
+            metadata = {'fs':fs, 'dx': None, 'start_time': start_time}
         else:
             acquisition = list(h5_file[f'{group}/Source1/Zone1'].keys())[0]
             # read data
@@ -264,8 +275,6 @@ def _read_segy(fname, **kwargs):
     # https://github.com/equinor/segyio-notebooks/blob/master/notebooks/basic/02_segy_quicklook.ipynb
 
     with segyio.open(fname, ignore_geometry=True) as segy_file:
-        warnings.warn('This data format doesn\'t include channel interval. Set '
-                      'dx to 1')
         nch = segy_file.tracecount
         ch1 = kwargs.pop('ch1', 0)
         ch2 = kwargs.pop('ch2', nch)
@@ -275,7 +284,9 @@ def _read_segy(fname, **kwargs):
 
         # read metadata:
         fs = 1 / (segyio.tools.dt(segy_file) / 1e6)
-        metadata = {'fs': fs, 'dx': 1, 'start_channel': ch1}
+        metadata = {'fs': fs, 'dx': None, 'start_channel': ch1}
+        warnings.warn('This data format doesn\'t include channel interval.'
+                      'Please set manually')
 
         return data, metadata
 
@@ -284,6 +295,8 @@ def _read_npy(fname, **kwargs):
     data = np.load(fname)
     ch1 = kwargs.pop('ch1', 0)
     ch2 = kwargs.pop('ch2', len(data))
+    warnings.warn('This data format doesn\'t include channel interval and '
+                  'sampling rate. Please set manually')
     return data[ch1:ch2], {'dx': None, 'fs': None}
 
 
