@@ -1,10 +1,10 @@
 # Purpose: Plot data
 # Author: Minzhe Hu
-# Date: 2024.6.18
+# Date: 2024.8.30
 # Email: hmz2018@mail.ustc.edu.cn
 import numpy as np
 import matplotlib.pyplot as plt
-from typing import Iterable
+from copy import deepcopy
 from collections.abc import Sequence
 
 
@@ -77,20 +77,15 @@ def plot(data: np.ndarray, dx=None, fs=None, ax=None, obj='waveform', dpi=150,
             xlabel_default = 'Disitance (km)'
             extent = [x0 * 1e-3, (x0 + nch * dx) * 1e-3, t0 + nt / fs, t0]
 
-        if obj == 'phasepick':
-            if len(pick) != nch:
-                raise ValueError(
-                    "Number of picks must be the same as channels.")
-            for i, pk in enumerate(pick):
-                if isinstance(pk, Iterable):
-                    n = len(pk)
-                    if n != 0:
-                        ax.scatter(n * [(x0 + i * dx) * 1e-3],
-                                   t0 + np.array(pk) / fs, marker=',', s=0.1,
-                                   c='black')
-                else:
-                    ax.scatter((x0 + i * dx) * 1e-3, t0 + np.array(pk) / fs,
-                               marker=',', s=0.1, c='black')
+        if obj == 'phasepick' and len(pick):
+            pck = pick.astype(float)
+            if xmode.lower() == 'distance':
+                pck[:, 0] = (x0 + pck[:, 0] * dx) * 1e-3
+            elif xmode.lower() == 'channel':
+                pck[:, 0] = x0 + pck[:, 0]
+            if tmode.lower() == 'sampling':
+                pck[:, 1] = pck[:, 1] / fs
+            ax.scatter(pck[:,0], t0 + pck[:,1], marker=',', s=0.1, c='black')
 
     elif obj in ['spectrum', 'spectrogram', 'fk', 'dispersion']:
         if isinstance(data[0,0], (complex, np.complex64)):
