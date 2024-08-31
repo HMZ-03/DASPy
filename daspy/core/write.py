@@ -1,6 +1,6 @@
 # Purpose: Module for writing DAS data.
 # Author: Minzhe Hu
-# Date: 2024.8.31
+# Date: 2024.9.1
 # Email: hmz2018@mail.ustc.edu.cn
 import warnings
 import pickle
@@ -132,7 +132,6 @@ def _write_h5(sec, fname, raw_fname=None):
                 DataTime = np.arange(
                     stime, stime + sec.nt / sec.fs, 1 / sec.fs)
             else:
-                # stime = .encode('ascii')
                 h5_file['Acquisition/Raw[0]/RawData'].attrs['PartStartTime'] = \
                     np.bytes_(str(sec.start_time))
                 DataTime = sec.start_time + np.arange(0, sec.nt / sec.fs,
@@ -142,7 +141,8 @@ def _write_h5(sec, fname, raw_fname=None):
                 create_dataset('RawDataTime', data=DataTime)
             h5_file['Acquisition/Raw[0]'].attrs['OutputDataRate'] = sec.fs
             h5_file['Acquisition'].attrs['SpatialSamplingInterval'] = sec.dx
-            h5_file['Acquisition'].attrs['GaugeLength'] = sec.gauge_length
+            if hasattr(sec, 'gauge_length'):
+                h5_file['Acquisition'].attrs['GaugeLength'] = sec.gauge_length
     else:
         copyfile(raw_fname, fname)
         with h5py.File(fname, 'r+') as h5_file:
@@ -152,16 +152,15 @@ def _write_h5(sec, fname, raw_fname=None):
                 _update_h5_dataset(h5_file, 'Acquisition/Raw[0]/', 'RawData',
                                    sec.data)
                 if isinstance(sec.start_time, datetime):
-                    h5_file['Acquisition/Raw[0]/RawData'].attrs['PartStartTime'] = \
-                        np.bytes_(
+                    h5_file['Acquisition/Raw[0]/RawData'].\
+                        attrs['PartStartTime'] = np.bytes_(
                         sec.start_time.strftime('%Y-%m-%dT%H:%M:%S.%f%z'))
                     stime = sec.start_time.timestamp() * 1e6
                     DataTime = np.arange(
                         stime, stime + sec.nt / sec.fs, 1 / sec.fs)
                 else:
-                    # stime = .encode('ascii')
-                    h5_file['Acquisition/Raw[0]/RawData'].attrs['PartStartTime'] = \
-                        np.bytes_(str(sec.start_time))
+                    h5_file['Acquisition/Raw[0]/RawData'].\
+                        attrs['PartStartTime'] = np.bytes_(str(sec.start_time))
                     DataTime = sec.start_time + np.arange(0, sec.nt / sec.fs,
                                                         1 / sec.fs)
                 _update_h5_dataset(h5_file, 'Acquisition/Raw[0]/',
@@ -169,6 +168,11 @@ def _write_h5(sec, fname, raw_fname=None):
                 h5_file['Acquisition/Raw[0]'].attrs['OutputDataRate'] = sec.fs
                 h5_file['Acquisition'].attrs['SpatialSamplingInterval'] = sec.dx
                 h5_file['Acquisition'].attrs['GaugeLength'] = sec.gauge_length
+            elif group == 'raw':
+                _update_h5_dataset(h5_file, '/', 'raw', sec.data)
+                DataTime = sec.start_time.timestamp() + \
+                    np.arange(0, sec.nt / sec.fs, 1 / sec.fs)
+                _update_h5_dataset(h5_file, '/', 'timestamp', DataTime)
             else:
                 acquisition = list(h5_file[f'{group}/Source1/Zone1'].keys())[0]
                 data = sec.data

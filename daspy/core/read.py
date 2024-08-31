@@ -1,6 +1,6 @@
 # Purpose: Module for reading DAS data.
 # Author: Minzhe Hu
-# Date: 2024.8.31
+# Date: 2024.9.1
 # Email: hmz2018@mail.ustc.edu.cn
 # Modified from
 # https://github.com/RobbinLuo/das-toolkit/blob/main/DasTools/DasPrep.py
@@ -153,7 +153,7 @@ def _read_h5(fname, **kwargs):
             ch1 = kwargs.pop('ch1', 0)
             ch2 = kwargs.pop('ch2', nch)
             data = h5_file['raw'][ch1:ch2, :]
-            fs = int(1 / np.diff(h5_file['timestamp']).mean())
+            fs = round(1 / np.diff(h5_file['timestamp']).mean())
             start_time = DASDateTime.fromtimestamp(h5_file['timestamp'][0])
             warnings.warn('This data format doesn\'t include channel interval. '
                           'Please set manually')
