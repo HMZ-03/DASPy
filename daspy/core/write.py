@@ -18,6 +18,8 @@ def write(sec, fname, raw_fname=None):
     ftype = fname.lower().split('.')[-1]
     if ftype == 'pkl':
         write_pkl(sec, fname)
+    elif ftype == 'npy':
+        np.save(fname, sec.data)
     else:
         if raw_fname is not None:
             if str(raw_fname).lower().split('.')[-1] != ftype:
