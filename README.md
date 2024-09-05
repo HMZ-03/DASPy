@@ -20,6 +20,12 @@ DASPy runs on Python 3.9 and up. We recommend you use the latest version of pyth
 pip install git+https://github.com/HMZ-03/DASPy.git
 ```
 
+If you installed DASPy this way, you can upgrade DASPy with the following command:
+
+```
+pip install --upgrade git+https://github.com/HMZ-03/DASPy.git
+```
+
 ### Conda
 ```
 conda install -c hmz-03 daspy
