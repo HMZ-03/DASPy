@@ -57,4 +57,4 @@ Please see details on how to contribute to the project [here](CONTRIBUTING.md) a
 
 ### Reference
 
-  * Minzhe Hu and Zefeng Li (2024), [DASPy: A Python Toolbox for DAS Seismology](https://pubs.geoscienceworld.org/ssa/srl/article/95/5/3055/645865/DASPy-A-Python-Toolbox-for-DAS-Seismology), _Seismological Research Letters_ , 95(5), 3055–3066. doi: `https://doi.org/10.1785/0220240124`.
+  * Minzhe Hu and Zefeng Li (2024), [DASPy: A Python Toolbox for DAS Seismology](https://pubs.geoscienceworld.org/ssa/srl/article/95/5/3055/645865/DASPy-A-Python-Toolbox-for-DAS-Seismology), _Seismological Research Letters_, 95(5), 3055–3066. doi: `https://doi.org/10.1785/0220240124`.
