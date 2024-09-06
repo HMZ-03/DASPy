@@ -55,6 +55,6 @@ sec.plot()
 
 Please see details on how to contribute to the project [here](CONTRIBUTING.md) and [here](CodingStyleGuide.md).
 
-### References
+### Reference
 
   * Minzhe Hu, Zefeng Li; DASPy: A Python Toolbox for DAS Seismology. Seismological Research Letters 2024;; 95 (5): 3055–3066. doi: https://doi.org/10.1785/0220240124
