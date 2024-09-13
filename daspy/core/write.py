@@ -1,6 +1,6 @@
 # Purpose: Module for writing DAS data.
 # Author: Minzhe Hu
-# Date: 2024.9.1
+# Date: 2024.9.14
 # Email: hmz2018@mail.ustc.edu.cn
 import warnings
 import pickle
@@ -12,19 +12,17 @@ from nptdms import TdmsFile, TdmsWriter, RootObject, GroupObject, ChannelObject
 from datetime import datetime
 
 
-def write(sec, fname, raw_fname=None):
-    fun_map = {'tdms': _write_tdms, 'h5': _write_h5, 'hdf5': _write_h5,
-               'segy': _write_segy, 'sgy': _write_segy}
-    ftype = fname.lower().split('.')[-1]
+def write(sec, fname, ftype=None, raw_fname=None):
+    fun_map = {'tdms': _write_tdms, 'h5': _write_h5, 'sgy': _write_segy}
+    if ftype is None:
+        ftype = str(fname).lower().split('.')[-1]
+    ftype.replace('hdf5', 'h5')
+    ftype.replace('segy', 'sgy')
     if ftype == 'pkl':
         write_pkl(sec, fname)
     elif ftype == 'npy':
         np.save(fname, sec.data)
     else:
-        if raw_fname is not None:
-            if str(raw_fname).lower().split('.')[-1] != ftype:
-                raise KeyError('Format of new_fname and raw_fname should be '
-                               'same.')
         fun_map[ftype](sec, fname, raw_fname=raw_fname)
     return None
 
@@ -149,7 +147,7 @@ def _write_h5(sec, fname, raw_fname=None):
         copyfile(raw_fname, fname)
         with h5py.File(fname, 'r+') as h5_file:
             group = list(h5_file.keys())[0]
-            if group == 'Acuisition':
+            if group == 'Acquisition':
                 h5_file['Acquisition'].attrs['NumberOfLoci'] = sec.nch
                 _update_h5_dataset(h5_file, 'Acquisition/Raw[0]/', 'RawData',
                                    sec.data)
@@ -175,6 +173,26 @@ def _write_h5(sec, fname, raw_fname=None):
                 DataTime = sec.start_time.timestamp() + \
                     np.arange(0, sec.nt / sec.fs, 1 / sec.fs)
                 _update_h5_dataset(h5_file, '/', 'timestamp', DataTime)
+            elif group == 'data_product':
+                _update_h5_dataset(h5_file, 'data_product/', 'data', sec.data)
+                h5_file.attrs['dt_computer'] = 1 / sec.fs
+                h5_file.attrs['dx'] = sec.dx
+                h5_file.attrs['gauge_length'] = sec.gauge_length
+                DataTime = sec.start_time.timestamp() + \
+                    np.arange(0, sec.nt / sec.fs, 1 / sec.fs)
+                if h5_file.attrs['saving_start_gps_time'] > 0:
+                    h5_file.attrs['file_start_gps_time'] = \
+                        sec.start_time.timestamp()
+                    _update_h5_dataset(h5_file, 'data_product/', 'gps_time',
+                                       DataTime)
+                    del h5_file['data_product/posix_time']
+                else:
+                    h5_file.attrs['file_start_computer_time'] = \
+                        sec.start_time.timestamp()
+                    _update_h5_dataset(h5_file, 'data_product/', 'posix_time',
+                                       DataTime)
+                    del h5_file['data_product/gps_time']
+                h5_file.attrs['data_product'] = sec.data_type
             else:
                 acquisition = list(h5_file[f'{group}/Source1/Zone1'].keys())[0]
                 data = sec.data

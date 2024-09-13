@@ -1,6 +1,6 @@
 # Purpose: Module for handling Section objects.
 # Author: Minzhe Hu
-# Date: 2024.8.30
+# Date: 2024.9.14
 # Email: hmz2018@mail.ustc.edu.cn
 import warnings
 import os
@@ -52,8 +52,8 @@ class Section(object):
         :param turning_channels: sequnce of channel numbers. Channel numbers of
             turning points.
         :param headers: dict. Other headers.
-        :param source: str or pathlib.PosixPath or type. Raw source of instance.
-            It should be path to the source file or raw type it converted from.
+        :param source: str or pathlib.PosixPath. Path to the source file.
+        :param source_type: str. Raw type it read from.
         """
         if data.ndim == 1:
             data = data[np.newaxis, :]
@@ -64,7 +64,8 @@ class Section(object):
         self.start_distance = start_distance
         self.start_time = start_time
         opt_attrs = ['origin_time', 'gauge_length', 'data_type', 'scale',
-                     'geometry', 'turning_channels', 'headers', 'source']
+                     'geometry', 'turning_channels', 'headers', 'source',
+                     'source_type']
         for attr in opt_attrs:
             if attr in kwargs:
                 setattr(self, attr, kwargs.pop(attr))
@@ -339,13 +340,15 @@ class Section(object):
 
         return Patch(self.data.T, coords, dims, attrs)
 
-    def save(self, fname=None):
+    def save(self, fname=None, ftype=None):
         """
         Save the instance as a pickle file or update the raw file and resave as
         new file.
 
         :param fname: str or pathlib.PosixPath. Path of new DAS data file to
             save.
+        :param ftype: None or str. None for automatic detection), or 'pkl',
+            'pickle', 'tdms', 'h5', 'hdf5', 'segy', 'sgy', 'npy'.
         """
         if fname is None:
             if hasattr(self, 'source'):
@@ -356,12 +359,16 @@ class Section(object):
                 fname = 'section.pkl'
 
         raw_fname = None
+        if ftype is None:
+            ftype = str(fname).lower().split('.')[-1]
+        ftype.replace('hdf5', 'h5')
+        ftype.replace('segy', 'sgy')
+
         if hasattr(self, 'source'):
-            if os.path.isfile(self.source) and str(fname).lower().split(
-                    '.')[-1] == str(self.source).lower().split('.')[-1]:
+            if os.path.isfile(self.source) and ftype == self.source_type:
                 raw_fname = self.source
 
-        write(self, fname, raw_fname=raw_fname)
+        write(self, fname, ftype=ftype, raw_fname=raw_fname)
         return self
 
     def channel_data(self, use_channel, replace=False):

@@ -1,6 +1,6 @@
 # Purpose: Module for reading DAS data.
 # Author: Minzhe Hu
-# Date: 2024.9.1
+# Date: 2024.9.14
 # Email: hmz2018@mail.ustc.edu.cn
 # Modified from
 # https://github.com/RobbinLuo/das-toolkit/blob/main/DasTools/DasPrep.py
@@ -16,7 +16,7 @@ from daspy.core.section import Section
 from daspy.core.dasdatetime import DASDateTime
 
 
-def read(fname=None, output_type='section', **kwargs):
+def read(fname=None, output_type='section', ftype=None, **kwargs):
     """
     Read a .pkl/.pickle, .tdms, .h5/.hdf5, .segy/.sgy file.
 
@@ -24,24 +24,28 @@ def read(fname=None, output_type='section', **kwargs):
     :param output_type: str. 'Section' means return an instance of
         daspy.Section, 'array' means return numpy.array for data and a
         dictionary for metadata.
+    :param ftype: None or str. None for automatic detection), or 'pkl',
+        'pickle', 'tdms', 'h5', 'hdf5', 'segy', 'sgy', 'npy'.
     :param ch1: int. The first channel required.
     :param ch2: int. The last channel required (not included).
     :return: An instance of daspy.Section, or numpy.array for data and a
         dictionary for metadata.
     """
     fun_map = {'pkl': _read_pkl, 'pickle': _read_pkl, 'tdms': _read_tdms,
-               'h5': _read_h5, 'hdf5': _read_h5, 'segy': _read_segy,
-               'sgy': _read_segy, 'npy': _read_npy}
+               'h5': _read_h5, 'sgy': _read_segy, 'npy': _read_npy}
     if fname is None:
         fname = Path(__file__).parent / 'example.pkl'
         ftype = 'pkl'
-    else:
+    if ftype is None:
         ftype = str(fname).lower().split('.')[-1]
+    ftype.replace('hdf5', 'h5')
+    ftype.replace('segy', 'sgy')
 
     data, metadata = fun_map[ftype](fname, **kwargs)
 
     if output_type.lower() == 'section':
         metadata['source'] = Path(fname)
+        metadata['source_type'] = ftype
         return Section(data.astype(float), **metadata)
     elif output_type.lower() == 'array':
         return data, metadata
@@ -158,6 +162,33 @@ def _read_h5(fname, **kwargs):
             warnings.warn('This data format doesn\'t include channel interval. '
                           'Please set manually')
             metadata = {'fs':fs, 'dx': None, 'start_time': start_time}
+        elif group == 'data_product':
+            # read data
+            nch = h5_file.attrs['nx']
+            ch1 = kwargs.pop('ch1', 0)
+            ch2 = kwargs.pop('ch2', nch)
+
+            array_shape = h5_file['data_product/data'].shape
+            if array_shape[0] == nch:
+                data = h5_file['data_product/data'][ch1:ch2, :]
+            else:
+                data = h5_file['data_product/data'][:, ch1:ch2].T
+
+            # read metadata
+            fs = 1 / h5_file.attrs['dt_computer']
+            dx = h5_file.attrs['dx']
+            gauge_length = h5_file.attrs['gauge_length']
+            if h5_file.attrs['saving_start_gps_time'] > 0:
+                start_time = DASDateTime.fromtimestamp(
+                    h5_file.attrs['file_start_gps_time'])
+            else:
+                start_time = DASDateTime.fromtimestamp(
+                    h5_file.attrs['file_start_computer_time'])
+            data_type = h5_file.attrs['data_product']
+
+            metadata = {'fs': fs, 'dx': dx, 'start_channel': ch1,
+                        'start_distance': ch1 * dx, 'start_time': start_time,
+                        'gauge_length': gauge_length, 'data_type': data_type}
         else:
             acquisition = list(h5_file[f'{group}/Source1/Zone1'].keys())[0]
             # read data
