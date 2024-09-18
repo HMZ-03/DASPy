@@ -1,6 +1,6 @@
 # Purpose: Module for reading DAS data.
 # Author: Minzhe Hu
-# Date: 2024.9.14
+# Date: 2024.9.18
 # Email: hmz2018@mail.ustc.edu.cn
 # Modified from
 # https://github.com/RobbinLuo/das-toolkit/blob/main/DasTools/DasPrep.py
@@ -13,7 +13,7 @@ import segyio
 from pathlib import Path
 from nptdms import TdmsFile
 from daspy.core.section import Section
-from daspy.core.dasdatetime import DASDateTime
+from daspy.core.dasdatetime import DASDateTime, utc
 
 
 def read(fname=None, output_type='section', ftype=None, **kwargs):
@@ -113,9 +113,10 @@ def _read_h5_starttime(h5_file):
         if len(stime) > 26:
             stime = DASDateTime.strptime(stime, '%Y-%m-%dT%H:%M:%S.%f%z')
         else:
-            stime = DASDateTime.strptime(stime, '%Y-%m-%dT%H:%M:%S.%f')
+            stime = DASDateTime.strptime(stime, '%Y-%m-%dT%H:%M:%S.%f').\
+                astimezone(utc)
     else:
-        stime = DASDateTime.fromtimestamp(stime / 1e6)
+        stime = DASDateTime.fromtimestamp(stime / 1e6).astimezone(utc)
 
     return stime
 
@@ -158,7 +159,7 @@ def _read_h5(fname, **kwargs):
             ch2 = kwargs.pop('ch2', nch)
             data = h5_file['raw'][ch1:ch2, :]
             fs = round(1 / np.diff(h5_file['timestamp']).mean())
-            start_time = DASDateTime.fromtimestamp(h5_file['timestamp'][0])
+            start_time = DASDateTime.fromtimestamp(h5_file['timestamp'][0]).astimezone(utc)
             warnings.warn('This data format doesn\'t include channel interval. '
                           'Please set manually')
             metadata = {'fs':fs, 'dx': None, 'start_time': start_time}
@@ -187,7 +188,8 @@ def _read_h5(fname, **kwargs):
             data_type = h5_file.attrs['data_product']
 
             metadata = {'fs': fs, 'dx': dx, 'start_channel': ch1,
-                        'start_distance': ch1 * dx, 'start_time': start_time,
+                        'start_distance': ch1 * dx,
+                        'start_time': start_time.astimezone(utc),
                         'gauge_length': gauge_length, 'data_type': data_type}
         else:
             acquisition = list(h5_file[f'{group}/Source1/Zone1'].keys())[0]
@@ -209,7 +211,7 @@ def _read_h5(fname, **kwargs):
                 fs = h5_file[f'{group}/Source1/Zone1'].attrs['SamplingRate'][0]
             start_distance = h5_file[f'{group}/Source1/Zone1'].attrs['Origin'][0]
             start_time = DASDateTime.fromtimestamp(
-                h5_file[f'{group}/Source1/time'][0, 0])
+                h5_file[f'{group}/Source1/time'][0, 0]).astimezone(utc)
             gauge_length = h5_file[f'{group}/Source1/Zone1'].\
                 attrs['GaugeLength'][0]
             metadata = {'fs': fs, 'dx': dx, 'start_channel': ch1,
