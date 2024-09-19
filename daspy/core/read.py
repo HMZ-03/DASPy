@@ -1,6 +1,6 @@
 # Purpose: Module for reading DAS data.
 # Author: Minzhe Hu
-# Date: 2024.9.18
+# Date: 2024.9.19
 # Email: hmz2018@mail.ustc.edu.cn
 # Modified from
 # https://github.com/RobbinLuo/das-toolkit/blob/main/DasTools/DasPrep.py
@@ -125,7 +125,7 @@ def _read_h5(fname, **kwargs):
     with h5py.File(fname, 'r') as h5_file:
         # read headers
         group = list(h5_file.keys())[0]
-        if group == 'Acuisition':
+        if group == 'Acquisition':
             # read data
             try:
                 nch = h5_file['Acquisition'].attrs['NumberOfLoci']
