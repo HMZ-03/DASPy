@@ -372,8 +372,10 @@ class Section(object):
             warnings.warn('The type of start_time is not DASDateTime. The '
                           'starttime of Trace instances may be wrong')
             start_time = datetime.fromtimestamp(self.start_time)
-        else:
+        elif isinstance(self.start_time, DASDateTime):
             start_time = self.start_time.to_datetime()
+        if start_time.tzinfo is None:
+            start_time = start_time.astimezone(utc)
         if hasattr(self, 'data_type'):
             for key in ['strain rate', 'strain', 'displacement', 'velocity',
                         'acceleration']:
