@@ -1,6 +1,6 @@
 # Purpose: Module for handling DASDateTime objects.
 # Author: Minzhe Hu
-# Date: 2024.6.18
+# Date: 2024.9.25
 # Email: hmz2018@mail.ustc.edu.cn
 import time
 from typing import Iterable
@@ -48,7 +48,7 @@ class DASDateTime(datetime):
 
     @classmethod
     def from_datetime(cls, dt: datetime):
-        return cls.fromtimestamp(dt.timestamp())
+        return cls.fromtimestamp(dt.timestamp(), tz=dt.tzinfo)
 
     def to_datetime(self):
-        return datetime.fromtimestamp(self.timestamp())
+        return datetime.fromtimestamp(self.timestamp(), tz=self.tzinfo)

@@ -1,12 +1,13 @@
 # Purpose: Module for handling Section objects.
 # Author: Minzhe Hu
-# Date: 2024.9.14
+# Date: 2024.9.25
 # Email: hmz2018@mail.ustc.edu.cn
 import warnings
 import os
 import numpy as np
 from copy import deepcopy
 from typing import Iterable
+from datetime import datetime
 from daspy.core.dasdatetime import DASDateTime, utc
 from daspy.core.write import write
 from daspy.basic_tools.visualization import plot
@@ -263,6 +264,21 @@ class Section(object):
                   headers=patch.attrs, source=type(patch), **kwargs)
         return sec
 
+    @classmethod
+    def from_lightguide_blast(cls, blast):
+        """
+        Construct a Section from a lightguide.blast.Blast instance.
+
+        :param blast: lightguide.blast.Blast. An instance of
+            lightguide.blast.Blast for construction.
+        :return: daspy.Section.
+        """
+        sec = cls(blast.data, blast.channel_spacing, blast.sampling_rate,
+                  start_time=DASDateTime.from_datetime(blast.start_time),
+                  start_channel=blast.start_channel, data_type=blast.unit,
+                  source=type(blast))
+        return sec
+
     def to_obspy_stream(self):
         """
         Construct an instance of obspy.core.stream.Stream.
@@ -271,8 +287,13 @@ class Section(object):
         """
         from obspy import Stream, Trace, UTCDateTime
         st = Stream()
-        header = {'sampling_rate': self.fs,
-                  'starttime': UTCDateTime(self.start_time.timestamp())}
+        header = {'sampling_rate': self.fs}
+        if not isinstance(datetime, self.start_time):
+            warnings.warn('The type of start_time is not DASDateTime. The '
+                          'starttime of Trace instances may be wrong')
+            header['starttime'] = UTCDateTime(self.start_time)
+        else:
+            header['starttime'] = UTCDateTime(self.start_time.timestamp())
         if hasattr(self, 'scale'):
             header['calib'] = self.scale
         for i in range(self.nch):
@@ -339,6 +360,40 @@ class Section(object):
                 kwargs['gauge_length_units'] = Quantity(1, 'meter')
 
         return Patch(self.data.T, coords, dims, attrs)
+
+    def to_lightguide_blast(self):
+        """
+        Construct an instance of lightguide.blast.Blast
+
+        :return: lightguide.blast.Blast.
+        """
+        from lightguide.blast import Blast
+        if not isinstance(self.start_time, datetime):
+            warnings.warn('The type of start_time is not DASDateTime. The '
+                          'starttime of Trace instances may be wrong')
+            start_time = datetime.fromtimestamp(self.start_time)
+        else:
+            start_time = self.start_time.to_datetime()
+        if hasattr(self, 'data_type'):
+            for key in ['strain rate', 'strain', 'displacement', 'velocity',
+                        'acceleration']:
+                if key in self.data_type.lower():
+                    if self.data_type.lower() == key:
+                        unit = key
+                    else:
+                        warnings.warn(f'Data type {self.data_type} is not '
+                                      f'supported in lightguide. Set to {key}.')
+                    break
+                else:
+                    warnings.warn(f'Data type {unit} is not supported in '
+                                'lightguide. Set to default (starin rate).')
+                    unit = 'strain rate'
+        else:
+            print('Set unit to default (starin rate).')
+            unit = 'strain rate'
+        return Blast(self.data, start_time, self.fs,
+                     start_channel=self.start_channel, channel_spacing=self.dx,
+                     unit=unit)
 
     def save(self, fname=None, ftype=None):
         """
