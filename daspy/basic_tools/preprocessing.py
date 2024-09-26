@@ -1,6 +1,6 @@
 # Purpose: Some preprocess methods
 # Author: Minzhe Hu
-# Date: 2024.8.30
+# Date: 2024.9.26
 # Email: hmz2018@mail.ustc.edu.cn
 import numpy as np
 from scipy.signal import detrend
@@ -28,15 +28,15 @@ def normalization(data, method='z-score'):
     Normalize for each individual channel using Z-score method.
 
     :param data: numpy.ndarray. Data to normalize.
-    :param method: str. Method for normalization, should be one of 'max' or
-        'z-score'.
+    :param method: str. Method for normalization, should be one of 'max',
+        'z-score', or 'one-bit'.
     :return: Normalized data.
     """
-    if len(data.shape) == 1:
+    if data.ndim == 1:
         data = data.reshape(1, len(data))
-    elif len(data.shape) != 2:
+    elif data.ndim != 2:
         raise ValueError("Data should be 1-D or 2-D array")
-    nt = len(data[0])
+
     if method == 'max':
         amp = np.max(abs(data), 1, keepdims=True)
         amp[amp == 0] = amp[amp > 0].min()
@@ -47,6 +47,9 @@ def normalization(data, method='z-score'):
         std = np.std(data, axis=1, keepdims=True)
         std[std == 0] = std[std > 0].min()
         return (data - mean) / std
+
+    if method == 'one-bit':
+        return np.sign(data)
 
 
 def demeaning(data):
