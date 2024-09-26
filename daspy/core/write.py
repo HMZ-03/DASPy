@@ -1,7 +1,8 @@
 # Purpose: Module for writing DAS data.
 # Author: Minzhe Hu
-# Date: 2024.9.14
+# Date: 2024.9.26
 # Email: hmz2018@mail.ustc.edu.cn
+import os
 import warnings
 import pickle
 import numpy as np
@@ -144,7 +145,8 @@ def _write_h5(sec, fname, raw_fname=None):
             if hasattr(sec, 'gauge_length'):
                 h5_file['Acquisition'].attrs['GaugeLength'] = sec.gauge_length
     else:
-        copyfile(raw_fname, fname)
+        if not os.path.samefile(raw_fname, fname):
+            copyfile(raw_fname, fname)
         with h5py.File(fname, 'r+') as h5_file:
             group = list(h5_file.keys())[0]
             if group == 'Acquisition':
