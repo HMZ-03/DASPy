@@ -46,8 +46,7 @@ class Section(object):
         :param data_type: str. Can be 'phase shift', 'phase change rate',
             'strain', 'strain rate', 'displacement', 'velocity', 'acceleration',
             or normalized above parameters.
-        :param scale: number. Scale of data. Usually in the form of scientific
-            notation.
+        :param scale: number. Scale or gain of data.
         :param geometry: numpy.ndarray. Should include latitude and longitude
             (first two columns), and can also include depth (last column).
         :param turning_channels: sequnce of channel numbers. Channel numbers of
@@ -530,6 +529,26 @@ class Section(object):
         plot(data, self.dx, self.fs, obj=obj, xmode=xmode, tmode=tmode,
              **kwargs)
 
+    def rescaling(self, scale=None):
+        """
+        Scale data according to a scale factor.
+
+        :param scale: float. It is required if the Section instance does
+            not specify the attribute 'scale'.
+        """
+        if scale is None:
+            try:
+                self.data *= self['scale']
+            except KeyError:
+                print('Please specify a scale factor.')
+        else:
+            if hasattr(self, 'scale') and self.scale != scale:
+                warnings.warn('The set scale is different from the previous '
+                              'self.scale.')
+            self.data *= scale
+        self.scale = 1
+        return self
+
     def phase2strain(self, lam, e, n, gl=None):
         """
         Convert the optical phase shift in radians to strain, or phase change
@@ -630,14 +649,20 @@ class Section(object):
             self.fs /= tint
         return self
 
-    def trimming(self, xmin=None, xmax=None, tmin=None, tmax=None, mode=1):
+    def trimming(self, mode=1, xmin=None, xmax=None, tmin=None, tmax=None):
         """
         Cut data to given start and end distance/channel or time/sampling
         points.
 
-        :param xmin, xmax, tmin, tmax: Boundary for trimming.
-        :param mode: 0 means the unit of boundary is channel number and sampling
-            points; 1 means the unit of boundary is meters and seconds.
+        :param mode: int. 0 means the unit of boundary is channel number and
+            sampling points; 1 means the unit of boundary is meters and seconds.
+        :param xmin, xmax: int or float. Boundary of channel number (mode=0)
+            or boundary of distance (mode=1).
+            in meters.
+        :param tmin, tmax: int, float or DASDateTime. Boundary of sampling
+            points (mode=0) or boundary of time (mode=1). When mode=1, 
+            start_time is of type DASDateTime and tmin/tmax are floats, 
+            tmin/tmax means the time relative to start_time.
         """
         if mode == 1:
             if tmin is not None:
