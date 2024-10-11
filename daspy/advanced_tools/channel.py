@@ -1,6 +1,6 @@
 # Purpose: Several functions for analysis data quality and geometry of channels
 # Author: Minzhe Hu, Zefeng Li
-# Date: 2024.4.22
+# Date: 2024.10.11
 # Email: hmz2018@mail.ustc.edu.cn
 import numpy as np
 from copy import deepcopy
@@ -107,15 +107,17 @@ def channel_checking(data, deg=10, thresh=5, continuity=True, adjacent=2,
     return good_chn, bad_chn
 
 
-def _channel_location(tx, ty, tn):
-    l_track = np.sqrt(np.diff(tx) ** 2 + np.diff(ty) ** 2)
+def _channel_location(track_pt):
+    track, tn = track_pt[:, :-1], track_pt[:, -1]
+    dim = track.shape[1]
+    l_track = np.sqrt(np.sum(np.diff(track, axis=0) ** 2, axis=1))
     l_track_cum = np.hstack(([0], np.cumsum(l_track)))
     idx_kp = np.where(tn >= 0)[0]
 
     interp_ch = []
     chn = np.floor(tn[idx_kp[0]])
     if abs(chn - tn[idx_kp[0]]) < 1e-6:
-        interp_ch.append([tx[idx_kp[0]], ty[idx_kp[0]], chn])
+        interp_ch.append([*track[idx_kp[0]], chn])
 
     seg_interval = []
     for i in range(1, len(idx_kp)):
@@ -140,25 +142,24 @@ def _channel_location(tx, ty, tn):
                     l_res  # channel distance from segment start
 
                 # interpolate the channel loc
-                tx_new = np.interp(l_new, [0, l_track[j]], [tx[j], tx[j + 1]])
-                ty_new = np.interp(l_new, [0, l_track[j]], [ty[j], ty[j + 1]])
-                # fx = interp1d([0, l_track[j + 1]], [tx[j], tx[j + 1]])
-                # fy = interp1d([0, l_track[j + 1]], [ty[j], ty[j + 1]])
-                # tx_new, ty_new = fx(l_new), fy(x_new)
+                t_new = np.zeros((len(l_new), dim))
+                for d in range(dim):
+                    t_new[:, d] = np.interp(l_new, [0, l_track[j]],
+                                            [track[j, d], track[j + 1, d]])
 
                 # remaining length to add to next segment
                 l_res = l_start - n_chn_tp * d_interp
 
                 # write interpolated channel loc
-                for (xi, yi) in zip(tx_new, ty_new):
+                for ti in t_new:
                     chn += 1
-                    interp_ch.append([xi, yi, chn])
+                    interp_ch.append([*ti, chn])
 
                 # handle floor int problem when l_start/d_interp is near an
                 # interger
                 if (d_interp - l_res) / d_interp < 1e-6:
                     chn += 1
-                    interp_ch.append([tx[j + 1], ty[j + 1], int(tn[j + 1])])
+                    interp_ch.append([*track[j + 1, :], int(tn[j + 1])])
                     l_res = 0
                 chn_res = 0
             # if tp segment length is not enough for one interval, simply add
@@ -169,63 +170,73 @@ def _channel_location(tx, ty, tn):
     return np.array(seg_interval), np.array(interp_ch)
 
 
-def location_interpolation(known_pt, track_pt=None, dx=None, data_type='lonlat',
+def location_interpolation(known_pt, track_pt=None, dx=2, data_type='lonlat',
                            verbose=False):
     """
     Interpolate to obtain the positions of all channels.
 
-    :param known_pt: N*3 np.ndarray. Points with known channel numbers. Each row
-        includes two coordinates and a channel number.
-    :param track_pt: M*2 np.ndarray. Optional fiber spatial track points without
-        channel numbers. Each row includes two coordinates.
+    :param known_pt: np.ndarray. Points with known channel numbers. Each row
+        includes 2 or 3 coordinates and a channel number.
+    :param track_pt: np.ndarray. Optional fiber spatial track points without
+        channel numbers. Each row includes 2 or 3 coordinates. Please ensure
+        that the track points are arranged in increasing order of track number.
+        If track points is not dense enough, please insert the coordinates of
+        known points into track points in order.
     :param dx: Known points far from the track (> dx) will be excluded.
         Recommended setting is channel interval. The unit is m.
-    :param data_type: str. Coordinate type. 'lonlat' for longitude and latitude,
-        'xy' for x and y.
+    :param data_type: str. Coordinate type. 'lonlat' ('lonlatheight') for
+        longitude, latitude in degree (and height in meters), 'xy' ('xyz') for
+        x, y (and z) in meters.
     :param verbose: bool. If True, return interpoleted channel location and
         segment interval.
     :return: Interpoleted channel location if verbose is False.
     """
-    if data_type == 'lonlat':
-        klo, kla, kn = known_pt.T
-        zone = np.floor((max(klo) + min(klo)) / 2 / 6).astype(int) + 31
+    known_pt = known_pt[known_pt[:,-1].argsort()]
+    dim = known_pt.shape[1] - 1
+    if 'lonlat' in data_type:
+        zone = np.floor((max(known_pt[:,0]) + min(known_pt[:,0])) / 2 / 6)\
+            .astype(int) + 31
         DASProj = Proj(proj='utm', zone=zone, ellps='WGS84',
                        preserve_units=False)
-        kx, ky = DASProj(klo, kla)
-    elif data_type == 'xy':
-        kx, ky, kn = known_pt.T
+        known_pt[:, 0], known_pt[:, 1] = DASProj(known_pt[:, 0], known_pt[:, 1])
+    else:
+        assert 'xy' in data_type, ('data_type should be \'lonlat\',\''
+                                   'lonlatheight\', \'xy\' or \'xyz\'')
 
     if track_pt is None:
-        seg_interval, interp_ch = _channel_location(kx, ky, kn)
+        seg_interval, interp_ch = _channel_location(known_pt)
     else:
-        if data_type == 'lonlat':
-            tlo, tla = track_pt.T
-            tx, ty = DASProj(tlo, tla)
-        elif data_type == 'xy':
-            tx, ty = track_pt.T
-
-        tn = np.zeros(len(track_pt)) - 1
+        K = len(known_pt)
+        T = len(track_pt)
+        track_pt = np.c_[track_pt, np.zeros(T) - 1]
+        if 'lonlat' in data_type:
+            track_pt[:, 0], track_pt[:, 1] = DASProj(track_pt[:, 0],
+                                                     track_pt[:, 1])
 
         # insert the known points into the fiber track data
-        K = len(klo)
-        dx_matrix = np.tile(tx, (len(kx), 1)) - np.tile(kx, (len(tx), 1)).T
-        dy_matrix = np.tile(ty, (len(ky), 1)) - np.tile(ky, (len(ty), 1)).T
-        d = np.sqrt(dx_matrix ** 2 + dy_matrix ** 2)
-        idx = np.argmin(d, axis=1)
-        for i in range(K):
-            if d[i, idx[i]] < dx:
-                tn[idx[i]] = kn[i]
-                last_pt = idx[i]
+        matrix = [np.tile(track_pt[:, d], (K, 1)) -
+                  np.tile(known_pt[:, d], (T, 1)).T for d in range(dim)]
+
+        dist = np.sqrt(np.sum(np.array(matrix) ** 2, axis=0))
+        for k in range(K):
+            if min(dist[k]) < dx:
+                t_list = np.sort(np.where(dist[k] == min(dist[k]))[0])
+                for t in t_list:
+                    if track_pt[t, -1] == -1:
+                        track_pt[t, -1] = known_pt[k, -1]
+                        last_pt = t
+                        break
 
         # interpolation with regular spacing along the fiber track
         try:
-            tx, ty, tn = tx[:last_pt + 1], ty[:last_pt + 1], tn[:last_pt + 1]
+            track_pt = track_pt[:last_pt + 1]
         except NameError:
-            print('All known points are too far away from the track points.' +
-                  'If they are reliable, they can be merged in sequence as' +
-                  'track points to input')
+            print('All known points are too far away from the track points. If '
+                  'they are reliable, they can be merged in sequence as track '
+                  'points to input')
             return None
-        seg_interval, interp_ch = _channel_location(tx, ty, tn)
+
+        seg_interval, interp_ch = _channel_location(track_pt)
 
     if data_type == 'lonlat':
         interp_ch[:, 0], interp_ch[:, 1] = \
