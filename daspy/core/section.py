@@ -387,7 +387,7 @@ class Section(object):
                     break
                 else:
                     warnings.warn(f'Data type {unit} is not supported in '
-                                'lightguide. Set to default (starin rate).')
+                                  'lightguide. Set to default (starin rate).')
                     unit = 'strain rate'
         else:
             print('Set unit to default (starin rate).')
@@ -660,8 +660,8 @@ class Section(object):
             or boundary of distance (mode=1).
             in meters.
         :param tmin, tmax: int, float or DASDateTime. Boundary of sampling
-            points (mode=0) or boundary of time (mode=1). When mode=1, 
-            start_time is of type DASDateTime and tmin/tmax are floats, 
+            points (mode=0) or boundary of time (mode=1). When mode=1,
+            start_time is of type DASDateTime and tmin/tmax are floats,
             tmin/tmax means the time relative to start_time.
         """
         if mode == 1:
@@ -856,8 +856,8 @@ class Section(object):
             the iteratively determined pass band frequency.
         :return: Filtered data.
         """
-        self.data = lowpass_cheby_2(self.data, self.fs, freq, **kwargs)
-        return self
+        self.data, zf = lowpass_cheby_2(self.data, self.fs, freq, **kwargs)
+        return self, zf
 
     def highpass(self, freq, **kwargs):
         """
@@ -1257,3 +1257,17 @@ class Section(object):
                                    turning=turning, **kwargs)
         self._strain2vel_attr()
         return self
+
+    def afk_filter(self, exponent: float = 0.8, window_size: int = 16,
+                   overlap: int = 7, normalize_power: bool = False):
+        """
+        From package 'lightguide' (https://github.com/pyrocko/lightguide).
+        """
+        from lightguide.filters import afk_filter
+        self.data = afk_filter(
+            self.data.astype(np.float32),
+            window_size=window_size,
+            overlap=overlap,
+            exponent=exponent,
+            normalize_power=normalize_power,
+        )
