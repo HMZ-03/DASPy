@@ -8,23 +8,7 @@ import numpy as np
 from scipy.signal import cheb2ord, cheby2, hilbert, iirfilter, zpk2sos, sosfilt
 
 
-def _preprocessing(data, detrend, taper):
-    from daspy.basic_tools.preprocessing import demeaning, detrending, \
-        cosine_taper
-    if detrend in [True, 'linear', 'detrend']:
-        data = detrending(data)
-    elif detrend in ['constant', 'demean']:
-        data = demeaning(data)
-    
-    if taper:
-        taper = (taper, 0.1)[taper is True]
-        data = cosine_taper(data, p=taper)
-
-    return data
-
-
-def bandpass(data, fs, freqmin, freqmax, corners=4, zerophase=True,
-             detrend=True, taper=False):
+def bandpass(data, fs, freqmin, freqmax, corners=4, zi=None, zerophase=True):
     """
     Filter data from 'freqmin' to 'freqmax' using Butterworth bandpass filter of
     'corners' corners.
@@ -34,18 +18,15 @@ def bandpass(data, fs, freqmin, freqmax, corners=4, zerophase=True,
     :param freqmin: Pass band low corner frequency.
     :param freqmax: Pass band high corner frequency.
     :param corners: Filter corners / order.
+    :param zi : None, 0, or array_like. Initial conditions for the cascaded
+        filter delays. It is a vector of shape (n_sections, nch, 2). Set to 0 to
+        trigger a output of the final filter delay values.
     :param zerophase: If True, apply filter once forwards and once backwards.
         This results in twice the filter order but zero phase shift in
-        the resulting filtered trace.
-    :param detrend : str or bool. Specifies whether and how to detrend each
-        segment.  'linear' or 'detrend' or True = detrend, 'constant' or
-        'demean' = demean.
-    :param taper: bool or float. Float means decimal percentage of Tukey taper
-        for time dimension (ranging from 0 to 1). True for 0.1 which tapers 5%
-        from the beginning and 5% from the end.
-    :return: Filtered data.
+        the resulting filtered trace. Only valid when zi is None.
+    :return: Filtered data and the final filter delay values (if zi is not
+        None).
     """
-    data = _preprocessing(data, detrend, taper)
     if len(data.shape) == 1:
         data = data[np.newaxis, :]
     fe = 0.5 * fs
@@ -65,17 +46,19 @@ def bandpass(data, fs, freqmin, freqmax, corners=4, zerophase=True,
     z, p, k = iirfilter(corners, [low, high], btype='band', ftype='butter',
                         output='zpk')
     sos = zpk2sos(z, p, k)
-    data_flt = sosfilt(sos, data)
-    if zerophase:
-        data_flt = sosfilt(sos, data_flt[:, ::-1])[:, ::-1]
+    if zi is None:
+        data_flt = sosfilt(sos, data)
+        if zerophase:
+            data_flt = sosfilt(sos, data_flt[:, ::-1])[:, ::-1]
+        return data_flt
+    elif isinstance(zi, (int, float)):
+        zi = np.ones((sos.shape[0], len(data), 2)) * zi
+    
+    data_flt, zf = sosfilt(sos, data, zi=zi)
+    return data_flt, zf
 
-    if len(data_flt) == 1:
-        data_flt = data_flt[0]
-    return data_flt
 
-
-def bandstop(data, fs, freqmin, freqmax, corners=4, zerophase=False,
-             detrend=True, taper=False):
+def bandstop(data, fs, freqmin, freqmax, corners=4, zi=None, zerophase=False):
     """
     Filter data removing data between frequencies 'freqmin' and 'freqmax' using
     Butterworth bandstop filter of 'corners' corners.
@@ -85,18 +68,15 @@ def bandstop(data, fs, freqmin, freqmax, corners=4, zerophase=False,
     :param freqmin: Stop band low corner frequency.
     :param freqmax: Stop band high corner frequency.
     :param corners: Filter corners / order.
+    :param zi : None, 0, or array_like. Initial conditions for the cascaded
+        filter delays. It is a vector of shape (n_sections, nch, 2). Set to 0 to
+        trigger a output of the final filter delay values.
     :param zerophase: If True, apply filter once forwards and once backwards.
         This results in twice the number of corners but zero phase shift in
-        the resulting filtered trace.
-    :param detrend : str or bool. Specifies whether and how to detrend each
-        segment.  'linear' or 'detrend' or True = detrend, 'constant' or
-        'demean' = demean.
-    :param taper: bool or float. Float means decimal percentage of Tukey taper
-        for time dimension (ranging from 0 to 1). True for 0.1 which tapers 5%
-        from the beginning and 5% from the end.
-    :return: Filtered data.
+        the resulting filtered trace. Only valid when zi is None.
+    :return: Filtered data and the final filter delay values (if zi is not
+        None).
     """
-    data = _preprocessing(data, detrend, taper)
     if len(data.shape) == 1:
         data = data[np.newaxis, :]
     fe = 0.5 * fs
@@ -114,17 +94,19 @@ def bandstop(data, fs, freqmin, freqmax, corners=4, zerophase=False,
     z, p, k = iirfilter(corners, [low, high],
                         btype='bandstop', ftype='butter', output='zpk')
     sos = zpk2sos(z, p, k)
-    data_flt = sosfilt(sos, data)
-    if zerophase:
-        data_flt = sosfilt(sos, data_flt[:, ::-1])[:, ::-1]
+    if zi is None:
+        data_flt = sosfilt(sos, data)
+        if zerophase:
+            data_flt = sosfilt(sos, data_flt[:, ::-1])[:, ::-1]
+        return data_flt
+    elif isinstance(zi, (int, float)):
+        zi = np.ones((sos.shape[0], len(data), 2)) * zi
+    
+    data_flt, zf = sosfilt(sos, data, zi=zi)
+    return data_flt, zf
 
-    if len(data_flt) == 1:
-        data_flt = data_flt[0]
-    return data_flt
 
-
-def lowpass(data, fs, freq, corners=4, zerophase=False, detrend=True,
-            taper=False):
+def lowpass(data, fs, freq, corners=4, zi=None, zerophase=False):
     """
     Filter data removing data over certain frequency 'freq' using Butterworth
     lowpass filter of 'corners' corners.
@@ -133,18 +115,15 @@ def lowpass(data, fs, freq, corners=4, zerophase=False, detrend=True,
     :param fs: Sampling rate in Hz.
     :param freq: Filter corner frequency.
     :param corners: Filter corners / order.
+    :param zi : None, 0, or array_like. Initial conditions for the cascaded
+        filter delays. It is a vector of shape (n_sections, nch, 2). Set to 0 to
+        trigger a output of the final filter delay values.
     :param zerophase: If True, apply filter once forwards and once backwards.
         This results in twice the number of corners but zero phase shift in
-        the resulting filtered trace.
-    :param detrend : str or bool. Specifies whether and how to detrend each
-        segment.  'linear' or 'detrend' or True = detrend, 'constant' or
-        'demean' = demean.
-    :param taper: bool or float. Float means decimal percentage of Tukey taper
-        for time dimension (ranging from 0 to 1). True for 0.1 which tapers 5%
-        from the beginning and 5% from the end.
-    :return: Filtered data.
+        the resulting filtered trace. Only valid when zi is None.
+    :return: Filtered data and the final filter delay values (if zi is not
+        None).
     """
-    data = _preprocessing(data, detrend, taper)
     if len(data.shape) == 1:
         data = data[np.newaxis, :]
     fe = 0.5 * fs
@@ -158,16 +137,20 @@ def lowpass(data, fs, freq, corners=4, zerophase=False, detrend=True,
     z, p, k = iirfilter(corners, f, btype='lowpass', ftype='butter',
                         output='zpk')
     sos = zpk2sos(z, p, k)
-    data_flt = sosfilt(sos, data)
-    if zerophase:
-        data_flt = sosfilt(sos, data_flt[:, ::-1])[:, ::-1]
+    if zi is None:
+        data_flt = sosfilt(sos, data)
+        if zerophase:
+            data_flt = sosfilt(sos, data_flt[:, ::-1])[:, ::-1]
+        return data_flt
+    elif isinstance(zi, (int, float)):
+        zi = np.ones((sos.shape[0], len(data), 2)) * zi
+    
+    data_flt, zf = sosfilt(sos, data, zi=zi)
+    return data_flt, zf
 
-    if len(data_flt) == 1:
-        data_flt = data_flt[0]
-    return data_flt
 
-
-def lowpass_cheby_2(data, fs, freq, maxorder=12, ba=False, freq_passband=False):
+def lowpass_cheby_2(data, fs, freq, maxorder=12, zi=None, ba=False,
+                    freq_passband=False):
     """
     Filter data by passing data only below a certain frequency. The main purpose
     of this cheby2 filter is downsampling. This method will iteratively design a
@@ -178,11 +161,15 @@ def lowpass_cheby_2(data, fs, freq, maxorder=12, ba=False, freq_passband=False):
     :param fs: Sampling rate in Hz.
     :param freq: The frequency above which signals are attenuated with 95 dB.
     :param maxorder: Maximal order of the designed cheby2 filter.
+    :param zi : None, 0, or array_like. Initial conditions for the cascaded
+        filter delays. It is a vector of shape (n_sections, nch, 2). Set to 0 to
+        trigger a output of the final filter delay values.
     :param ba: If True return only the filter coefficients (b, a) instead of
         filtering.
     :param freq_passband: If True return additionally to the filtered data, the
         iteratively determined pass band frequency.
-    :return: Filtered data.
+    :return: Filtered data, the final filter delay values (if zi is not None)
+        and the determined pass band frequency (if freq_passband is True).
     """
     if data.ndim == 1:
         data = data[np.newaxis, :]
@@ -195,9 +182,8 @@ def lowpass_cheby_2(data, fs, freq, maxorder=12, ba=False, freq_passband=False):
     # raise for some bad scenarios
     if ws > 1:
         ws = 1.0
-        msg = "Selected corner frequency is above Nyquist. " + \
-              "Setting Nyquist as high corner."
-        warnings.warn(msg)
+        warnings.warn('Selected corner frequency is above Nyquist. Setting '
+                      'Nyquist as high corner.')
     while True:
         if order <= maxorder:
             break
@@ -207,16 +193,21 @@ def lowpass_cheby_2(data, fs, freq, maxorder=12, ba=False, freq_passband=False):
         return cheby2(order, rs, wn, btype='low', analog=0, output='ba')
     z, p, k = cheby2(order, rs, wn, btype='low', analog=0, output='zpk')
     sos = zpk2sos(z, p, k)
-    data_flt = sosfilt(sos, data)
-    if len(data_flt) == 1:
-        data_flt = data_flt[0]
+    if zi is None:
+        data_flt = sosfilt(sos, data)
+        if freq_passband:
+            return data_flt, wp * nyquist
+        return data_flt
+    elif isinstance(zi, (int, float)):
+        zi = np.ones((sos.shape[0], len(data), 2)) * zi
+    
+    data_flt, zf = sosfilt(sos, data, zi=zi)
     if freq_passband:
-        return data_flt, wp * nyquist
-    return data_flt
+        return data_flt, zf, wp * nyquist
+    return data_flt, zf
 
 
-def highpass(data, fs, freq, corners=4, zerophase=False, detrend=True,
-             taper=False):
+def highpass(data, fs, freq, corners=4, zi=None, zerophase=False):
     """
     Filter data removing data below certain frequency 'freq' using Butterworth
     highpass filter of 'corners' corners.
@@ -227,16 +218,10 @@ def highpass(data, fs, freq, corners=4, zerophase=False, detrend=True,
     :param corners: Filter corners / order.
     :param zerophase: If True, apply filter once forwards and once backwards.
         This results in twice the number of corners but zero phase shift in
-        the resulting filtered trace.
-    :param detrend : str or bool. Specifies whether and how to detrend each
-        segment.  'linear' or 'detrend' or True = detrend, 'constant' or
-        'demean' = demean.
-    :param taper: bool or float. Float means decimal percentage of Tukey taper
-        for time dimension (ranging from 0 to 1). True for 0.1 which tapers 5%
-        from the beginning and 5% from the end.
-    :return: Filtered data.
+        the resulting filtered trace. Only valid when zi is None.
+    :return: Filtered data and the final filter delay values (if zi is not
+        None).
     """
-    data = _preprocessing(data, detrend, taper)
     if len(data.shape) == 1:
         data = data[np.newaxis, :]
     fe = 0.5 * fs
@@ -248,14 +233,16 @@ def highpass(data, fs, freq, corners=4, zerophase=False, detrend=True,
     z, p, k = iirfilter(corners, f, btype='highpass', ftype='butter',
                         output='zpk')
     sos = zpk2sos(z, p, k)
-    data_flt = sosfilt(sos, data)
-    if zerophase:
-        data_flt = sosfilt(sos, data_flt[:, ::-1])[:, ::-1]
-
-    if len(data_flt) == 1:
-        data_flt = data_flt[0]
-    return data_flt
-
+    if zi is None:
+        data_flt = sosfilt(sos, data)
+        if zerophase:
+            data_flt = sosfilt(sos, data_flt[:, ::-1])[:, ::-1]
+        return data_flt
+    elif isinstance(zi, (int, float)):
+        zi = np.ones((sos.shape[0], len(data), 2)) * zi
+    
+    data_flt, zf = sosfilt(sos, data, zi=zi)
+    return data_flt, zf
 
 def envelope(data):
     """
