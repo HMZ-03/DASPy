@@ -78,7 +78,7 @@ def plot(data: np.ndarray, dx=None, fs=None, ax=None, obj='waveform', dpi=150,
             extent = [x0 * 1e-3, (x0 + nch * dx) * 1e-3, t0 + nt / fs, t0]
 
         if obj == 'phasepick' and len(pick):
-            pck = pick.astype(float)
+            pck = np.array(pick).astype(float)
             if xmode.lower() == 'distance':
                 pck[:, 0] = (x0 + pck[:, 0] * dx) * 1e-3
             elif xmode.lower() == 'channel':
