@@ -1,6 +1,6 @@
 # Purpose: Filter the waveform
 # Author: Minzhe Hu
-# Date: 2024.6.17
+# Date: 2024.10.16
 # Email: hmz2018@mail.ustc.edu.cn
 # Modified from https://docs.obspy.org/_modules/obspy/signal/filter.html
 import warnings
@@ -22,8 +22,8 @@ def bandpass(data, fs, freqmin, freqmax, corners=4, zi=None, zerophase=True):
         filter delays. It is a vector of shape (n_sections, nch, 2). Set to 0 to
         trigger a output of the final filter delay values.
     :param zerophase: If True, apply filter once forwards and once backwards.
-        This results in twice the filter order but zero phase shift in
-        the resulting filtered trace. Only valid when zi is None.
+        This results in twice the number of corners but zero phase shift in
+        the resulting filtered data. Only valid when zi is None.
     :return: Filtered data and the final filter delay values (if zi is not
         None).
     """
@@ -73,7 +73,7 @@ def bandstop(data, fs, freqmin, freqmax, corners=4, zi=None, zerophase=False):
         trigger a output of the final filter delay values.
     :param zerophase: If True, apply filter once forwards and once backwards.
         This results in twice the number of corners but zero phase shift in
-        the resulting filtered trace. Only valid when zi is None.
+        the resulting filtered data. Only valid when zi is None.
     :return: Filtered data and the final filter delay values (if zi is not
         None).
     """
@@ -120,7 +120,7 @@ def lowpass(data, fs, freq, corners=4, zi=None, zerophase=False):
         trigger a output of the final filter delay values.
     :param zerophase: If True, apply filter once forwards and once backwards.
         This results in twice the number of corners but zero phase shift in
-        the resulting filtered trace. Only valid when zi is None.
+        the resulting filtered data. Only valid when zi is None.
     :return: Filtered data and the final filter delay values (if zi is not
         None).
     """
@@ -218,7 +218,7 @@ def highpass(data, fs, freq, corners=4, zi=None, zerophase=False):
     :param corners: Filter corners / order.
     :param zerophase: If True, apply filter once forwards and once backwards.
         This results in twice the number of corners but zero phase shift in
-        the resulting filtered trace. Only valid when zi is None.
+        the resulting filtered data. Only valid when zi is None.
     :return: Filtered data and the final filter delay values (if zi is not
         None).
     """
