@@ -1,6 +1,6 @@
 # Purpose: Module for writing DAS data.
 # Author: Minzhe Hu
-# Date: 2024.9.26
+# Date: 2024.10.17
 # Email: hmz2018@mail.ustc.edu.cn
 import os
 import warnings
@@ -76,17 +76,15 @@ def _write_tdms(sec, fname, raw_fname=None):
     if raw_fname is None:
         file_prop['ISO8601 Timestamp'] = start_time.strftime(
             '%Y-%m-%dT%H:%M:%S.%f%z')
-        group_prop['Trigger Time'] = np.datetime64(
-            start_time.replace(tzinfo=None))
+        group_prop['Trigger Time'] = np.datetime64(start_time.remove_tz())
     else:
         if 'ISO8601 Timestamp' in file_prop.keys():
             file_prop['ISO8601 Timestamp'] = start_time.strftime(
                 '%Y-%m-%dT%H:%M:%S.%f%z')
         else:
-            for key in ['GPSTimeStamp', 'CPUTimeStamp', 'Trigger Time']:
-                if 'key' in group_prop.keys():
-                    group_prop[key] = np.datetime64(
-                        start_time.replace(tzinfo=None))
+            for s in ['GPSTimeStamp', 'CPUTimeStamp', 'Trigger Time']:
+                if s in group_prop.keys():
+                    group_prop[s] = np.datetime64(start_time.remove_tz())
                     break
 
     if hasattr(sec, 'gauge_length'):
@@ -145,7 +143,7 @@ def _write_h5(sec, fname, raw_fname=None):
             if hasattr(sec, 'gauge_length'):
                 h5_file['Acquisition'].attrs['GaugeLength'] = sec.gauge_length
     else:
-        if not os.path.samefile(raw_fname, fname):
+        if not os.path.exists(fname) or not os.path.samefile(raw_fname, fname):
             copyfile(raw_fname, fname)
         with h5py.File(fname, 'r+') as h5_file:
             group = list(h5_file.keys())[0]

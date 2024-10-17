@@ -1,6 +1,6 @@
 # Purpose: Module for reading DAS data.
 # Author: Minzhe Hu
-# Date: 2024.9.19
+# Date: 2024.10.17
 # Email: hmz2018@mail.ustc.edu.cn
 # Modified from
 # https://github.com/RobbinLuo/das-toolkit/blob/main/DasTools/DasPrep.py
@@ -38,8 +38,8 @@ def read(fname=None, output_type='section', ftype=None, **kwargs):
         ftype = 'pkl'
     if ftype is None:
         ftype = str(fname).lower().split('.')[-1]
-    ftype.replace('hdf5', 'h5')
-    ftype.replace('segy', 'sgy')
+    ftype = ftype.replace('hdf5', 'h5')
+    ftype = ftype.replace('segy', 'sgy')
 
     data, metadata = fun_map[ftype](fname, **kwargs)
 
@@ -133,11 +133,14 @@ def _read_h5(fname, **kwargs):
                 nch = len(h5_file['Acquisition/Raw[0]/RawData/'])
             ch1 = kwargs.pop('ch1', 0)
             ch2 = kwargs.pop('ch2', nch)
-            array_shape = h5_file['Acquisition/Raw[0]/RawData/'].shape
-            if array_shape[0] == nch:
-                data = h5_file['Acquisition/Raw[0]/RawData/'][ch1:ch2, :]
+            if ch1 == ch2:
+                data = None
             else:
-                data = h5_file['Acquisition/Raw[0]/RawData/'][:, ch1:ch2].T
+                array_shape = h5_file['Acquisition/Raw[0]/RawData/'].shape
+                if array_shape[0] == nch:
+                    data = h5_file['Acquisition/Raw[0]/RawData/'][ch1:ch2, :]
+                else:
+                    data = h5_file['Acquisition/Raw[0]/RawData/'][:, ch1:ch2].T
 
             # read metadata
             try:
@@ -157,23 +160,29 @@ def _read_h5(fname, **kwargs):
             nch = len(h5_file['raw'])
             ch1 = kwargs.pop('ch1', 0)
             ch2 = kwargs.pop('ch2', nch)
-            data = h5_file['raw'][ch1:ch2, :]
+            if ch1 == ch2:
+                data = None
+            else:
+                data = h5_file['raw'][ch1:ch2, :]
             fs = round(1 / np.diff(h5_file['timestamp']).mean())
-            start_time = DASDateTime.fromtimestamp(h5_file['timestamp'][0]).astimezone(utc)
+            start_time = DASDateTime.fromtimestamp(
+                h5_file['timestamp'][0]).astimezone(utc)
             warnings.warn('This data format doesn\'t include channel interval. '
                           'Please set manually')
-            metadata = {'fs':fs, 'dx': None, 'start_time': start_time}
+            metadata = {'fs': fs, 'dx': None, 'start_time': start_time}
         elif group == 'data_product':
             # read data
             nch = h5_file.attrs['nx']
             ch1 = kwargs.pop('ch1', 0)
             ch2 = kwargs.pop('ch2', nch)
-
-            array_shape = h5_file['data_product/data'].shape
-            if array_shape[0] == nch:
-                data = h5_file['data_product/data'][ch1:ch2, :]
+            if ch1 == ch2:
+                data = None
             else:
-                data = h5_file['data_product/data'][:, ch1:ch2].T
+                array_shape = h5_file['data_product/data'].shape
+                if array_shape[0] == nch:
+                    data = h5_file['data_product/data'][ch1:ch2, :]
+                else:
+                    data = h5_file['data_product/data'][:, ch1:ch2].T
 
             # read metadata
             fs = 1 / h5_file.attrs['dt_computer']
@@ -199,9 +208,11 @@ def _read_h5(fname, **kwargs):
             nch = h5_file[f'{group}/Source1/Zone1/{acquisition}'].shape[-1]
             ch1 = kwargs.pop('ch1', start_channel)
             ch2 = kwargs.pop('ch2', start_channel + nch)
-            data = h5_file[f'{group}/Source1/Zone1/{acquisition}']\
-                [:, :, ch1-start_channel:ch2-start_channel].T.reshape((ch2-ch1,
-                                                                       -1))
+            if ch1 == ch2:
+                data = None
+            else:
+                data = h5_file[f'{group}/Source1/Zone1/{acquisition}'][:, :, ch1 - start_channel:ch2 - start_channel].T.\
+                    reshape((ch2 - ch1, -1))
 
             # read metadata
             dx = h5_file[f'{group}/Source1/Zone1'].attrs['Spacing'][0]
@@ -215,10 +226,10 @@ def _read_h5(fname, **kwargs):
             gauge_length = h5_file[f'{group}/Source1/Zone1'].\
                 attrs['GaugeLength'][0]
             metadata = {'fs': fs, 'dx': dx, 'start_channel': ch1,
-                        'start_distance': start_distance + 
+                        'start_distance': start_distance +
                                             (ch1 - start_channel) * dx,
                         'start_time': start_time, 'gauge_length': gauge_length}
-            
+
         metadata['headers'] = _read_h5_headers(h5_file)
 
     return data, metadata
@@ -244,8 +255,11 @@ def _read_tdms(fname, **kwargs):
             ch1 = max(kwargs.pop('ch1', start_channel), start_channel)
             ch2 = min(kwargs.pop('ch2', start_channel + nch),
                       start_channel + nch)
-            data = np.asarray([tdms_file[key][str(ch)]
-                              for ch in range(ch1, ch2)])
+            if ch1 == ch2:
+                data = None
+            else:
+                data = np.asarray([tdms_file[key][str(ch)]
+                                   for ch in range(ch1, ch2)])
         elif nch == 1:
             try:
                 start_channel = int(headers['Initial Channel'])
@@ -256,8 +270,12 @@ def _read_tdms(fname, **kwargs):
             nch = int(headers['Total Channels'])
             ch2 = min(kwargs.pop('ch2', start_channel + nch),
                       start_channel + nch)
-            data = np.asarray(tdms_file[key].channels()[0]).reshape((-1, nch)).T
-            data = data[ch1 - start_channel: ch2 - start_channel]
+            if ch1 == ch2:
+                data = None
+            else:
+                data = np.asarray(tdms_file[key].channels()[0]).\
+                    reshape((-1, nch)).T
+                data = data[ch1 - start_channel: ch2 - start_channel]
 
         # read metadata
         try:
@@ -313,7 +331,10 @@ def _read_segy(fname, **kwargs):
         ch2 = kwargs.pop('ch2', nch)
 
         # read data
-        data = segy_file.trace.raw[ch1:ch2]
+        if ch1 == ch2:
+            data = None
+        else:
+            data = segy_file.trace.raw[ch1:ch2]
 
         # read metadata:
         fs = 1 / (segyio.tools.dt(segy_file) / 1e6)

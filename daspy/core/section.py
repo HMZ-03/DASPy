@@ -1,6 +1,6 @@
 # Purpose: Module for handling Section objects.
 # Author: Minzhe Hu
-# Date: 2024.9.25
+# Date: 2024.10.17
 # Email: hmz2018@mail.ustc.edu.cn
 import warnings
 import os
@@ -455,9 +455,9 @@ class Section(object):
         :param kwargs_pro: dict. If obj is one of 'spectrum', 'spectrogram',
             'fk' and data is not specified, this parameter will be used to
             process the data to plot.
-        :param ax: Matplotlib.axes.Axes. Axes to plot. If not specified, the
-            function will directly display the image using
-            matplotlib.pyplot.show().
+        :param ax: Matplotlib.axes.Axes or tuple. Axes to plot. A tuple for new
+            figsize. If not specified, the function will directly display the
+            image using matplotlib.pyplot.show().
         :param dpi: int. The resolution of the figure in dots-per-inch.
         :param title: str. The title of this axes.
         :param transpose: bool. Transpose the figure or not.
@@ -629,18 +629,20 @@ class Section(object):
         self.data = cosine_taper(self.data, p=p)
         return self
 
-    def downsampling(self, xint=None, tint=None, stack=True, filter=True):
+    def downsampling(self, xint=None, tint=None, stack=True,
+                     lowpass_filter=True):
         """
         Downsample DAS data.
 
         :param xint: int. Spatial downsampling factor.
         :param tint: int. Time downsampling factor.
         :param stack: bool. If True, stacking will replace decimation.
-        :param filter: bool. Filter before time downsampling or not.
+        :param lowpass_filter: bool. Lowpass cheby2 filter before time
+            downsampling or not.
         :return: Downsampled data.
         """
         self.data = downsampling(self.data, xint=xint, tint=tint, stack=stack,
-                                 filter=filter)
+                                 lowpass_filter=lowpass_filter)
         if xint and xint > 1:
             self.dx *= xint
             if hasattr(self, 'gauge_length'):
@@ -777,67 +779,76 @@ class Section(object):
             self._time_int_dif_attr(mode=-1)
         return self
 
-    def bandpass(self, freqmin, freqmax, **kwargs):
+    def bandpass(self, freqmin, freqmax, zi=None, **kwargs):
         """
         Filter data from 'freqmin' to 'freqmax' using Butterworth bandpass
         filter of 'corners' corners.
 
         :param freqmin: Pass band low corner frequency.
         :param freqmax: Pass band high corner frequency.
+        :param zi : None, 0, or array_like. Initial conditions for the cascaded
+            filter delays. It is a vector of shape (n_sections, nch, 2). Set to
+            0 to trigger a output of the final filter delay values.
         :param corners: Filter corners / order.
         :param zerophase: If True, apply filter once forwards and once
-            backwards. This results in twice the filter order but zero phase
-            shift in the resulting filtered trace.
-        :param detrend : str or bool. Specifies whether and how to detrend each
-            segment.  'linear' or 'detrend' or True = detrend, 'constant' or
-            'demean' = demean.
-        :param taper: bool or float. Float means decimal percentage of Tukey
-            taper for time dimension (ranging from 0 to 1). True for 0.1 which
-            tapers 5% from the beginning and 5% from the end.
+            backwards. This results in twice the number of corners but zero
+            phase shift in the resulting filtered data. Only valid when zi is
+            None.
         """
-        self.data = bandpass(self.data, self.fs, freqmin, freqmax, **kwargs)
-        return self
+        if zi is None:
+            self.data = bandpass(self.data, self.fs, freqmin, freqmax, **kwargs)
+            return self
+        else:
+            self.data, zf = bandpass(self.data, self.fs, freqmin, freqmax,
+                                     zi=zi, **kwargs)
+            return zf
 
-    def bandstop(self, freqmin, freqmax, **kwargs):
+    def bandstop(self, freqmin, freqmax, zi=None, **kwargs):
         """
         Filter data removing data between frequencies 'freqmin' and 'freqmax'
         using Butterworth bandstop filter of 'corners' corners.
 
         :param freqmin: Stop band low corner frequency.
         :param freqmax: Stop band high corner frequency.
+        :param zi : None, 0, or array_like. Initial conditions for the cascaded
+            filter delays. It is a vector of shape (n_sections, nch, 2). Set to
+            0 to trigger a output of the final filter delay values.
         :param corners: Filter corners / order.
         :param zerophase: If True, apply filter once forwards and once
             backwards. This results in twice the number of corners but zero
-            phase shift in the resulting filtered trace.
-        :param detrend : str or bool. Specifies whether and how to detrend each
-            segment.  'linear' or 'detrend' or True = detrend, 'constant' or
-            'demean' = demean.
-        :param taper: bool or float. Float means decimal percentage of Tukey
-            taper for time dimension (ranging from 0 to 1). True for 0.1 which
-            tapers 5% from the beginning and 5% from the end.
+            phase shift in the resulting filtered data. Only valid when zi is
+            None.
         """
-        self.data = bandstop(self.data, self.fs, freqmin, freqmax, **kwargs)
-        return self
 
-    def lowpass(self, freq, **kwargs):
+        if zi is None:
+            self.data = bandstop(self.data, self.fs, freqmin, freqmax, **kwargs)
+            return self
+        else:
+            self.data, zf = bandstop(self.data, self.fs, freqmin, freqmax,
+                                     zi=zi, **kwargs)
+            return zf
+
+    def lowpass(self, freq, zi=None, **kwargs):
         """
         Filter data removing data over certain frequency 'freq' using
         Butterworth lowpass filter of 'corners' corners.
 
         :param freq: Filter corner frequency.
+        :param zi : None, 0, or array_like. Initial conditions for the cascaded
+            filter delays. It is a vector of shape (n_sections, nch, 2). Set to
+            0 to trigger a output of the final filter delay values.
         :param corners: Filter corners / order.
         :param zerophase: If True, apply filter once forwards and once
             backwards. This results in twice the number of corners but zero
-            phase shift in the resulting filtered trace.
-        :param detrend : str or bool. Specifies whether and how to detrend each
-            segment.  'linear' or 'detrend' or True = detrend, 'constant' or
-            'demean' = demean.
-        :param taper: bool or float. Float means decimal percentage of Tukey
-            taper for time dimension (ranging from 0 to 1). True for 0.1 which
-            tapers 5% from the beginning and 5% from the end.
+            phase shift in the resulting filtered data. Only valid when zi is
+            None.
         """
-        self.data = lowpass(self.data, self.fs, freq, **kwargs)
-        return self
+        if zi is None:
+            self.data = lowpass(self.data, self.fs, freq, **kwargs)
+            return self
+        else:
+            self.data, zf = lowpass(self.data, self.fs, freq, zi=zi, **kwargs)
+            return zf
 
     def lowpass_cheby_2(self, freq, **kwargs):
         """
@@ -850,37 +861,49 @@ class Section(object):
         :param freq: The frequency above which signals are attenuated with 95
             dB.
         :param maxorder: Maximal order of the designed cheby2 filter.
+        :param zi : None, 0, or array_like. Initial conditions for the cascaded
+            filter delays. It is a vector of shape (n_sections, nch, 2). Set to 0 to
+            trigger a output of the final filter delay values.
         :param ba: If True return only the filter coefficients (b, a) instead of
             filtering.
         :param freq_passband: If True return additionally to the filtered data,
             the iteratively determined pass band frequency.
-        :return: Filtered data.
         """
-        self.data, zf = lowpass_cheby_2(self.data, self.fs, freq, **kwargs)
-        return self, zf
+        output = lowpass_cheby_2(self.data, self.fs, freq, **kwargs)
+        if isinstance(output, tuple):
+            self.data = output[0]
+            if len(output) == 2:
+                return output[1]
+            else:
+                return output[1:]
+        else:
+            if kwargs.pop('ba', False):
+                self.data = output
+                return self
+            else:
+                return output
 
-    def highpass(self, freq, **kwargs):
+    def highpass(self, freq, zi=None, **kwargs):
         """
         Filter data removing data below certain frequency 'freq' using
         Butterworth highpass filter of 'corners' corners.
 
-        :param data: numpy.ndarray. Data to filter.
-        :param fs: Sampling rate in Hz.
         :param freq: Filter corner frequency.
+        :param zi : None, 0, or array_like. Initial conditions for the cascaded
+            filter delays. It is a vector of shape (n_sections, nch, 2). Set to
+            0 to trigger a output of the final filter delay values.
         :param corners: Filter corners / order.
         :param zerophase: If True, apply filter once forwards and once
             backwards. This results in twice the number of corners but zero
-            phase shift in the resulting filtered trace.
-        :param detrend : str or bool. Specifies whether and how to detrend each
-            segment.  'linear' or 'detrend' or True = detrend, 'constant' or
-            'demean' = demean.
-        :param taper: bool or float. Float means decimal percentage of Tukey
-            taper for time dimension (ranging from 0 to 1). True for 0.1 which
-            tapers 5% from the beginning and 5% from the end.
+            phase shift in the resulting filtered data. Only valid when zi is
+            None.
         """
-
-        self.data = highpass(self.data, self.fs, freq, **kwargs)
-        return self
+        if zi is None:
+            self.data = highpass(self.data, self.fs, freq, **kwargs)
+            return self
+        else:
+            self.data, zf = highpass(self.data, self.fs, freq, zi=zi, **kwargs)
+            return zf
 
     def envelope(self):
         """

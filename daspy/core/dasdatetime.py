@@ -45,6 +45,9 @@ class DASDateTime(datetime):
 
     def utc(self):
         return self.astimezone(tz=utc)
+    
+    def remove_tz(self):
+        return self.replace(tzinfo=None)
 
     @classmethod
     def from_datetime(cls, dt: datetime):

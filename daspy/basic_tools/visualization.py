@@ -1,6 +1,6 @@
 # Purpose: Plot data
 # Author: Minzhe Hu
-# Date: 2024.8.30
+# Date: 2024.10.17
 # Email: hmz2018@mail.ustc.edu.cn
 import numpy as np
 import matplotlib.pyplot as plt
@@ -20,8 +20,9 @@ def plot(data: np.ndarray, dx=None, fs=None, ax=None, obj='waveform', dpi=150,
     :param data: numpy.ndarray. Data to plot.
     :param dx: Channel interval in m.
     :param fs: Sampling rate in Hz.
-    :param ax: Matplotlib.axes.Axes. Axes to plot. If not specified, the
-        function will directly display the image using matplotlib.pyplot.show().
+    :param ax: Matplotlib.axes.Axes or tuple. Axes to plot. A tuple for new
+        figsize. If not specified, the function will directly display the image
+        using matplotlib.pyplot.show().
     :param obj: str. Type of data to plot. It should be one of 'waveform',
         'phasepick', 'spectrum', 'spectrogram', 'fk', or 'dispersion'.
     :param dpi: int. The resolution of the figure in dots-per-inch.
@@ -54,7 +55,9 @@ def plot(data: np.ndarray, dx=None, fs=None, ax=None, obj='waveform', dpi=150,
     """
     nch, nt = data.shape
     if ax is None:
-        fig, ax = plt.subplots(1, figsize=(6, 5), dpi=dpi)
+        ax = (6, 5)
+    if isinstance(ax, tuple):
+        fig, ax = plt.subplots(1, figsize=ax, dpi=dpi)
         show = True
     else:
         show = False
