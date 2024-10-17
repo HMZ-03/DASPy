@@ -1,6 +1,6 @@
 # Purpose: Some preprocess methods
 # Author: Minzhe Hu
-# Date: 2024.9.26
+# Date: 2024.10.17
 # Email: hmz2018@mail.ustc.edu.cn
 import numpy as np
 from scipy.signal import detrend
@@ -121,15 +121,15 @@ def cosine_taper(data, p=0.1):
     return data * win
 
 
-def downsampling(data, xint=None, tint=None, stack=True, filter=True):
+def downsampling(data, xint=None, tint=None, stack=True, lowpass_filter=True):
     """
     Downsample DAS data.
 
     :param data: numpy.ndarray. Data to downsample can be 1-D or 2-D.
     :param xint: int. Spatial downsampling factor.
     :param tint: int. Time downsampling factor.
-    :param stack: bool. If True, stacking will replace decimation.
-    :param filter: bool. Filter before time downsampling or not.
+    :param lowpass_filter: bool. Lowpass cheby2 filter before time downsampling
+        or not.
     :return: Downsampled data.
     """
     data_ds = data.copy()
@@ -139,8 +139,8 @@ def downsampling(data, xint=None, tint=None, stack=True, filter=True):
         else:
             data_ds = data_ds[::xint]
     if tint and tint > 1:
-        if filter:
-            data_ds = lowpass_cheby_2(detrending(data_ds), 1, 1 / 2 / tint)
+        if lowpass_filter:
+            data_ds = lowpass_cheby_2(data_ds, 1, 1 / 2 / tint)
         if len(data_ds.shape) == 1:
             data_ds = data_ds[::tint]
         else:
