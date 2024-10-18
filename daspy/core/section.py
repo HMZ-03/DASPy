@@ -1280,17 +1280,3 @@ class Section(object):
                                    turning=turning, **kwargs)
         self._strain2vel_attr()
         return self
-
-    def afk_filter(self, exponent: float = 0.8, window_size: int = 16,
-                   overlap: int = 7, normalize_power: bool = False):
-        """
-        From package 'lightguide' (https://github.com/pyrocko/lightguide).
-        """
-        from lightguide.filters import afk_filter
-        self.data = afk_filter(
-            self.data.astype(np.float32),
-            window_size=window_size,
-            overlap=overlap,
-            exponent=exponent,
-            normalize_power=normalize_power,
-        )
