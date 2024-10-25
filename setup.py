@@ -40,6 +40,7 @@ setup(
         'pyproj',
         'h5py',
         'segyio',
-        'nptdms'
+        'nptdms',
+        'tqdm'
     ]
 )

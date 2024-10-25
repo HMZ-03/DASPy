@@ -38,7 +38,7 @@ conda update -n base -c conda-forge conda
 ```
 
 ### Manual installation
-1. Install dependent packages: numpy, scipy >=1.13, matplotlib, geographiclib, pyproj, h5py, segyio, nptdms
+1. Install dependent packages: numpy, scipy >=1.13, matplotlib, geographiclib, pyproj, h5py, segyio, nptdms, tqdm
 
 2. Add DASPy into your Python path.
 
