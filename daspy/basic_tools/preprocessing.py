@@ -1,6 +1,6 @@
 # Purpose: Some preprocess methods
 # Author: Minzhe Hu
-# Date: 2024.10.17
+# Date: 2024.10.25
 # Email: hmz2018@mail.ustc.edu.cn
 import numpy as np
 from scipy.signal import detrend
@@ -199,23 +199,40 @@ def padding(data, dn, reverse=False):
         return data_pd
 
 
-def time_integration(data, fs):
+def time_integration(data, fs, c=0):
     """
     Integrate DAS data in time.
 
-    :param data: numpy.ndarray. 2D DAS data to pad.
+    :param data: numpy.ndarray. 2D DAS data.
     :param fs: Sampling rate in Hz.
+    :param c: float. A constant added to the result.
     :return: Integrated data.
     """
-    return np.cumsum(data, axis=1) / fs
+    return np.cumsum(data, axis=1) / fs + c
 
 
-def time_differential(data, fs):
+def time_differential(data, fs, prepend=0):
     """
     Differentiate DAS data in time.
 
-    :param data: numpy.ndarray. 2D DAS data to pad.
+    :param data: numpy.ndarray. 2D DAS data.
     :param fs: Sampling rate in Hz.
+    :param prepend: 'mean' or values to prepend to `data` along axis prior to
+        performing the difference. 
     :return: Differentiated data.
     """
-    return np.diff(data, axis=1) / fs
+    if prepend == 'mean':
+        prepend = np.mean(data, axis=1).reshape((-1, 1))
+    return np.diff(data, axis=1, prepend=prepend) * fs
+
+
+def distance_integration(data, dx, c=0):
+    """
+    Integrate DAS data in distance.
+
+    :param data: numpy.ndarray. 2D DAS data.
+    :param dx: Channel interval in m.
+    :param c: float. A constant added to the result.
+    :return: Integrated data.
+    """
+    return np.cumsum(data, axis=1) * dx + c

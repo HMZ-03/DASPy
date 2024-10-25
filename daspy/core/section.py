@@ -1,6 +1,6 @@
 # Purpose: Module for handling Section objects.
 # Author: Minzhe Hu
-# Date: 2024.10.17
+# Date: 2024.10.25
 # Email: hmz2018@mail.ustc.edu.cn
 import warnings
 import os
@@ -16,7 +16,8 @@ from daspy.basic_tools.preprocessing import (phase2strain, normalization,
                                              cosine_taper, downsampling,
                                              padding, trimming,
                                              time_integration,
-                                             time_differential)
+                                             time_differential,
+                                             distance_integration)
 from daspy.basic_tools.filter import (bandpass, bandstop, lowpass,
                                       lowpass_cheby_2, highpass, envelope)
 from daspy.basic_tools.freqattributes import (spectrum, spectrogram,
@@ -163,8 +164,16 @@ class Section(object):
         return self.start_channel + self.nch - 1
 
     @property
+    def distance(self):
+        return self.nch * self.dx
+
+    @property
     def end_distance(self):
         return self.start_distance + self.nch * self.dx
+
+    @property
+    def duration(self):
+        return self.nt / self.fs
 
     @property
     def end_time(self):
@@ -761,22 +770,37 @@ class Section(object):
                     return self
         warnings.warn('Unable to convert data type.')
 
-    def time_integration(self):
+    def time_integration(self, c=0):
         """
         Integrate DAS data in time.
+
+        :param c: float. A constant added to the result.
         """
-        self.data = time_integration(self.data, self.fs)
+        self.data = time_integration(self.data, self.fs, c=c)
         if hasattr(self, 'data_type'):
             self._time_int_dif_attr(mode=1)
         return self
 
-    def time_differential(self):
+    def time_differential(self, prepend=0):
         """
         Differentiate DAS data in time.
+
+        :param prepend: 'mean' or values to prepend to `data` along axis prior to
+            performing the difference. 
         """
-        self.data = time_differential(self.data, self.fs)
+        self.data = time_differential(self.data, self.fs, prepend=prepend)
         if hasattr(self, 'data_type'):
             self._time_int_dif_attr(mode=-1)
+        return self
+
+    def distance_integration(self, c=0):
+        """
+        Differentiate DAS data in distance.
+
+        :param c: float. A constant added to the result.
+        """
+        self.data = distance_integration(self.data, self.dx, c=c)
+        self._strain2vel_attr()
         return self
 
     def bandpass(self, freqmin, freqmax, zi=None, **kwargs):
