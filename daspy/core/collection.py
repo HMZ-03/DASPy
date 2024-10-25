@@ -213,13 +213,13 @@ class Collection(object):
                         win = cosine_taper(np.ones_like(sec.data), **kwargs_list[j])
                         win[:, :sec.nt//2] = 1
                         sec.data *= win
-                elif method == 'time_integration':
-                    kwargs_list[j]['c'] = sec.data[:, -1]
-                elif method == 'time_differential':
-                    kwargs_list[j]['prepend'] = sec.data[:, -1]
                 else:
                     out = eval(f'sec.{method}')(**kwargs_list[j])
-                    if method in cascade_method:
+                    if method == 'time_integration':
+                        kwargs_list[j]['c'] = sec.data[:, -1]
+                    elif method == 'time_differential':
+                        kwargs_list[j]['prepend'] = sec.data[:, -1]
+                    elif method in cascade_method:
                         kwargs_list[j]['zi'] = out
             f0, f1 = os.path.splitext(os.path.basename(f))
             if ftype is not None:
