@@ -1,6 +1,6 @@
 # Purpose: Module for handling Collection objects.
 # Author: Minzhe Hu
-# Date: 2024.10.25
+# Date: 2024.10.28
 # Email: hmz2018@mail.ustc.edu.cn
 import os
 import warnings
@@ -17,91 +17,105 @@ cascade_method = ['time_integration', 'time_differential', 'downsampling',
                   'lowpass_cheby_2']
 
 class Collection(object):
-    def __init__(self, filepath, ftype=None, dt=None, meta_from_file=True, 
-                 dx=None, fs=None, gauge_length=None,
-                 timeinfo_format='%Y-%m-%dT%H:%M:%S%z',
-                 timeinfo_slice=slice(None)):
+    def __init__(self, fpath, ftype=None, flength=None, meta_from_file=True,
+                 timeinfo_format=None, **kwargs):
         """
-        :param filepath: str or Sequence of str. File path(s) containing data.
+        :param fpath: str or Sequence of str. File path(s) containing data.
         :param ftype: None or str. None for automatic detection, or 'pkl',
             'pickle', 'tdms', 'h5', 'hdf5', 'segy', 'sgy', 'npy'.
-        :param dt: float. The duration of a single file in senconds.
+        :param flength: float. The duration of a single file in senconds.
         :param meta_from_file: bool or 'all'. False for manually set dt, dx, fs
             and gauge_length. True for extracting dt, dx, fs and gauge_length
             from first 2 file. 'all' for exracting and checking these metadata
             from all file.
+        :param timeinfo_format: str or (slice, str). Format for extracting start
+            time from file name.
+        :param nch: int. Channel number.
+        :param nt: int. Sampling points of each file.
         :param dx: number. Channel interval in m.
         :param fs: number. Sampling rate in Hz.
         :param gauge_length: number. Gauge length in m.
-        :param timeinfo_format: str. Format for extracting start time from file
-            name.
-        :param timeinfo_slice: slice. Slice of file name that containning time
-            information.
         """
-        if isinstance(filepath, (list, tuple)):
-            self.filelist = []
-            for fp in filepath:
-                self.filelist.extend(glob(fp))
+        if isinstance(fpath, (list, tuple)):
+            self.flist = []
+            for fp in fpath:
+                self.flist.extend(glob(fp))
         else:
-            self.filelist = glob(filepath)
-        if not len(self.filelist):
+            self.flist = glob(fpath)
+        if not len(self.flist):
             raise ValueError('No file input.')
         self.ftype = ftype
+        for key in ['nch', 'nt', 'dx', 'fs', 'gauge_length']:
+            if key in kwargs.keys():
+                setattr(self, key, kwargs[key])
+        if timeinfo_format is None and meta_from_file is None:
+            meta_from_file = True
+
         if meta_from_file:
             time = []
-            sl = slice(None) if meta_from_file == 'all' else slice(0,2)
             metadata_list = []
-            for f in self.filelist[sl]:
-                _, metadata = read(f, ftype=ftype, output_type='array', ch1=0,
-                                   ch2=0)
-                time.append(metadata.pop('start_time'))
-                metadata_list.append((metadata.pop('dx', None),
-                                      metadata.pop('fs', None),
-                                      metadata.pop('gauge_length', None)))
+            for f in self.flist:
+                sec = read(f, ftype=ftype, read_data=False)
+                if not hasattr(sec, 'gauge_length'):
+                    sec.gauge_length = None
+                time.append(sec.start_time)
+                metadata_list.append((sec.nch, sec.nt, sec.dx, sec.fs,
+                                      sec.gauge_length))
+                if meta_from_file != 'all':
+                    break
 
             if len(set(metadata_list)) > 1:
                 warnings.warn('More than one kind of setting detected.')
             metadata = max(metadata_list, key=metadata_list.count)
-            self.dx = metadata[0] if dx is None else dx
-            self.fs = metadata[1] if fs is None else fs
-            self.gauge_length = metadata[2] if gauge_length is None else \
-                gauge_length
-            if len(time) == len(self.filelist):
+            for i, key in enumerate(['nch', 'nt', 'dx', 'fs', 'gauge_length']):
+                if not hasattr(self, key):
+                    setattr(self, key, metadata[i])
+            if len(time) == len(self.flist):
                 self.time = time
-        
+
         if not hasattr(self, 'time'):
-            self.time = []
-            for f in self.filelist:
-                self.time.append(DASDateTime.strptime(
-                    os.path.basename(f)[timeinfo_slice], timeinfo_format))
+            if timeinfo_format is None:
+                self.flist.sort()
+                sec = read(self.flist[0], ftype=ftype, read_data=False)
+                if flength is None:
+                    flength = sec.duration
+                self.time = [sec.start_time + i * flength for i in
+                             range(len(self))]
+            else:
+                if isinstance(timeinfo_format, tuple):
+                    timeinfo_slice, timeinfo_format = timeinfo_format
+                else:
+                    timeinfo_slice = slice(None)
+                self.time = [DASDateTime.strptime(
+                    os.path.basename(f)[timeinfo_slice], timeinfo_format)
+                    for f in self.flist]
 
         self._sort()
-        if dt is None:
-            if len(self.filelist) == 1:
-                dt = read(self.filelist[0], ftype=ftype, ch1=0, ch2=1).duration
-            else:
-                time_diff = np.unique(np.diff(self.time))
-                if len(time_diff) > 1:
-                    warnings.warn('File start times are unevenly spaced and'
-                                  'self.dt may be incorrectly detected')
-                self.dt = time_diff.min()
-        elif dt <= 0:
+        if flength is None:
+            time_diff = np.unique(np.diff(self.time))
+            if len(time_diff) > 1:
+                warnings.warn('File start times are unevenly spaced and'
+                                'self.flength may be incorrectly detected')
+            flength = time_diff.min()
+        elif flength <= 0:
            raise ValueError('dt must > 0')
         
-        self.dt = dt
+        self.flength = flength
 
     def __str__(self):
         if len(self) == 1:
-            describe = f'    filelist: {self.filelist}\n'
+            describe = f'       flist: {self.flist}\n'
         elif len(self) <= 5:
-            describe = f'    filelist: {len(self)} files\n' + \
-                       f'              {self.filelist}\n'
+            describe = f'       flist: {len(self)} files\n' + \
+                       f'              {self.flist}\n'
         else:
-            describe = f'    filelist: {len(self)} files\n' + \
+            describe = f'       flist: {len(self)} files\n' + \
                        f'              [{self[0]}, {self[1]}, ..., {self[-1]}]\n'
 
         describe += f'        time: {self.start_time} to {self.end_time}\n' + \
-                    f'          dt: {self.dt}\n' + \
+                    f'     flength: {self.flength}\n' + \
+                    f'         nch: {self.nch}\n' + \
+                    f'          nt: {self.nt}\n' + \
                     f'          dx: {self.dx}\n' + \
                     f'          fs: {self.fs}\n' + \
                     f'gauge_length: {self.gauge_length}\n'
@@ -111,15 +125,15 @@ class Collection(object):
     __repr__ = __str__
 
     def __getitem__(self, i):
-        return self.filelist[i]
+        return self.flist[i]
 
     def __len__(self):
-        return len(self.filelist)
+        return len(self.flist)
 
     def _sort(self):
         sort = np.argsort(self.time)
         self.time = [self.time[i] for i in sort]
-        self.filelist = [self.filelist[i] for i in sort]
+        self.flist = [self.flist[i] for i in sort]
         return self
 
     @property
@@ -128,7 +142,7 @@ class Collection(object):
 
     @property
     def end_time(self):
-        return self.time[-1] + self.dt
+        return self.time[-1] + self.flength
 
     @property
     def duration(self):
@@ -140,7 +154,7 @@ class Collection(object):
 
         :param stime, etime: DASDateTime. Start and end time of required data.
         :param readsec: bool. If True, read as a instance of daspy.Section and
-            return. If False, update self.filelist.
+            return. If False, update self.flist.
         :param ch1: int. The first channel required. Only works when
             readsec=True.
         :param ch2: int. The last channel required (not included). Only works
@@ -150,18 +164,18 @@ class Collection(object):
             stime = self.time[0]
 
         if etime is None:
-            etime = self.time[-1] + self.dt
+            etime = self.time[-1] + self.flength
 
-        filelist = [self.filelist[i] for i in range(len(self))
-                    if (stime - self.dt) < self.time[i] <= etime]
+        flist = [self.flist[i] for i in range(len(self))
+                    if (stime - self.flength) < self.time[i] <= etime]
         if readsec:
-            sec = read(filelist[0], **kwargs)
-            for f in filelist[1:]:
+            sec = read(flist[0], **kwargs)
+            for f in flist[1:]:
                 sec += read(f, **kwargs)
             sec.trimming(tmin=stime, tmax=etime)
             return sec
         else:
-            self.filelist = filelist
+            self.flist = flist
             return self
 
     def _optimize_for_continuity(self, operations):
@@ -199,7 +213,7 @@ class Collection(object):
         if not os.path.exists(savepath):
             os.makedirs(savepath)
         method_list, kwargs_list = self._optimize_for_continuity(operations)
-        new_filelist = []
+        new_flist = []
         for i in tqdm(range(len(self))):
             f = self[i]
             sec = read(f, ftype=self.ftype, **read_kwargs)
@@ -226,6 +240,6 @@ class Collection(object):
                 f1 = ftype
             filepath = os.path.join(savepath, f0+suffix+f1)
             sec.save(filepath)
-            new_filelist.append(filepath)
+            new_flist.append(filepath)
 
-        return Collection(new_filelist, ftype=ftype, dt=self.dt)
+        return Collection(new_flist, ftype=ftype, dt=self.flength)
