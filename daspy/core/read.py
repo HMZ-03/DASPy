@@ -1,8 +1,8 @@
 # Purpose: Module for reading DAS data.
 # Author: Minzhe Hu
-# Date: 2024.10.17
+# Date: 2024.10.27
 # Email: hmz2018@mail.ustc.edu.cn
-# Modified from
+# Partially modified from
 # https://github.com/RobbinLuo/das-toolkit/blob/main/DasTools/DasPrep.py
 import warnings
 import json
@@ -16,7 +16,8 @@ from daspy.core.section import Section
 from daspy.core.dasdatetime import DASDateTime, utc
 
 
-def read(fname=None, output_type='section', ftype=None, **kwargs):
+def read(fname=None, output_type='section', ftype=None, read_data=True,
+         **kwargs):
     """
     Read a .pkl/.pickle, .tdms, .h5/.hdf5, .segy/.sgy file.
 
@@ -26,6 +27,9 @@ def read(fname=None, output_type='section', ftype=None, **kwargs):
         dictionary for metadata.
     :param ftype: None or str. None for automatic detection), or 'pkl',
         'pickle', 'tdms', 'h5', 'hdf5', 'segy', 'sgy', 'npy'.
+    :param read_data. bool. If False, only metadata will be read, the returned
+        data will be an array of all zeros of the same size as the original
+        data.
     :param ch1: int. The first channel required.
     :param ch2: int. The last channel required (not included).
     :return: An instance of daspy.Section, or numpy.array for data and a
@@ -41,7 +45,7 @@ def read(fname=None, output_type='section', ftype=None, **kwargs):
     ftype = ftype.replace('hdf5', 'h5')
     ftype = ftype.replace('segy', 'sgy')
 
-    data, metadata = fun_map[ftype](fname, **kwargs)
+    data, metadata = fun_map[ftype](fname, read_data=read_data, **kwargs)
 
     if output_type.lower() == 'section':
         metadata['source'] = Path(fname)
@@ -51,27 +55,33 @@ def read(fname=None, output_type='section', ftype=None, **kwargs):
         return data, metadata
 
 
-def _read_pkl(fname, **kwargs):
+def _read_pkl(fname, read_data=True, **kwargs):
     with open(fname, 'rb') as f:
         pkl_data = pickle.load(f)
         if isinstance(pkl_data, np.ndarray):
-            ch1 = kwargs.pop('ch1', 0)
-            ch2 = kwargs.pop('ch2', len(pkl_data))
-            warnings.warn('This data doesn\'t include channel interval and '
-                          'sampling rate. Please set manually')
-            return pkl_data[ch1:ch2], {'dx': None, 'fs': None}
+            warnings.warn('This data format doesn\'t include channel interval'
+                          'and sampling rate. Please set manually')
+            if read_data:
+                ch1 = kwargs.pop('ch1', 0)
+                ch2 = kwargs.pop('ch2', len(pkl_data))
+                return pkl_data[ch1:ch2], {'dx': None, 'fs': None}
+            else:
+                return np.zeros_like(pkl_data), {'dx': None, 'fs': None}
         elif isinstance(pkl_data, dict):
             data = pkl_data.pop('data')
-            if 'ch1' in kwargs.keys() or 'ch2' in kwargs.keys():
-                if 'start_channel' in pkl_data.keys():
-                    s_chn = pkl_data['start_channel']
-                    print(f'Data is start with channel {s_chn}.')
-                else:
-                    s_chn = 0
-                ch1 = kwargs.pop('ch1', s_chn)
-                ch2 = kwargs.pop('ch2', s_chn + len(data))
-                data = data[ch1 - s_chn:ch2 - s_chn, :]
-                pkl_data['start_channel'] = ch1
+            if read_data:
+                if 'ch1' in kwargs.keys() or 'ch2' in kwargs.keys():
+                    if 'start_channel' in pkl_data.keys():
+                        s_chn = pkl_data['start_channel']
+                        print(f'Data is start with channel {s_chn}.')
+                    else:
+                        s_chn = 0
+                    ch1 = kwargs.pop('ch1', s_chn)
+                    ch2 = kwargs.pop('ch2', s_chn + len(data))
+                    data = data[ch1 - s_chn:ch2 - s_chn, :]
+                    pkl_data['start_channel'] = ch1
+            else:
+                data = np.zeros_like(data)
             return data, pkl_data
         else:
             raise TypeError('Unknown data type.')
@@ -121,7 +131,7 @@ def _read_h5_starttime(h5_file):
     return stime
 
 
-def _read_h5(fname, **kwargs):
+def _read_h5(fname, read_data=True, **kwargs):
     with h5py.File(fname, 'r') as h5_file:
         # read headers
         group = list(h5_file.keys())[0]
@@ -133,14 +143,18 @@ def _read_h5(fname, **kwargs):
                 nch = len(h5_file['Acquisition/Raw[0]/RawData/'])
             ch1 = kwargs.pop('ch1', 0)
             ch2 = kwargs.pop('ch2', nch)
-            if ch1 == ch2:
-                data = None
-            else:
-                array_shape = h5_file['Acquisition/Raw[0]/RawData/'].shape
-                if array_shape[0] == nch:
+            array_shape = h5_file['Acquisition/Raw[0]/RawData/'].shape
+            if array_shape[0] == nch:
+                if read_data:
                     data = h5_file['Acquisition/Raw[0]/RawData/'][ch1:ch2, :]
                 else:
+                    data = np.zeros_like(h5_file['Acquisition/Raw[0]/RawData/'])
+            else:
+                if read_data:
                     data = h5_file['Acquisition/Raw[0]/RawData/'][:, ch1:ch2].T
+                else:
+                    data = np.zeros_like(
+                        h5_file['Acquisition/Raw[0]/RawData/']).T
 
             # read metadata
             try:
@@ -160,10 +174,10 @@ def _read_h5(fname, **kwargs):
             nch = len(h5_file['raw'])
             ch1 = kwargs.pop('ch1', 0)
             ch2 = kwargs.pop('ch2', nch)
-            if ch1 == ch2:
-                data = None
-            else:
+            if read_data:
                 data = h5_file['raw'][ch1:ch2, :]
+            else:
+                data = np.zeros_like(h5_file['raw'])
             fs = round(1 / np.diff(h5_file['timestamp']).mean())
             start_time = DASDateTime.fromtimestamp(
                 h5_file['timestamp'][0]).astimezone(utc)
@@ -175,14 +189,17 @@ def _read_h5(fname, **kwargs):
             nch = h5_file.attrs['nx']
             ch1 = kwargs.pop('ch1', 0)
             ch2 = kwargs.pop('ch2', nch)
-            if ch1 == ch2:
-                data = None
-            else:
-                array_shape = h5_file['data_product/data'].shape
-                if array_shape[0] == nch:
+            array_shape = h5_file['data_product/data'].shape
+            if array_shape[0] == nch:
+                if read_data:
                     data = h5_file['data_product/data'][ch1:ch2, :]
                 else:
+                    data = np.zeros_like(h5_file['data_product/data'])
+            else:
+                if read_data:
                     data = h5_file['data_product/data'][:, ch1:ch2].T
+                else:
+                    data = np.zeros_like(h5_file['data_product/data']).T
 
             # read metadata
             fs = 1 / h5_file.attrs['dt_computer']
@@ -208,11 +225,14 @@ def _read_h5(fname, **kwargs):
             nch = h5_file[f'{group}/Source1/Zone1/{acquisition}'].shape[-1]
             ch1 = kwargs.pop('ch1', start_channel)
             ch2 = kwargs.pop('ch2', start_channel + nch)
-            if ch1 == ch2:
-                data = None
-            else:
-                data = h5_file[f'{group}/Source1/Zone1/{acquisition}'][:, :, ch1 - start_channel:ch2 - start_channel].T.\
+            if read_data:
+                data = h5_file[f'{group}/Source1/Zone1/{acquisition}']\
+                    [:, :, ch1 - start_channel:ch2 - start_channel].T.\
                     reshape((ch2 - ch1, -1))
+            else:
+                data = np.zeros_like(
+                    h5_file[f'{group}/Source1/Zone1/{acquisition}']).T.\
+                        reshape((nch, -1))
 
             # read metadata
             dx = h5_file[f'{group}/Source1/Zone1'].attrs['Spacing'][0]
@@ -220,7 +240,8 @@ def _read_h5(fname, **kwargs):
                 fs = float(h5_file[f'{group}/Source1/Zone1'].attrs['FreqRes'])
             except KeyError:
                 fs = h5_file[f'{group}/Source1/Zone1'].attrs['SamplingRate'][0]
-            start_distance = h5_file[f'{group}/Source1/Zone1'].attrs['Origin'][0]
+            start_distance = h5_file[f'{group}/Source1/Zone1'].\
+                attrs['Origin'][0]
             start_time = DASDateTime.fromtimestamp(
                 h5_file[f'{group}/Source1/time'][0, 0]).astimezone(utc)
             gauge_length = h5_file[f'{group}/Source1/Zone1'].\
@@ -235,7 +256,7 @@ def _read_h5(fname, **kwargs):
     return data, metadata
 
 
-def _read_tdms(fname, **kwargs):
+def _read_tdms(fname, read_data=True, **kwargs):
     # https://nptdms.readthedocs.io/en/stable/quickstart.html
     with TdmsFile.read(fname) as tdms_file:
         group_name = [group.name for group in tdms_file.groups()]
@@ -255,11 +276,12 @@ def _read_tdms(fname, **kwargs):
             ch1 = max(kwargs.pop('ch1', start_channel), start_channel)
             ch2 = min(kwargs.pop('ch2', start_channel + nch),
                       start_channel + nch)
-            if ch1 == ch2:
-                data = None
-            else:
+            if read_data:
                 data = np.asarray([tdms_file[key][str(ch)]
                                    for ch in range(ch1, ch2)])
+            else:
+                nt = len(tdms_file[key][str(start_channel)])
+                data = np.zeros((nch, nt))
         elif nch == 1:
             try:
                 start_channel = int(headers['Initial Channel'])
@@ -270,12 +292,13 @@ def _read_tdms(fname, **kwargs):
             nch = int(headers['Total Channels'])
             ch2 = min(kwargs.pop('ch2', start_channel + nch),
                       start_channel + nch)
-            if ch1 == ch2:
-                data = None
-            else:
+            if read_data:
                 data = np.asarray(tdms_file[key].channels()[0]).\
                     reshape((-1, nch)).T
                 data = data[ch1 - start_channel: ch2 - start_channel]
+            else:
+                data = np.zeros(len(tdms_file[key].channels()[0])).\
+                    reshape((nch, -1))
 
         # read metadata
         try:
@@ -331,10 +354,10 @@ def _read_segy(fname, **kwargs):
         ch2 = kwargs.pop('ch2', nch)
 
         # read data
-        if ch1 == ch2:
-            data = None
-        else:
+        if read_data:
             data = segy_file.trace.raw[ch1:ch2]
+        else:
+            data = np.zeros_like(segy_file.trace.raw)
 
         # read metadata:
         fs = 1 / (segyio.tools.dt(segy_file) / 1e6)
@@ -345,13 +368,16 @@ def _read_segy(fname, **kwargs):
         return data, metadata
 
 
-def _read_npy(fname, **kwargs):
+def _read_npy(fname, read_data=True, **kwargs):
     data = np.load(fname)
-    ch1 = kwargs.pop('ch1', 0)
-    ch2 = kwargs.pop('ch2', len(data))
-    warnings.warn('This data format doesn\'t include channel interval and '
-                  'sampling rate. Please set manually')
-    return data[ch1:ch2], {'dx': None, 'fs': None}
+    if read_data:
+        ch1 = kwargs.pop('ch1', 0)
+        ch2 = kwargs.pop('ch2', len(data))
+        warnings.warn('This data format doesn\'t include channel interval and '
+                    'sampling rate. Please set manually')
+        return data[ch1:ch2], {'dx': None, 'fs': None}
+    else:
+        return np.zeros_like(data), {'dx': None, 'fs': None}
 
 
 def read_json(fname, output_type='dict'):
