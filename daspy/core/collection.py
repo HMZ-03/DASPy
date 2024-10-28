@@ -44,6 +44,7 @@ class Collection(object):
             self.flist = glob(fpath)
         if not len(self.flist):
             raise ValueError('No file input.')
+        self.flist.sort()
         self.ftype = ftype
         for key in ['nch', 'nt', 'dx', 'fs', 'gauge_length']:
             if key in kwargs.keys():
@@ -52,13 +53,13 @@ class Collection(object):
             meta_from_file = True
 
         if meta_from_file:
-            time = []
+            ftime = []
             metadata_list = []
             for f in self.flist:
                 sec = read(f, ftype=ftype, read_data=False)
                 if not hasattr(sec, 'gauge_length'):
                     sec.gauge_length = None
-                time.append(sec.start_time)
+                ftime.append(sec.start_time)
                 metadata_list.append((sec.nch, sec.nt, sec.dx, sec.fs,
                                       sec.gauge_length))
                 if meta_from_file != 'all':
@@ -70,29 +71,27 @@ class Collection(object):
             for i, key in enumerate(['nch', 'nt', 'dx', 'fs', 'gauge_length']):
                 if not hasattr(self, key):
                     setattr(self, key, metadata[i])
-            if len(time) == len(self.flist):
-                self.time = time
+            if len(ftime) == len(self.flist):
+                self.ftime = ftime
 
         if not hasattr(self, 'time'):
             if timeinfo_format is None:
-                self.flist.sort()
-                sec = read(self.flist[0], ftype=ftype, read_data=False)
                 if flength is None:
                     flength = sec.duration
-                self.time = [sec.start_time + i * flength for i in
-                             range(len(self))]
+                self.ftime = [sec.start_time + i * flength for i in
+                              range(len(self))]
             else:
                 if isinstance(timeinfo_format, tuple):
                     timeinfo_slice, timeinfo_format = timeinfo_format
                 else:
                     timeinfo_slice = slice(None)
-                self.time = [DASDateTime.strptime(
+                self.ftime = [DASDateTime.strptime(
                     os.path.basename(f)[timeinfo_slice], timeinfo_format)
                     for f in self.flist]
 
         self._sort()
         if flength is None:
-            time_diff = np.unique(np.diff(self.time))
+            time_diff = np.unique(np.diff(self.ftime))
             if len(time_diff) > 1:
                 warnings.warn('File start times are unevenly spaced and'
                                 'self.flength may be incorrectly detected')
@@ -112,7 +111,7 @@ class Collection(object):
             describe = f'       flist: {len(self)} files\n' + \
                        f'              [{self[0]}, {self[1]}, ..., {self[-1]}]\n'
 
-        describe += f'        time: {self.start_time} to {self.end_time}\n' + \
+        describe += f'       ftime: {self.start_time} to {self.end_time}\n' + \
                     f'     flength: {self.flength}\n' + \
                     f'         nch: {self.nch}\n' + \
                     f'          nt: {self.nt}\n' + \
@@ -131,18 +130,18 @@ class Collection(object):
         return len(self.flist)
 
     def _sort(self):
-        sort = np.argsort(self.time)
-        self.time = [self.time[i] for i in sort]
+        sort = np.argsort(self.ftime)
+        self.ftime = [self.ftime[i] for i in sort]
         self.flist = [self.flist[i] for i in sort]
         return self
 
     @property
     def start_time(self):
-        return self.time[0]
+        return self.ftime[0]
 
     @property
     def end_time(self):
-        return self.time[-1] + self.flength
+        return self.ftime[-1] + self.flength
 
     @property
     def duration(self):
@@ -161,13 +160,13 @@ class Collection(object):
             when readsec=True.
         """
         if stime is None:
-            stime = self.time[0]
+            stime = self.ftime[0]
 
         if etime is None:
-            etime = self.time[-1] + self.flength
+            etime = self.ftime[-1] + self.flength
 
         flist = [self.flist[i] for i in range(len(self))
-                    if (stime - self.flength) < self.time[i] <= etime]
+                    if (stime - self.flength) < self.ftime[i] <= etime]
         if readsec:
             sec = read(flist[0], **kwargs)
             for f in flist[1:]:
