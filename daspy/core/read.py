@@ -345,7 +345,7 @@ def _read_tdms(fname, read_data=True, **kwargs):
     return data, metadata
 
 
-def _read_segy(fname, **kwargs):
+def _read_segy(fname, read_data=True, **kwargs):
     # https://github.com/equinor/segyio-notebooks/blob/master/notebooks/basic/02_segy_quicklook.ipynb
 
     with segyio.open(fname, ignore_geometry=True) as segy_file:
