@@ -98,8 +98,9 @@ class Collection(object):
                 time_diff = np.round(np.diff(self.ftime[1:]).astype(float))
                 flength_set, counts = np.unique(time_diff, return_counts=True)
                 if len(flength_set) > 1:
-                    warnings.warn('File start times are unevenly spaced and'
-                                    'self.flength may be incorrectly detected')
+                    warnings.warn('File start times are unevenly spaced. Data '
+                                  'may not be continuous and self.flength may '
+                                  'be incorrectly detected.')
                 flength = flength_set[counts.argmax()]
             elif len(self.flist) == 2:
                 flength = self.ftime[1] - self.ftime[0]
