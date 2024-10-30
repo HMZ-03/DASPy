@@ -209,7 +209,7 @@ def _read_h5(fname, headonly=False, **kwargs):
                         'gauge_length': gauge_length, 'geometry': geometry,
                         'scale': scale}
             metadata['start_time'] = _read_h5_starttime(h5_file)
-        elif group == 'Acquisition': # OptaSens/ODH, Silixa/iDAS
+        elif group == 'Acquisition': # OptaSens/ODH, Silixa/iDAS, Smart Sensing/ZD DAS
             # read data
             try:
                 nch = h5_file['Acquisition'].attrs['NumberOfLoci']
