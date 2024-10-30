@@ -172,12 +172,22 @@ class Collection(object):
         """
         if stime is None:
             stime = self.ftime[0]
+        elif stime - self.ftime[0] < 0:
+            warnings.warn('stime is earlier than the start time of the first '
+                          'file. Set stime to self.ftime[0].')
 
         if etime is None:
             etime = self.ftime[-1] + self.flength
+        elif etime - self.ftime[-1] > self.flength:
+            warnings.warn('etime is later than the end time of the last file. '
+                          'Set etime to self.ftime[-1] + self.flength.')
+
+        if stime > etime:
+            raise ValueError('Start time can\'t be later than end time.')
+        
 
         flist = [self.flist[i] for i in range(len(self))
-                    if (stime - self.flength) < self.ftime[i] <= etime]
+                    if (stime - self.flength) < self.ftime[i] < etime]
         if readsec:
             sec = read(flist[0], **kwargs)
             for f in flist[1:]:
