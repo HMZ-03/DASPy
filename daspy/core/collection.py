@@ -120,7 +120,10 @@ class Collection(object):
                        f'              {self.flist}\n'
         else:
             describe = f'       flist: {len(self)} files\n' + \
-                       f'              [{self[0]}, {self[1]}, ..., {self[-1]}]\n'
+                       f'              [{self[0]},\n' + \
+                       f'               {self[1]},\n' + \
+                       f'               ...,\n' + \
+                       f'               {self[-1]}]\n'
 
         describe += f'       ftime: {self.start_time} to {self.end_time}\n' + \
                     f'     flength: {self.flength}\n' + \
@@ -184,7 +187,6 @@ class Collection(object):
 
         if stime > etime:
             raise ValueError('Start time can\'t be later than end time.')
-        
 
         flist = [self.flist[i] for i in range(len(self))
                     if (stime - self.flength) < self.ftime[i] < etime]
