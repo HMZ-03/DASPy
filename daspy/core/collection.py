@@ -263,5 +263,3 @@ class Collection(object):
             filepath = os.path.join(savepath, f0+suffix+f1)
             sec.save(filepath)
             new_flist.append(filepath)
-
-        return Collection(new_flist, ftype=ftype, dt=self.flength)
