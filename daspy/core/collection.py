@@ -1,6 +1,6 @@
 # Purpose: Module for handling Collection objects.
 # Author: Minzhe Hu
-# Date: 2024.10.28
+# Date: 2024.10.30
 # Email: hmz2018@mail.ustc.edu.cn
 import os
 import warnings
@@ -49,53 +49,63 @@ class Collection(object):
         for key in ['nch', 'nt', 'dx', 'fs', 'gauge_length']:
             if key in kwargs.keys():
                 setattr(self, key, kwargs[key])
-        if timeinfo_format is None and meta_from_file is None:
+        if timeinfo_format is None and not meta_from_file:
             meta_from_file = True
 
-        if meta_from_file:
+        if meta_from_file == 'all':
             ftime = []
             metadata_list = []
             for f in self.flist:
-                sec = read(f, ftype=ftype, read_data=False)
+                sec = read(f, ftype=ftype, headonly=True)
                 if not hasattr(sec, 'gauge_length'):
                     sec.gauge_length = None
                 ftime.append(sec.start_time)
                 metadata_list.append((sec.nch, sec.nt, sec.dx, sec.fs,
                                       sec.gauge_length))
-                if meta_from_file != 'all':
-                    break
 
-            if len(set(metadata_list)) > 1:
+            if len(set(metadata_list[1:])) > 1:
                 warnings.warn('More than one kind of setting detected.')
             metadata = max(metadata_list, key=metadata_list.count)
             for i, key in enumerate(['nch', 'nt', 'dx', 'fs', 'gauge_length']):
                 if not hasattr(self, key):
                     setattr(self, key, metadata[i])
-            if len(ftime) == len(self.flist):
-                self.ftime = ftime
-
-        if not hasattr(self, 'time'):
+            self.ftime = ftime
+        elif meta_from_file:
+            i = int(len(self.flist) > 1)
+            sec = read(self.flist[i], ftype=ftype, headonly=True)
             if timeinfo_format is None:
                 if flength is None:
                     flength = sec.duration
-                self.ftime = [sec.start_time + i * flength for i in
-                              range(len(self))]
+                self.ftime = [sec.start_time + (j - i) * flength for j in
+                            range(len(self))]
+            metadata = (sec.nch, sec.nt, sec.dx, sec.fs, sec.gauge_length)
+            for i, key in enumerate(['nch', 'nt', 'dx', 'fs', 'gauge_length']):
+                if not hasattr(self, key):
+                    setattr(self, key, metadata[i])
+
+        if not hasattr(self, 'ftime'):
+            if isinstance(timeinfo_format, tuple):
+                timeinfo_slice, timeinfo_format = timeinfo_format
             else:
-                if isinstance(timeinfo_format, tuple):
-                    timeinfo_slice, timeinfo_format = timeinfo_format
-                else:
-                    timeinfo_slice = slice(None)
-                self.ftime = [DASDateTime.strptime(
-                    os.path.basename(f)[timeinfo_slice], timeinfo_format)
-                    for f in self.flist]
+                timeinfo_slice = slice(None)
+            self.ftime = [DASDateTime.strptime(
+                os.path.basename(f)[timeinfo_slice], timeinfo_format)
+                for f in self.flist]
 
         self._sort()
         if flength is None:
-            time_diff = np.unique(np.diff(self.ftime))
-            if len(time_diff) > 1:
-                warnings.warn('File start times are unevenly spaced and'
-                                'self.flength may be incorrectly detected')
-            flength = time_diff.min()
+            if len(self.flist) > 2:
+                time_diff = np.round(np.diff(self.ftime[1:]).astype(float))
+                flength_set, counts = np.unique(time_diff, return_counts=True)
+                if len(flength_set) > 1:
+                    warnings.warn('File start times are unevenly spaced and'
+                                    'self.flength may be incorrectly detected')
+                flength = flength_set[counts.argmax()]
+            elif len(self.flist) == 2:
+                flength = self.ftime[1] - self.ftime[0]
+            else:
+                flength = read(self.flist[0], ftype=ftype,
+                               headonly=True).duration
         elif flength <= 0:
            raise ValueError('dt must > 0')
         
