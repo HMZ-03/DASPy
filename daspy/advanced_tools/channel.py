@@ -313,7 +313,7 @@ def turning_points(data, data_type='coordinate', thresh=5, depth_info=False,
 
     :param data: numpy.ndarray. Data used to seek turning points.
     :param data_type: str. If data_type is 'coordinate', data should include
-        latitude and longitude (first two columns), and can also include depth
+        longitude and latitude (first two columns), and can also include depth
         (last column). If data_type is 'waveform', data should be continuous
         waveform, preferably containing signal with strong coherence
         (earthquake, traffic signal, etc.).
