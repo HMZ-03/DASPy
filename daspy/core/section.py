@@ -1,6 +1,6 @@
 # Purpose: Module for handling Section objects.
 # Author: Minzhe Hu
-# Date: 2024.10.25
+# Date: 2024.10.28
 # Email: hmz2018@mail.ustc.edu.cn
 import warnings
 import os
@@ -72,12 +72,13 @@ class Section(object):
                 setattr(self, attr, kwargs.pop(attr))
 
     def __str__(self):
-        describe = ''
         n = max(map(len, self.__dict__.keys()))
+        describe = '{}: shape{}\n'.format('data'.rjust(n), self.data.shape)
         for key, value in self.__dict__.items():
-            if key in ['data', 'geometry']:
-                describe = '{}: shape{}\n'.format(key.rjust(n), value.shape) \
-                    + describe
+            if key == 'data':
+                continue
+            if key == 'geometry':
+                describe += '{}: shape{}\n'.format(key.rjust(n), value.shape)
             elif key in ['dx', 'start_distance', 'gauge_length']:
                 describe += '{}: {} m\n'.format(key.rjust(n), value)
             elif key == 'fs':
@@ -405,7 +406,7 @@ class Section(object):
                      start_channel=self.start_channel, channel_spacing=self.dx,
                      unit=unit)
 
-    def save(self, fname=None, ftype=None):
+    def save(self, fname=None, ftype=None, keep_format=False):
         """
         Save the instance as a pickle file or update the raw file and resave as
         new file.
@@ -414,6 +415,9 @@ class Section(object):
             save.
         :param ftype: None or str. None for automatic detection), or 'pkl',
             'pickle', 'tdms', 'h5', 'hdf5', 'segy', 'sgy', 'npy'.
+        :param keep_format: bool. If True, we will make a copy of the
+            self.source file and make changes to it. This will strictly preserve
+            the original format, but will cost more IO resources.
         """
         if fname is None:
             if hasattr(self, 'source'):
@@ -423,17 +427,23 @@ class Section(object):
             else:
                 fname = 'section.pkl'
 
-        raw_fname = None
         if ftype is None:
             ftype = str(fname).lower().split('.')[-1]
-        ftype.replace('hdf5', 'h5')
-        ftype.replace('segy', 'sgy')
 
-        if hasattr(self, 'source'):
-            if os.path.isfile(self.source) and ftype == self.source_type:
-                raw_fname = self.source
+        for rtp in [('pickle', 'pkl'), ('hdf5', 'h5'), ('segy', 'sgy')]:
+            ftype = ftype.replace(*rtp)
 
-        write(self, fname, ftype=ftype, raw_fname=raw_fname)
+        if keep_format:
+            if not hasattr(self, 'source'):
+                raise ValueError('self.source not exit.')
+            if not os.path.isfile(self.source):
+                raise ValueError('self.source is not a file.')
+            if ftype != self.source_type:
+                raise ValueError('self.source_type is different from ftype.')
+            write(self, fname, ftype=ftype, raw_fname=self.source)
+        else:
+            write(self, fname, ftype=ftype)
+
         return self
 
     def channel_data(self, use_channel, replace=False):
@@ -548,7 +558,7 @@ class Section(object):
         if scale is None:
             try:
                 self.data *= self['scale']
-            except KeyError:
+            except ValueError:
                 print('Please specify a scale factor.')
         else:
             if hasattr(self, 'scale') and self.scale != scale:

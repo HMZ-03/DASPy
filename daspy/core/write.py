@@ -1,6 +1,6 @@
 # Purpose: Module for writing DAS data.
 # Author: Minzhe Hu
-# Date: 2024.10.17
+# Date: 2024.10.28
 # Email: hmz2018@mail.ustc.edu.cn
 import os
 import warnings
@@ -147,7 +147,33 @@ def _write_h5(sec, fname, raw_fname=None):
             copyfile(raw_fname, fname)
         with h5py.File(fname, 'r+') as h5_file:
             group = list(h5_file.keys())[0]
-            if group == 'Acquisition':
+            if len(h5_file.keys()) == 10:
+                if h5_file['header/dimensionNames'][0] == b'time':
+                    _update_h5_dataset(h5_file, '/', 'data', sec.data.T)
+                elif h5_file['header/dimensionNames'][0] == b'distance':
+                    _update_h5_dataset(h5_file, '/', 'data', sec.data)
+
+                _update_h5_dataset(h5_file, 'header', 'dx', sec.dx)
+                _update_h5_dataset(h5_file, 'header', 'dt', 1 / sec.fs)
+                if isinstance(sec.start_time, datetime):
+                    _update_h5_dataset(h5_file, 'header', 'time',
+                                       sec.start_time.timestamp())
+                else:
+                    _update_h5_dataset(h5_file, 'header', 'time',
+                                       sec.start_time)
+                if hasattr(sec, 'gauge_length'):
+                    _update_h5_dataset(h5_file, '/', 'gaugeLength',
+                                       sec.gauge_length)
+                if hasattr(sec, 'scale'):
+                    _update_h5_dataset(h5_file, '/', 'dataScale', sec.scale)
+            elif len(h5_file.keys()) == 5:
+                _update_h5_dataset(h5_file, '/', 'strain', sec.data.T)
+                _update_h5_dataset(h5_file, '/', 'spatialsampling', sec.dx)
+                _update_h5_dataset(h5_file, '/', 'RepetitionFrequency', sec.fs)
+                if hasattr(sec, 'gauge_length'):
+                    _update_h5_dataset(h5_file, '/', 'GaugeLength',
+                                       sec.gauge_length)
+            elif group == 'Acquisition':
                 h5_file['Acquisition'].attrs['NumberOfLoci'] = sec.nch
                 _update_h5_dataset(h5_file, 'Acquisition/Raw[0]/', 'RawData',
                                    sec.data)
@@ -167,7 +193,9 @@ def _write_h5(sec, fname, raw_fname=None):
                                    'RawDataTime', DataTime)
                 h5_file['Acquisition/Raw[0]'].attrs['OutputDataRate'] = sec.fs
                 h5_file['Acquisition'].attrs['SpatialSamplingInterval'] = sec.dx
-                h5_file['Acquisition'].attrs['GaugeLength'] = sec.gauge_length
+                if hasattr(sec, 'gauge_length'):
+                    h5_file['Acquisition'].attrs['GaugeLength'] = \
+                        sec.gauge_length
             elif group == 'raw':
                 _update_h5_dataset(h5_file, '/', 'raw', sec.data)
                 DataTime = sec.start_time.timestamp() + \
@@ -197,14 +225,16 @@ def _write_h5(sec, fname, raw_fname=None):
                 acquisition = list(h5_file[f'{group}/Source1/Zone1'].keys())[0]
                 data = sec.data
                 fs = int(sec.fs)
-                mod = sec.nt % fs
-                if mod:
-                    data = np.hstack((data, np.zeros((sec.nch, fs-mod))))
-                
-                data = data.reshape((sec.nch, fs, sec.nt//fs)).T
+                d = len(h5_file[f'{group}/Source1/Zone1/{acquisition}'].shape)
+                if d == 3:
+                    mod = sec.nt % fs
+                    if mod:
+                        data = np.hstack((data, np.zeros((sec.nch, fs - mod))))
+                    data = data.reshape((sec.nch, fs, sec.nt//fs)).T
+                elif d == 2:
+                    data = data.T
                 _update_h5_dataset(h5_file, f'{group}/Source1/Zone1/',
-                                   acquisition,
-                                   data)
+                                   acquisition, data)
 
                 h5_file[f'{group}/Source1/Zone1'].attrs['Spacing'][0] = sec.dx
                 h5_file[f'{group}/Source1/Zone1'].attrs['FreqRes'] = \
