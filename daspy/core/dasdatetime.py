@@ -13,6 +13,7 @@ local_tz = timezone(timedelta(seconds=-time.altzone))
 
 class DASDateTime(datetime):
 
+
     def __add__(self, other):
         if isinstance(other, Iterable):
             out = []
@@ -30,15 +31,29 @@ class DASDateTime(datetime):
                 out.append(self - t)
             return out
         elif isinstance(other, datetime):
-            if self.tzinfo and not other.tzinfo:
-                return super().__sub__(other.replace(tzinfo=self.tzinfo)).\
-                    total_seconds()
-            elif not self.tzinfo and other.tzinfo:
-                return - (other - self)
-            return super().__sub__(other).total_seconds()
+            return datetime.__sub__(*self._unify_tz(other)).total_seconds()
         elif not isinstance(other, timedelta):
             other = timedelta(seconds=other)
         return super().__sub__(other)
+
+    def __le__(self, other):
+        return datetime.__le__(*self._unify_tz(other))
+
+    def __lt__(self, other):
+        return datetime.__lt__(*self._unify_tz(other))
+
+    def __ge__(self, other):
+        return datetime.__ge__(*self._unify_tz(other))
+
+    def __gt__(self, other):
+        return datetime.__gt__(*self._unify_tz(other))
+
+    def _unify_tz(self, other):
+        if self.tzinfo and not other.tzinfo:
+            return self, other.replace(tzinfo=self.tzinfo)
+        elif not self.tzinfo and other.tzinfo:
+            return self.replace(tzinfo=other.tzinfo), other
+        return self, other
 
     def local(self):
         return self.astimezone(tz=local_tz)
