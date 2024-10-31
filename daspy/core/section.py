@@ -112,17 +112,19 @@ class Section(object):
                 elif other.fs is not None:
                     raise ValueError('These two Sections have different fs, '
                                      'please check.')
-            if abs(other.start_time - self.end_time) > 0.1:
-                if abs(other.end_time - self.start_time) <= 0.1:
-                    warnings.warn('According to the time information of the two'
-                                  ' Sections, the order of addition is '
-                                  'reversed.')
-                    return other + self
-                else:
-                    warnings.warn('The start time of the second Section '
-                                  f'({other.start_time}) is inconsistent with '
-                                  'the end time of the first Section ('
-                                  f'{self.end_time}).')
+            if isinstance(self.start_time, DASDateTime) and \
+                isinstance(other.start_time, DASDateTime):
+                if abs(other.start_time - self.end_time) > 0.1:
+                    if abs(other.end_time - self.start_time) <= 0.1:
+                        warnings.warn('According to the time information of the'
+                                      ' two Sections, the order of addition is '
+                                      'reversed.')
+                        return other + self
+                    else:
+                        warnings.warn('The start time of the second Section '
+                                      f'({other.start_time}) is inconsistent '
+                                      'with the end time of the first Section ('
+                                      f'{self.end_time}).')
             data = other.data
         elif isinstance(other, np.ndarray):
             data = other
