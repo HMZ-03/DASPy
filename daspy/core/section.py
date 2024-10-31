@@ -544,6 +544,8 @@ class Section(object):
             if tmode == 'start':
                 kwargs['t0'] -= self.start_time
             tmode = 'time'
+        if hasattr(self, 'datatype'):
+            kwargs.setdefault('colorbar_label', self.datatype)
 
         plot(data, self.dx, self.fs, obj=obj, xmode=xmode, tmode=tmode,
              **kwargs)
