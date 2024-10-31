@@ -1,6 +1,6 @@
 # Purpose: Module for handling Section objects.
 # Author: Minzhe Hu
-# Date: 2024.10.28
+# Date: 2024.10.31
 # Email: hmz2018@mail.ustc.edu.cn
 import warnings
 import os
@@ -191,21 +191,18 @@ class Section(object):
         :param patch: obspy.core.stream.Stream. An instance of
             obspy.core.stream.Stream for construction.
         """
-        for tr in st[1:]:
-            for key in ['sampling_rate', 'delta', 'starttime', 'endtime',
-                        'npts', 'calib']:
-                if getattr(tr.stats, key) != getattr(st[0].stats, key):
-                    raise ValueError(f'The {key} of all traces in a stream '
-                                     'should be the same.')
+        stime = min([tr.stats['starttime'] for tr in st])
+        etime = max([tr.stats['endtime'] for tr in st])
+        st.trim(starttime=stime, endtime=etime, pad=True, fill_value=0)
+        matadata = [(tr.stats['sampling_rate'], tr.stats['delta'],
+                     tr.stats['npts'], tr.stats['calib']) for tr in st]
+        assert len(set(matadata)) == 1, ('The metadata of all traces in the '
+                                         'stream should be the same.')
         nch = len(st)
         nt = st[0].stats.npts
         fs = st[0].stats.sampling_rate
-        dx = 1
-        warnings.warn('obspy.core.stream.Stream doesn\'t include channel '
-                      'interval. Set dx to 1.')
         start_time = DASDateTime.from_datetime(st[0].stats.starttime.datetime).\
             replace(tzinfo=utc)
-        start_time
         scale = st[0].stats.calib
         source = type(st)
         data = np.zeros((nch, nt))
@@ -223,7 +220,9 @@ class Section(object):
         for i, tr in enumerate(st):
             data[channel_no[i]] = tr.data
 
-        return cls(data.astype(float), dx, fs, start_channel=start_channel,
+        warnings.warn('obspy.core.stream.Stream doesn\'t include channel '
+                      'interval. Please set dx manually.')
+        return cls(data.astype(float), None, fs, start_channel=start_channel,
                    start_time=start_time, scale=scale, source=source)
 
     @classmethod

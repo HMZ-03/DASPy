@@ -63,7 +63,7 @@ class Collection(object):
                 metadata_list.append((sec.nch, sec.nt, sec.dx, sec.fs,
                                       sec.gauge_length))
 
-            if len(set(metadata_list[1:])) > 1:
+            if len(set(metadata_list)) > 1:
                 warnings.warn('More than one kind of setting detected.')
             metadata = max(metadata_list, key=metadata_list.count)
             for i, key in enumerate(['nch', 'nt', 'dx', 'fs', 'gauge_length']):

@@ -167,17 +167,18 @@ def _read_h5(fname, headonly=False, **kwargs):
         elif len(h5_file.keys()) == 5: # AP Sensing
             # read data
             nch = h5_file['strain'].shape[1]
+            ch1 = kwargs.pop('ch1', 0)
+            ch2 = kwargs.pop('ch2', nch)
             if headonly:
                 data = np.zeros_like(h5_file['strain']).T
             else:
-                ch1 = kwargs.pop('ch1', 0)
-                ch2 = kwargs.pop('ch2', nch)
                 data = h5_file['strain'][:, ch1:ch2].T
 
             # read metadata
+            dx = h5_file['spatialsampling'][()]
             metadata = {'fs': h5_file['RepetitionFrequency'][()],
-                        'dx': h5_file['spatialsampling'][()],
-                        'start_channel': ch1, 'start_distance': ch1 * dx,
+                        'dx': dx, 'start_channel': ch1,
+                        'start_distance': ch1 * dx,
                         'gauge_length': h5_file.get('GaugeLength')[()]}
         elif set(h5_file.keys()) == {'Mapping', 'Acquisition'}: # Silixa/iDAS
             nch = h5_file['Acquisition/Raw[0]'].attrs['NumberOfLoci']
@@ -299,10 +300,10 @@ def _read_h5(fname, headonly=False, **kwargs):
             dataset = h5_file[f'{group}/Source1/Zone1/{acquisition}']
             nch = dataset.shape[-1]
             ch1 = kwargs.pop('ch1', start_channel)
+            ch2 = kwargs.pop('ch2', start_channel + nch)
             if headonly:
                 data = np.zeros_like(dataset).T.reshape((nch, -1))
             else:
-                ch2 = kwargs.pop('ch2', start_channel + nch)
                 if len(dataset.shape) == 3: # Febus A1-R
                     data = dataset[:, :, ch1 - start_channel:ch2 -
                                    start_channel].T.reshape((ch2 - ch1, -1))
