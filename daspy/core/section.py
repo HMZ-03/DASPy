@@ -208,7 +208,7 @@ class Section(object):
         start_time
         scale = st[0].stats.calib
         source = type(st)
-        data = np.zeros((nch, nt)).astype(st[0].data.dtype)
+        data = np.zeros((nch, nt))
 
         if str.isdigit(st[0].stats.channel):
             channel_no = np.zeros(nch)
@@ -223,7 +223,7 @@ class Section(object):
         for i, tr in enumerate(st):
             data[channel_no[i]] = tr.data
 
-        return cls(data, dx, fs, start_channel=start_channel,
+        return cls(data.astype(float), dx, fs, start_channel=start_channel,
                    start_time=start_time, scale=scale, source=source)
 
     @classmethod
