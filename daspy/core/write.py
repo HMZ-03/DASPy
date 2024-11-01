@@ -143,7 +143,7 @@ def _write_h5(sec, fname, raw_fname=None):
             if hasattr(sec, 'gauge_length'):
                 h5_file['Acquisition'].attrs['GaugeLength'] = sec.gauge_length
             else:
-                h5_file['Acquisition'].attrs['GaugeLength'] = None
+                h5_file['Acquisition'].attrs['GaugeLength'] = np.nan
     else:
         if not os.path.exists(fname) or not os.path.samefile(raw_fname, fname):
             copyfile(raw_fname, fname)

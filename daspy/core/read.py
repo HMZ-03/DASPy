@@ -158,12 +158,14 @@ def _read_h5(fname, headonly=False, **kwargs):
                     ch2 = kwargs.pop('ch2', nch)
                     data = h5_file['data'][ch1:ch2, :]
             dx = h5_file['header/dx'][()]
-            start_time = DASDateTime.fromtimestamp(h5_file['header/time'][()]).utc()
+            start_time = DASDateTime.fromtimestamp(
+                h5_file['header/time'][()]).utc()
             metadata = {'dx': dx, 'fs': 1 / h5_file['header/dt'][()],
-                        'guage_length': h5_file['header/gaugeLength'][()],
                         'start_time': start_time, 'start_channel': ch1,
                         'start_distance': ch1 * dx,
                         'scale': h5_file['header/dataScale'][()]}
+            if h5_file['header/gaugeLength'][()] != np.nan:
+                metadata['guage_length'] = h5_file['header/gaugeLength'][()]
         elif len(h5_file.keys()) == 5: # AP Sensing
             # read data
             nch = h5_file['strain'].shape[1]
