@@ -1,6 +1,6 @@
 # Purpose: Module for handling Collection objects.
 # Author: Minzhe Hu
-# Date: 2024.10.30
+# Date: 2024.11.1
 # Email: hmz2018@mail.ustc.edu.cn
 import os
 import warnings
@@ -78,6 +78,8 @@ class Collection(object):
                     flength = sec.duration
                 self.ftime = [sec.start_time + (j - i) * flength for j in
                             range(len(self))]
+            if not hasattr(sec, 'gauge_length'):
+                sec.gauge_length = None
             metadata = (sec.nch, sec.nt, sec.dx, sec.fs, sec.gauge_length)
             for i, key in enumerate(['nch', 'nt', 'dx', 'fs', 'gauge_length']):
                 if not hasattr(self, key):
