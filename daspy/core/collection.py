@@ -18,7 +18,7 @@ cascade_method = ['time_integration', 'time_differential', 'downsampling',
 
 class Collection(object):
     def __init__(self, fpath, ftype=None, flength=None, meta_from_file=True,
-                 timeinfo_format=None, **kwargs):
+                 timeinfo_format=None, timeinfo_from_basename=True, **kwargs):
         """
         :param fpath: str or Sequence of str. File path(s) containing data.
         :param ftype: None or str. None for automatic detection, or 'pkl',
@@ -30,6 +30,8 @@ class Collection(object):
             from all file.
         :param timeinfo_format: str or (slice, str). Format for extracting start
             time from file name.
+        :param timeinfo_from_basename: bool. If True, timeinfo_format will use
+            DASDateTime.strptime to basename of fpath.
         :param nch: int. Channel number.
         :param nt: int. Sampling points of each file.
         :param dx: number. Channel interval in m.
@@ -90,9 +92,13 @@ class Collection(object):
                 timeinfo_slice, timeinfo_format = timeinfo_format
             else:
                 timeinfo_slice = slice(None)
-            self.ftime = [DASDateTime.strptime(
-                os.path.basename(f)[timeinfo_slice], timeinfo_format)
-                for f in self.flist]
+            if timeinfo_from_basename:
+                self.ftime = [DASDateTime.strptime(
+                    os.path.basename(f)[timeinfo_slice], timeinfo_format)
+                    for f in self.flist]
+            else:
+                self.ftime = [DASDateTime.strptime(f[timeinfo_slice],
+                    timeinfo_format) for f in self.flist]
 
         self._sort()
         if flength is None:
