@@ -1,6 +1,6 @@
 # Purpose: Module for reading DAS data.
 # Author: Minzhe Hu
-# Date: 2024.10.28
+# Date: 2024.11.1
 # Email: hmz2018@mail.ustc.edu.cn
 # Partially modified from
 # https://github.com/RobbinLuo/das-toolkit/blob/main/DasTools/DasPrep.py
@@ -158,7 +158,7 @@ def _read_h5(fname, headonly=False, **kwargs):
                     ch2 = kwargs.pop('ch2', nch)
                     data = h5_file['data'][ch1:ch2, :]
             dx = h5_file['header/dx'][()]
-            start_time = DASDateTime.fromtimestamp(h5_file['header/time'][()])
+            start_time = DASDateTime.fromtimestamp(h5_file['header/time'][()]).utc()
             metadata = {'dx': dx, 'fs': 1 / h5_file['header/dt'][()],
                         'guage_length': h5_file['header/gaugeLength'][()],
                         'start_time': start_time, 'start_channel': ch1,
