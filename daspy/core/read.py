@@ -312,21 +312,24 @@ def _read_h5(fname, headonly=False, **kwargs):
                 elif len(dataset.shape) == 2: # Febus A1
                     data = dataset[:, ch1 - start_channel:ch2 - start_channel].T
             # read metadata
-            dx = h5_file[f'{group}/Source1/Zone1'].attrs['Spacing'][0]
+            attrs = h5_file[f'{group}/Source1/Zone1'].attrs
+            dx = attrs['Spacing'][0]
             try:
-                fs = float(h5_file[f'{group}/Source1/Zone1'].attrs['FreqRes'])
+                fs = float(attrs['FreqRes'])
             except KeyError:
-                fs = h5_file[f'{group}/Source1/Zone1'].attrs['SamplingRate'][0]
-            start_distance = h5_file[f'{group}/Source1/Zone1'].\
-                attrs['Origin'][0]
+                try:
+                    fs = (attrs['PulseRateFreq'][0] /
+                          attrs['SamplingRes'][0]) / 1000
+                except KeyError:
+                    fs = attrs['SamplingRate'][0]
+            start_distance = attrs['Origin'][0]
             time = h5_file[f'{group}/Source1/time']
             if len(time.shape) == 2: # Febus A1-R
                 start_time = DASDateTime.fromtimestamp(time[0, 0]).\
                     astimezone(utc)
             elif len(time.shape) == 1: # Febus A1
                 start_time = DASDateTime.fromtimestamp(time[0]).astimezone(utc)
-            gauge_length = h5_file[f'{group}/Source1/Zone1'].\
-                attrs['GaugeLength'][0]
+            gauge_length = attrs['GaugeLength'][0]
             metadata = {'dx': dx, 'fs': fs, 'start_channel': ch1,
                         'start_distance': start_distance +
                                             (ch1 - start_channel) * dx,
