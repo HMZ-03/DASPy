@@ -1,6 +1,6 @@
 # Purpose: Module for writing DAS data.
 # Author: Minzhe Hu
-# Date: 2024.10.28
+# Date: 2024.11.1
 # Email: hmz2018@mail.ustc.edu.cn
 import os
 import warnings
@@ -142,6 +142,8 @@ def _write_h5(sec, fname, raw_fname=None):
             h5_file['Acquisition'].attrs['SpatialSamplingInterval'] = sec.dx
             if hasattr(sec, 'gauge_length'):
                 h5_file['Acquisition'].attrs['GaugeLength'] = sec.gauge_length
+            else:
+                h5_file['Acquisition'].attrs['GaugeLength'] = None
     else:
         if not os.path.exists(fname) or not os.path.samefile(raw_fname, fname):
             copyfile(raw_fname, fname)
