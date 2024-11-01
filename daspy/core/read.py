@@ -33,6 +33,7 @@ def read(fname=None, output_type='section', ftype=None, headonly=False,
         data.
     :param ch1: int. The first channel required.
     :param ch2: int. The last channel required (not included).
+    :param dch: int. Channel step.
     :return: An instance of daspy.Section, or numpy.array for data and a
         dictionary for metadata.
     """
@@ -63,6 +64,7 @@ def read(fname=None, output_type='section', ftype=None, headonly=False,
 
 
 def _read_pkl(fname, headonly=False, **kwargs):
+    dch = kwargs.pop('dch', 1)
     with open(fname, 'rb') as f:
         pkl_data = pickle.load(f)
         if isinstance(pkl_data, np.ndarray):
@@ -73,7 +75,7 @@ def _read_pkl(fname, headonly=False, **kwargs):
             else:
                 ch1 = kwargs.pop('ch1', 0)
                 ch2 = kwargs.pop('ch2', len(pkl_data))
-                return pkl_data[ch1:ch2], {'dx': None, 'fs': None}
+                return pkl_data[ch1:ch2:dch], {'dx': None, 'fs': None}
         elif isinstance(pkl_data, dict):
             data = pkl_data.pop('data')
             if headonly:
@@ -140,6 +142,7 @@ def _read_h5_starttime(h5_file):
 
 def _read_h5(fname, headonly=False, **kwargs):
     with h5py.File(fname, 'r') as h5_file:
+        dch = kwargs.pop('dch', 1)
         group = list(h5_file.keys())[0]
         if len(h5_file.keys()) >= 10: # ASN/OptoDAS https://github.com/ASN-Norway/simpleDAS
             ch1 = kwargs.pop('ch1', 0)
@@ -149,18 +152,18 @@ def _read_h5(fname, headonly=False, **kwargs):
                     data = np.zeros_like(h5_file['data']).T
                 else:
                     ch2 = kwargs.pop('ch2', nch)
-                    data = h5_file['data'][:, ch1:ch2].T
+                    data = h5_file['data'][:, ch1:ch2:dch].T
             elif h5_file['header/dimensionNames'][0] == b'distance':
                 nch = h5_file['data'].shape[1]
                 if headonly:
                     data = np.zeros_like(h5_file['data'])
                 else:
                     ch2 = kwargs.pop('ch2', nch)
-                    data = h5_file['data'][ch1:ch2, :]
+                    data = h5_file['data'][ch1:ch2:dch, :]
             dx = h5_file['header/dx'][()]
             start_time = DASDateTime.fromtimestamp(
                 h5_file['header/time'][()]).utc()
-            metadata = {'dx': dx, 'fs': 1 / h5_file['header/dt'][()],
+            metadata = {'dx': dx * dch, 'fs': 1 / h5_file['header/dt'][()],
                         'start_time': start_time, 'start_channel': ch1,
                         'start_distance': ch1 * dx,
                         'scale': h5_file['header/dataScale'][()]}
@@ -174,12 +177,12 @@ def _read_h5(fname, headonly=False, **kwargs):
             if headonly:
                 data = np.zeros_like(h5_file['strain']).T
             else:
-                data = h5_file['strain'][:, ch1:ch2].T
+                data = h5_file['strain'][:, ch1:ch2:dch].T
 
             # read metadata
             dx = h5_file['spatialsampling'][()]
             metadata = {'fs': h5_file['RepetitionFrequency'][()],
-                        'dx': dx, 'start_channel': ch1,
+                        'dx': dx * dch, 'start_channel': ch1,
                         'start_distance': ch1 * dx,
                         'gauge_length': h5_file.get('GaugeLength')[()]}
         elif set(h5_file.keys()) == {'Mapping', 'Acquisition'}: # Silixa/iDAS
@@ -190,13 +193,15 @@ def _read_h5(fname, headonly=False, **kwargs):
                 if headonly:
                     data = np.zeros_like(h5_file['Acquisition/Raw[0]/RawData/'])
                 else:
-                    data = h5_file['Acquisition/Raw[0]/RawData/'][ch1:ch2, :]
+                    data = h5_file['Acquisition/Raw[0]/RawData/']\
+                        [ch1:ch2:dch, :]
             else:
                 if headonly:
                     data = np.zeros_like(
                         h5_file['Acquisition/Raw[0]/RawData/']).T
                 else:
-                    data = h5_file['Acquisition/Raw[0]/RawData/'][:, ch1:ch2].T
+                    data = h5_file['Acquisition/Raw[0]/RawData/']\
+                        [:, ch1:ch2:dch].T
 
             dx = np.mean(h5_file['Mapping/MeasuredSpatialResolution'])
             start_distance = h5_file['Acquisition/Custom/UserSettings'].\
@@ -207,7 +212,7 @@ def _read_h5(fname, headonly=False, **kwargs):
             scale = h5_file['Acquisition/Raw[0]'].attrs['AmpScaling']
             geometry = np.vstack((h5_file['Mapping/Lon'],
                                   h5_file['Mapping/Lat'])).T
-            metadata = {'dx': dx, 'fs': fs, 'start_channel': ch1,
+            metadata = {'dx': dx * dch, 'fs': fs, 'start_channel': ch1,
                         'start_distance': ch1 * dx,
                         'gauge_length': gauge_length, 'geometry': geometry,
                         'scale': scale}
@@ -224,13 +229,15 @@ def _read_h5(fname, headonly=False, **kwargs):
                 if headonly:
                     data = np.zeros_like(h5_file['Acquisition/Raw[0]/RawData/'])
                 else:
-                    data = h5_file['Acquisition/Raw[0]/RawData/'][ch1:ch2, :]
+                    data = h5_file['Acquisition/Raw[0]/RawData/']\
+                        [ch1:ch2:dch, :]
             else:
                 if headonly:
                     data = np.zeros_like(
                         h5_file['Acquisition/Raw[0]/RawData/']).T
                 else:
-                    data = h5_file['Acquisition/Raw[0]/RawData/'][:, ch1:ch2].T
+                    data = h5_file['Acquisition/Raw[0]/RawData/']\
+                        [:, ch1:ch2:dch].T
 
             # read metadata
             try:
@@ -241,7 +248,7 @@ def _read_h5(fname, headonly=False, **kwargs):
 
             dx = h5_file['Acquisition'].attrs['SpatialSamplingInterval']
             gauge_length = h5_file['Acquisition'].attrs['GaugeLength']
-            metadata = {'dx': dx, 'fs': fs, 'start_channel': ch1,
+            metadata = {'dx': dx * dch, 'fs': fs, 'start_channel': ch1,
                         'start_distance': ch1 * dx,
                         'gauge_length': gauge_length}
 
@@ -253,7 +260,7 @@ def _read_h5(fname, headonly=False, **kwargs):
             if headonly:
                 data = np.zeros_like(h5_file['raw'])
             else:
-                data = h5_file['raw'][ch1:ch2, :]
+                data = h5_file['raw'][ch1:ch2:dch, :]
             fs = round(1 / np.diff(h5_file['timestamp']).mean())
             start_time = DASDateTime.fromtimestamp(
                 h5_file['timestamp'][0]).astimezone(utc)
@@ -271,12 +278,12 @@ def _read_h5(fname, headonly=False, **kwargs):
                 if headonly:
                     data = np.zeros_like(h5_file['data_product/data'])
                 else:
-                    data = h5_file['data_product/data'][ch1:ch2, :]
+                    data = h5_file['data_product/data'][ch1:ch2:dch, :]
             else:
                 if headonly:
                     data = np.zeros_like(h5_file['data_product/data']).T
                 else:
-                    data = h5_file['data_product/data'][:, ch1:ch2].T
+                    data = h5_file['data_product/data'][:, ch1:ch2:dch].T
 
             # read metadata
             fs = 1 / h5_file.attrs['dt_computer']
@@ -290,7 +297,7 @@ def _read_h5(fname, headonly=False, **kwargs):
                     h5_file.attrs['file_start_computer_time'])
             data_type = h5_file.attrs['data_product']
 
-            metadata = {'dx': dx, 'fs': fs, 'start_channel': ch1,
+            metadata = {'dx': dx * dch, 'fs': fs, 'start_channel': ch1,
                         'start_distance': ch1 * dx,
                         'start_time': start_time.astimezone(utc),
                         'gauge_length': gauge_length, 'data_type': data_type}
@@ -307,10 +314,11 @@ def _read_h5(fname, headonly=False, **kwargs):
                 data = np.zeros_like(dataset).T.reshape((nch, -1))
             else:
                 if len(dataset.shape) == 3: # Febus A1-R
-                    data = dataset[:, :, ch1 - start_channel:ch2 -
-                                   start_channel].T.reshape((ch2 - ch1, -1))
+                    data = dataset[:, :, ch1 - start_channel:ch2 - start_channel
+                                   :dch].T.reshape(((ch2 - ch1) // dch, -1))
                 elif len(dataset.shape) == 2: # Febus A1
-                    data = dataset[:, ch1 - start_channel:ch2 - start_channel].T
+                    data = dataset[:, ch1 - start_channel:ch2 - start_channel:
+                                   dch].T
             # read metadata
             attrs = h5_file[f'{group}/Source1/Zone1'].attrs
             dx = attrs['Spacing'][0]
@@ -330,7 +338,7 @@ def _read_h5(fname, headonly=False, **kwargs):
             elif len(time.shape) == 1: # Febus A1
                 start_time = DASDateTime.fromtimestamp(time[0]).astimezone(utc)
             gauge_length = attrs['GaugeLength'][0]
-            metadata = {'dx': dx, 'fs': fs, 'start_channel': ch1,
+            metadata = {'dx': dx * dch, 'fs': fs, 'start_channel': ch1,
                         'start_distance': start_distance +
                                             (ch1 - start_channel) * dx,
                         'start_time': start_time, 'gauge_length': gauge_length}
@@ -353,6 +361,7 @@ def _read_tdms(fname, headonly=False, **kwargs):
 
         headers = {**tdms_file.properties, **tdms_file[key].properties}
         nch = len(tdms_file[key])
+        dch = kwargs.pop('dch', 1)
         # read data
         if nch > 1:
             start_channel = min(int(channel.name) for channel in
@@ -365,7 +374,7 @@ def _read_tdms(fname, headonly=False, **kwargs):
                 data = np.zeros((nch, nt))
             else:
                 data = np.asarray([tdms_file[key][str(ch)]
-                                   for ch in range(ch1, ch2)])
+                                   for ch in range(ch1, ch2, dch)])
         elif nch == 1:
             try:
                 start_channel = int(headers['Initial Channel'])
@@ -382,7 +391,7 @@ def _read_tdms(fname, headonly=False, **kwargs):
             else:
                 data = np.asarray(tdms_file[key].channels()[0]).\
                     reshape((-1, nch)).T
-                data = data[ch1 - start_channel: ch2 - start_channel]
+                data = data[ch1 - start_channel:ch2 - start_channel:dch]
 
         # read metadata
         try:
@@ -422,6 +431,8 @@ def _read_tdms(fname, headonly=False, **kwargs):
                                                                item())
                         break
 
+        if dx is not None:
+            dx *= dch
         metadata = {'dx': dx, 'fs': fs, 'start_channel': ch1,
                     'start_distance': start_distance, 'start_time': start_time,
                     'headers': headers}
@@ -434,17 +445,17 @@ def _read_tdms(fname, headonly=False, **kwargs):
 
 def _read_segy(fname, headonly=False, **kwargs):
     # https://github.com/equinor/segyio-notebooks/blob/master/notebooks/basic/02_segy_quicklook.ipynb
-
     with segyio.open(fname, ignore_geometry=True) as segy_file:
         nch = segy_file.tracecount
         ch1 = kwargs.pop('ch1', 0)
         ch2 = kwargs.pop('ch2', nch)
+        dch = kwargs.pop('dch', 1)
 
         # read data
         if headonly:
             data = np.zeros_like(segy_file.trace.raw[:])
         else:
-            data = segy_file.trace.raw[ch1:ch2]
+            data = segy_file.trace.raw[ch1:ch2:dch]
 
         # read metadata:
         fs = 1 / (segyio.tools.dt(segy_file) / 1e6)
@@ -462,9 +473,10 @@ def _read_npy(fname, headonly=False, **kwargs):
     else:
         ch1 = kwargs.pop('ch1', 0)
         ch2 = kwargs.pop('ch2', len(data))
+        dch = kwargs.pop('dch', 1)
         warnings.warn('This data format doesn\'t include channel interval and '
                     'sampling rate. Please set manually')
-        return data[ch1:ch2], {'dx': None, 'fs': None}
+        return data[ch1:ch2:dch], {'dx': None, 'fs': None}
 
 
 def read_json(fname, output_type='dict'):
