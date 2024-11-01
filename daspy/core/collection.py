@@ -190,8 +190,13 @@ class Collection(object):
         if stime > etime:
             raise ValueError('Start time can\'t be later than end time.')
 
-        flist = [self.flist[i] for i in range(len(self))
-                    if (stime - self.flength) < self.ftime[i] < etime]
+        flist = []
+        ftime = []
+        for i in range(len(self)):
+            if (stime - self.flength) < self.ftime[i] < etime:
+                flist.append(self.flist[i])
+                ftime.append(self.ftime[i])
+
         if readsec:
             sec = read(flist[0], **kwargs)
             for f in flist[1:]:
@@ -200,6 +205,7 @@ class Collection(object):
             return sec
         else:
             self.flist = flist
+            self.ftime = ftime
             return self
 
     def _optimize_for_continuity(self, operations):
