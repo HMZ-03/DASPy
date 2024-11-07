@@ -17,13 +17,13 @@ DASPy runs on Python 3.9 and up. We recommend you use the latest version of pyth
 
 ### Pip (recommanded)
 ```
+pip install daspy-toolbox
+```
+
+Install the latest version from GitHub:
+
+```
 pip install git+https://github.com/HMZ-03/DASPy.git
-```
-
-If you installed DASPy this way, you can upgrade DASPy with the following command:
-
-```
-pip install --upgrade git+https://github.com/HMZ-03/DASPy.git
 ```
 
 ### Conda
@@ -57,4 +57,4 @@ Please see details on how to contribute to the project [here](CONTRIBUTING.md) a
 
 ### Reference
 
-  * Minzhe Hu and Zefeng Li (2024), [DASPy: A Python Toolbox for DAS Seismology](https://pubs.geoscienceworld.org/ssa/srl/article/95/5/3055/645865/DASPy-A-Python-Toolbox-for-DAS-Seismology), _Seismological Research Letters_, 95(5), 3055–3066, doi: `https://doi.org/10.1785/0220240124`.
+  * Minzhe Hu and Zefeng Li (2024), [DASPy: A Python Toolbox for DAS Seismology](https://pubs.geoscienceworld.org/ssa/srl/article/95/5/3055/645865/DASPy-A-Python-Toolbox-for-DAS-Seismology), *Seismological Research Letters*, 95(5), 3055–3066, doi: `https://doi.org/10.1785/0220240124`.

@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 
 setup(
-    name='daspy', version='1.0.0',
+    name='DASPy-toolbox', version='1.1.0',
     description=(
         'DASPy is an open-source project dedicated to provide a python package '
         'for DAS (Distributed Acoustic Sensing) data processing, which '
@@ -31,7 +31,7 @@ setup(
         'License :: OSI Approved :: MIT License',
         'Programming Language :: Python :: 3'
     ],
-    python_requires='>=3',
+    python_requires='>=3.9',
     install_requires=[
         'numpy',
         'scipy>=1.13',
