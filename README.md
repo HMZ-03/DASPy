@@ -12,8 +12,7 @@ The goal of the DASPy project is to lower the bar of DAS data processing. DASPy 
 DASPy is licensed under the MIT License. [An English version of DASPy tutorial](https://daspy-tutorial.readthedocs.io/en/latest/), [a Chinese version of DASPy tutorial](https://daspy-tutorial-cn.readthedocs.io/zh-cn/latest/) and [the DASPy paper](document/srl-2024124.1.pdf) is available. If you have any questions, please contact me via <hmz2018@mail.ustc.edu.cn>.
 
 ## Installation
-DASPy is currently running on Linux, Windows and Mac OS.
-DASPy runs on Python 3.9 and up. We recommend you use the latest version of python 3 if possible.
+DASPy runs on Linux, Windows and Mac OS and on Python 3.9 and up.
 
 ### Pip
 ```
