@@ -4,7 +4,6 @@
 # Email: hmz2018@mail.ustc.edu.cn
 import numpy as np
 import matplotlib.pyplot as plt
-from copy import deepcopy
 from collections.abc import Sequence
 
 
@@ -124,7 +123,7 @@ def plot(data: np.ndarray, dx=None, fs=None, ax=None, obj='waveform', dpi=150,
             data = data.T
             origin = 'lower'
             xlabel_default = 'Frequency (Hz)'
-            ylabel_default = 'Phase Velocity (m/s)'
+            ylabel_default = 'Velocity (m/s)'
             extent = [min(f), max(f), min(c), max(c)]
 
     if transpose:
