@@ -1,6 +1,6 @@
 # Purpose: Plot data
 # Author: Minzhe Hu
-# Date: 2024.10.17
+# Date: 2024.11.8
 # Email: hmz2018@mail.ustc.edu.cn
 import numpy as np
 import matplotlib.pyplot as plt
@@ -10,10 +10,11 @@ from collections.abc import Sequence
 
 def plot(data: np.ndarray, dx=None, fs=None, ax=None, obj='waveform', dpi=150,
          title=None, transpose=False, t0=0, x0=0, pick=None, f=None, k=None,
-         t=None, c=None, cmap=None, vmin=None, vmax=None, xmode='distance',
-         tmode='time', xlim=None, ylim=None, xlog=False, ylog=False, xinv=False,
-         yinv=False, xlabel=True, ylabel=True, xticklabels=True,
-         yticklabels=True, colorbar=True, colorbar_label=None, savefig=None):
+         t=None, c=None, cmap=None, vmin=None, vmax=None, dB=False,
+         xmode='distance', tmode='time', xlim=None, ylim=None, xlog=False,
+         ylog=False, xinv=False, yinv=False, xlabel=True, ylabel=True,
+         xticklabels=True, yticklabels=True, colorbar=True, colorbar_label=None,
+         savefig=None):
     """
     Plot several types of 2-D seismological data.
 
@@ -38,6 +39,7 @@ def plot(data: np.ndarray, dx=None, fs=None, ax=None, obj='waveform', dpi=150,
     :param cmap: str or Colormap. The Colormap instance or registered colormap
         name used to map scalar data to colors.
     :param vmin, vmax: Define the data range that the colormap covers.
+    :param dB: bool. Transfer data unit to dB and take 1 as the reference value.
     :param xmode: str. 'distance' or 'channel'.
     :param tmode: str. 'time' or 'sampling'.
     :param xlim, ylim: Set the x-axis and y-axis view limits.
@@ -93,6 +95,8 @@ def plot(data: np.ndarray, dx=None, fs=None, ax=None, obj='waveform', dpi=150,
     elif obj in ['spectrum', 'spectrogram', 'fk', 'dispersion']:
         if isinstance(data[0,0], (complex, np.complex64)):
             data = abs(data)
+        if dB:
+            data = 20 * np.log10(data)
         cmap = 'jet' if cmap is None else cmap
         vmax = np.percentile(abs(data), 80) if vmax is None else vmax
         vmin = np.percentile(abs(data), 20) if vmin is None else vmin

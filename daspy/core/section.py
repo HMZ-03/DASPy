@@ -1,6 +1,6 @@
 # Purpose: Module for handling Section objects.
 # Author: Minzhe Hu
-# Date: 2024.10.31
+# Date: 2024.11.8
 # Email: hmz2018@mail.ustc.edu.cn
 import warnings
 import os
@@ -485,6 +485,8 @@ class Section(object):
             colormap name used to map scalar data to colors.
         :param vmin, vmax: Define the data range that the colormap covers.
         :param xlim, ylim: Set the x-axis and y-axis view limits.
+        :param dB: bool. Transfer data unit to dB and take 1 as the reference
+            value.
         :param xlog, ylog: bool. If True, set the x-axis' or y-axis' scale as
             log.
         :param xinv, yinv: bool. If True, invert x-axis or y-axis.
@@ -545,8 +547,8 @@ class Section(object):
             if tmode == 'start':
                 kwargs['t0'] -= self.start_time
             tmode = 'time'
-        if hasattr(self, 'datatype'):
-            kwargs.setdefault('colorbar_label', self.datatype)
+        if hasattr(self, 'data_type'):
+            kwargs.setdefault('colorbar_label', self.data_type)
 
         plot(data, self.dx, self.fs, obj=obj, xmode=xmode, tmode=tmode,
              **kwargs)
