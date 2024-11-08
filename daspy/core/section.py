@@ -971,8 +971,8 @@ class Section(object):
         """
         Computes the spectrogram of the given data.
 
-        :param xmin, xmax: int. Start channel and end channel for calculating
-            the average spectrogram.
+        :param ch1, ch2, nch: int. Start channel, end channel and channel step
+            for calculating the average spectrogram.
         :param nperseg: int. Length of each segment.
         :param noverlap: int. Number of points to overlap between segments. If
             None, noverlap = nperseg // 2.
@@ -988,16 +988,20 @@ class Section(object):
             ['even', 'odd', 'constant', 'zeros', None].
         :return: Spectrogram, frequency sequence and time sequence.
         """
-        if 'xmin' in kwargs.keys():
-            xmin = int(kwargs.pop('xmin') - self.start_channel)
+        if 'ch1' in kwargs.keys():
+            ch1 = int(kwargs.pop('ch1') - self.start_channel)
         else:
-            xmin = 0
-        if 'xmax' in kwargs.keys():
-            xmax = int(kwargs.pop('xmax') - self.start_channel)
+            ch1 = 0
+        if 'ch2' in kwargs.keys():
+            ch2 = int(kwargs.pop('ch2') - self.start_channel)
         else:
-            xmax = len(self.data)
+            ch2 = self.nch
+        if 'nch' in kwargs.keys():
+            nch = int(kwargs.pop('nch'))
+        else:
+            nch = 1
 
-        return spectrogram(self.data[xmin:xmax], self.fs, **kwargs)
+        return spectrogram(self.data[ch1:ch2:nch], self.fs, **kwargs)
 
     def fk_transform(self, **kwargs):
         """
