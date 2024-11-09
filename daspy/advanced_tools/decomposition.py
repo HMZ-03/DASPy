@@ -59,7 +59,7 @@ def fk_fan_mask(f, k, fmin=None, fmax=None, kmin=None, kmax=None, vmin=None,
     return mask
 
 
-def fk_filter(data, dx, fs, taper=(0.02, 0.05), pad='default', mode='decompose', 
+def fk_filter(data, dx, fs, taper=(0.02, 0.05), pad='default', mode='decompose',
               fmin=None, fmax=None, kmin=None, kmax=None, vmin=None, vmax=None,
               edge=0.1, flag=None, verbose=False):
     """
