@@ -1,6 +1,6 @@
 # Purpose: Module for reading DAS data.
 # Author: Minzhe Hu
-# Date: 2024.11.1
+# Date: 2024.11.12
 # Email: hmz2018@mail.ustc.edu.cn
 # Partially modified from
 # https://github.com/RobbinLuo/das-toolkit/blob/main/DasTools/DasPrep.py
@@ -100,16 +100,15 @@ def _read_h5_headers(group):
     headers = {}
     if len(group.attrs) != 0:
         headers['attrs'] = dict(group.attrs)
-    for k in group.keys():
-        gp = group[k]
-        if isinstance(gp, h5py._hl.dataset.Dataset):
-            continue
-        elif isinstance(gp, h5py._hl.group.Group):
-            gp_headers = _read_h5_headers(group[k])
-            if len(gp_headers):
-                headers[k] = gp_headers
-        else:
-            headers[k] = gp
+    if isinstance(group, h5py._hl.dataset.Dataset):
+        return headers
+    for key, value in group.items():
+        try:
+            gp_headers = _read_h5_headers(value)
+        except AttributeError:
+            headers[key] = value
+        if len(gp_headers):
+            headers[key] = gp_headers
 
     return headers
 
