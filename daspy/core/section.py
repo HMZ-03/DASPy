@@ -1,6 +1,6 @@
 # Purpose: Module for handling Section objects.
 # Author: Minzhe Hu
-# Date: 2024.11.8
+# Date: 2024.11.11
 # Email: hmz2018@mail.ustc.edu.cn
 import warnings
 import os
@@ -451,7 +451,7 @@ class Section(object):
         """
         Extract data of one channel or several channels.
         """
-        channel = deepcopy(use_channel)
+        channel = np.array(use_channel).astype(int)
         channel -= self.start_channel
         data = self.data[channel]
         if replace:
