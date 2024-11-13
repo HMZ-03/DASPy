@@ -1,6 +1,6 @@
 # Purpose: Several functions for analysis data quality and geometry of channels
 # Author: Minzhe Hu, Zefeng Li
-# Date: 2024.11.11
+# Date: 2024.11.13
 # Email: hmz2018@mail.ustc.edu.cn
 import numpy as np
 from copy import deepcopy
@@ -428,7 +428,7 @@ def equally_spaced_channels(geometry, dx, depth_info=False, verbose=False):
     :return: Channel numbers for equally spaced channels if verbose is False.
     """
     nch = len(geometry)
-    if geometry.ndim == 2 + int(depth_info):
+    if geometry.shape[1] == 2 + int(depth_info):
         channels = np.arange(nch)
     else:
         geometry = geometry[geometry[:, 0].argsort()]
