@@ -9,7 +9,7 @@ The goal of the DASPy project is to lower the bar of DAS data processing. DASPy 
 * Classic seismic data processing techniques, including preprocessing, filter, spectrum analysis, and visualization
 * Specialized algorithms for DAS applications, including denoising, waveform decomposition, channel attribute analysis, and strain-velocity conversion. 
 
-DASPy is licensed under the MIT License. [An English version of DASPy tutorial](https://daspy-tutorial.readthedocs.io/en/latest/), [a Chinese version of DASPy tutorial](https://daspy-tutorial-cn.readthedocs.io/zh-cn/latest/) and [a Jupyter notebook example](document/example.ipynb) is available. If you have any questions, please contact me via <hmz2018@mail.ustc.edu.cn>.
+DASPy is licensed under the MIT License. [An English version of DASPy tutorial](https://daspy-tutorial.readthedocs.io/en/latest/), [a Chinese version of DASPy tutorial](https://daspy-tutorial-cn.readthedocs.io/zh-cn/latest/) and [an example of Jupyter notebook](document/example.ipynb) is available. If you have any questions, please contact me via <hmz2018@mail.ustc.edu.cn>.
 
 ## Installation
 DASPy runs on Linux, Windows and Mac OS and on Python 3.9 and up.
