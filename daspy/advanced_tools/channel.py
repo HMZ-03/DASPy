@@ -1,6 +1,6 @@
 # Purpose: Several functions for analysis data quality and geometry of channels
 # Author: Minzhe Hu, Zefeng Li
-# Date: 2024.11.13
+# Date: 2024.11.14
 # Email: hmz2018@mail.ustc.edu.cn
 import numpy as np
 from copy import deepcopy
@@ -115,9 +115,10 @@ def _channel_location(track_pt):
     idx_kp = np.where(tn >= 0)[0]
 
     interp_ch = []
-    chn = np.floor(tn[idx_kp[0]])
-    if abs(chn - tn[idx_kp[0]]) < 1e-6:
-        interp_ch.append([*track[idx_kp[0]], chn])
+    chn = np.floor(tn[idx_kp[0]]).astype(int)
+    interp_ch.append([*track[idx_kp[0]], chn])
+    if abs(chn - tn[idx_kp[0]]) > 1e-6:
+        chn += 1
 
     seg_interval = []
     for i in range(1, len(idx_kp)):
@@ -130,12 +131,17 @@ def _channel_location(track_pt):
         l_res = 0  # remaining fiber length before counting the next segment
         # consider if the given channelnumber is not an integer
         chn_res = tn[istart] - int(tn[istart])
+        if d_interp == 0:
+            while chn < int(tn[iend]):
+                chn += 1
+                interp_ch.append([*track[istart, :], chn])
+            continue
         for j in range(istart, iend):
             l_start = l_track[j] + l_res
 
             # if tp segment length is large for more than one interval, get the
             # channel loc
-            if l_start >= d_interp * (1 - chn_res):
+            if l_start >= d_interp * (1 - chn_res - 1e-6):
                 # floor int, num of channel available
                 n_chn_tp = int(l_start / d_interp + chn_res)
                 l_new = (np.arange(n_chn_tp) + 1 - chn_res) * d_interp - \
