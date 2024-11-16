@@ -114,7 +114,7 @@ def cosine_taper(data, p=0.1, side='both'):
         data = data.reshape(1, -1)
     nch, nt = data.shape
     if not isinstance(p, (tuple, list, np.ndarray)):
-        win = tukey(nt, p[1])
+        win = tukey(nt, p)
         if side == 'left':
             win[round(nch/2):] = 1
         elif side == 'right':
