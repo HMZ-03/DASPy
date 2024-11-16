@@ -439,10 +439,10 @@ def equally_spaced_channels(geometry, dx, depth_info=False, verbose=False):
     """
     nch = len(geometry)
     if geometry.shape[1] == 2 + int(depth_info):
-        channels = np.arange(nch)
+        channels = np.arange(nch).astype(int)
     else:
         geometry = geometry[geometry[:, 0].argsort()]
-        channels = geometry[:, 0]
+        channels = geometry[:, 0].astype(int)
         geometry = geometry[:, 1:]
 
     dist = np.zeros(nch - 1)

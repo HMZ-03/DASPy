@@ -1,6 +1,6 @@
 # Purpose: Module for reading DAS data.
 # Author: Minzhe Hu
-# Date: 2024.11.12
+# Date: 2024.11.17
 # Email: hmz2018@mail.ustc.edu.cn
 # Partially modified from
 # https://github.com/RobbinLuo/das-toolkit/blob/main/DasTools/DasPrep.py
@@ -267,6 +267,24 @@ def _read_h5(fname, headonly=False, **kwargs):
                           'Please set manually')
             metadata = {'dx': None, 'fs': fs, 'start_channel': ch1,
                         'start_time': start_time}
+        elif group == 'data': # https://ai4eps.github.io/homepage/ml4earth/seismic_event_format_das/
+            nch = h5_file['data'].shape[1]
+            ch1 = kwargs.pop('ch1', 0)
+            ch2 = kwargs.pop('ch2', nch)
+            dch = kwargs.pop('dch', 1)
+            if headonly:
+                data = np.zeros_like(h5_file['raw_data'])
+            else:
+                data = h5_file['data'][ch1:ch2:dch, :]
+            attr = h5_file['data'].attrs
+            dx = attr['dx_m']
+            metadata = {'dx': dx, 'fs': 1 / attr['dt_s'], 'start_channel': ch1,
+                        'start_distance': ch1 * dx,
+                        'start_time': DASDateTime.strptime(
+                            attr['begin_time'], '%Y-%m-%dT%H:%M:%S.%f%z'),
+                        'data_type': attr['unit'],
+                        'origin_time':DASDateTime.strptime(
+                            attr['event_time'], '%Y-%m-%dT%H:%M:%S.%f%z')}
         elif group == 'data_product':
             # read data
             nch = h5_file.attrs['nx']

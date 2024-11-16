@@ -1,6 +1,6 @@
 # Purpose: Module for writing DAS data.
 # Author: Minzhe Hu
-# Date: 2024.11.1
+# Date: 2024.11.17
 # Email: hmz2018@mail.ustc.edu.cn
 import os
 import warnings
@@ -203,6 +203,13 @@ def _write_h5(sec, fname, raw_fname=None):
                 DataTime = sec.start_time.timestamp() + \
                     np.arange(0, sec.nt / sec.fs, 1 / sec.fs)
                 _update_h5_dataset(h5_file, '/', 'timestamp', DataTime)
+            elif group == 'data': # https://ai4eps.github.io/homepage/ml4earth/seismic_event_format_das/
+                _update_h5_dataset(h5_file, '/', 'data', sec.data)
+                h5_file['data'].attrs['dx_m'] = sec.dx
+                h5_file['data'].attrs['dt_s'] = 1 / sec.fs
+                h5_file['data'].attrs['begin_time'] = \
+                    datetime.strftime(sec.start_time, '%Y-%m-%dT%H:%M:%S.%f%z')
+                h5_file['data'].attrs['unit'] = sec.data_type
             elif group == 'data_product':
                 _update_h5_dataset(h5_file, 'data_product/', 'data', sec.data)
                 h5_file.attrs['dt_computer'] = 1 / sec.fs
