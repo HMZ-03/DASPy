@@ -1,6 +1,6 @@
 # Purpose: Module for handling Section objects.
 # Author: Minzhe Hu
-# Date: 2024.11.15
+# Date: 2024.11.17
 # Email: hmz2018@mail.ustc.edu.cn
 import warnings
 import os
@@ -641,7 +641,14 @@ class Section(object):
             self.gauge_length += self.dx * (N - 1)
         return self
 
-    def cosine_taper(self, p=0.1):
+    def taper(self, *args, **kwargs):
+        """
+        See cosin_taper.
+        """
+        self.cosine_taper(self, *args, **kwargs)
+        return self
+
+    def cosine_taper(self, p=0.1, side='both'):
         """
         Taper using Tukey window.
 
@@ -650,8 +657,9 @@ class Section(object):
             0 to 1). Default is 0.1 which tapers 5% from the beginning and 5%
             from the end. If only one float is given, it only do for time
             dimension.
+        :param side: str. 'both', 'left', or 'right'.
         """
-        self.data = cosine_taper(self.data, p=p)
+        self.data = cosine_taper(self.data, p=p, side=side)
         return self
 
     def downsampling(self, xint=None, tint=None, stack=True,

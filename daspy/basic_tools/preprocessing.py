@@ -98,7 +98,7 @@ def stacking(data: np.ndarray, N: int, step: int = None, average: bool = False):
     return data_stacked
 
 
-def cosine_taper(data, p=0.1):
+def cosine_taper(data, p=0.1, side='both'):
     """
     Taper using Tukey window.
 
@@ -107,18 +107,23 @@ def cosine_taper(data, p=0.1):
         of Tukey taper for corresponding dimension (ranging from 0 to 1).
         Default is 0.1 which tapers 5% from the beginning and 5% from the end.
         If only one float is given, it only do for time dimension.
+    :param side: str. 'both', 'left', or 'right'.
     :return: Tapered data.
     """
-    if len(data.shape) == 1:
-        return data * tukey(len(data), p)
+    if data.ndim == 1:
+        data = data.reshape(1, -1)
     nch, nt = data.shape
-    win = np.ones_like(data)
     if not isinstance(p, (tuple, list, np.ndarray)):
-        p = (0, p)
-
-    win *= np.tile(tukey(nch, p[0]), (nt, 1)).T
-    win *= np.tile(tukey(nt, p[1]), (nch, 1))
-    return data * win
+        win = tukey(nt, p[1])
+        if side == 'left':
+            win[round(nch/2):] = 1
+        elif side == 'right':
+            win[:round(len(win)/2)] = 1
+        return data * np.tile(win, (nch, 1))
+    else:
+        if p[0] > 0:
+            data = data * np.tile(tukey(nch, p[0]), (nt, 1)).T
+        return cosine_taper(data, p[1], side=side)
 
 
 def downsampling(data, xint=None, tint=None, stack=True, lowpass_filter=True):

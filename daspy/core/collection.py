@@ -1,6 +1,6 @@
 # Purpose: Module for handling Collection objects.
 # Author: Minzhe Hu
-# Date: 2024.11.1
+# Date: 2024.11.17
 # Email: hmz2018@mail.ustc.edu.cn
 import os
 import warnings
@@ -9,7 +9,6 @@ from tqdm import tqdm
 from glob import glob
 from daspy.core.read import read
 from daspy.core.dasdatetime import DASDateTime
-from daspy.basic_tools.preprocessing import cosine_taper
 
 
 cascade_method = ['time_integration', 'time_differential', 'downsampling',
@@ -232,7 +231,9 @@ class Collection(object):
                     kwargs0 = dict(freq=self.fs/2/kwargs['tint'], zi=0)
                     kwargs_list.extend([kwargs0, kwargs])
             else:
-                if method in cascade_method:
+                if method in ['taper', 'cosine_taper']:
+                    kwargs.setdefault('side', 'both')
+                elif method in cascade_method:
                     kwargs.setdefault('zi', 0)
 
                 method_list.append(method)
@@ -254,23 +255,17 @@ class Collection(object):
             f = self[i]
             sec = read(f, ftype=self.ftype, **read_kwargs)
             for j, method in enumerate(method_list):
-                if method == 'taper':
-                    if i == 0:
-                        win = cosine_taper(np.ones_like(sec.data), **kwargs_list[j])
-                        win[:, -sec.nt//2:] = 1
-                        sec.data *= win
-                    elif i == len(self) - 1:
-                        win = cosine_taper(np.ones_like(sec.data), **kwargs_list[j])
-                        win[:, :sec.nt//2] = 1
-                        sec.data *= win
-                else:
-                    out = eval(f'sec.{method}')(**kwargs_list[j])
-                    if method == 'time_integration':
-                        kwargs_list[j]['c'] = sec.data[:, -1]
-                    elif method == 'time_differential':
-                        kwargs_list[j]['prepend'] = sec.data[:, -1]
-                    elif method in cascade_method:
-                        kwargs_list[j]['zi'] = out
+                if method in ['taper', 'cosine_taper']:
+                    if not ((i==0 and kwargs_list[j] != 'right') or
+                             (i == len(self) - 1 and kwargs_list[j] != 'left')):
+                        continue
+                out = eval(f'sec.{method}')(**kwargs_list[j])
+                if method == 'time_integration':
+                    kwargs_list[j]['c'] = sec.data[:, -1]
+                elif method == 'time_differential':
+                    kwargs_list[j]['prepend'] = sec.data[:, -1]
+                elif method in cascade_method:
+                    kwargs_list[j]['zi'] = out
             f0, f1 = os.path.splitext(os.path.basename(f))
             if ftype is not None:
                 f1 = ftype
