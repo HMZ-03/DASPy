@@ -1,6 +1,6 @@
 # Purpose: Module for handling Section objects.
 # Author: Minzhe Hu
-# Date: 2024.11.11
+# Date: 2024.11.15
 # Email: hmz2018@mail.ustc.edu.cn
 import warnings
 import os
@@ -542,6 +542,7 @@ class Section(object):
             if tmode == 'origin':
                 if hasattr(self, 'origin_time'):
                     kwargs['t0'] -= self.origin_time
+                    kwargs.setdefault('ylabel', 'Times(s) after occurance')
                 else:
                     tmode == 'start'
             if tmode == 'start':
