@@ -1,6 +1,6 @@
 # Purpose: Several functions for analysis data quality and geometry of channels
 # Author: Minzhe Hu, Zefeng Li
-# Date: 2024.11.14
+# Date: 2024.11.16
 # Email: hmz2018@mail.ustc.edu.cn
 import numpy as np
 from copy import deepcopy
@@ -172,6 +172,10 @@ def _channel_location(track_pt):
             # the length to next segment
             elif l_start < d_interp:
                 l_res = l_start
+
+    if abs(tn[iend] - int(tn[iend])) > 1e-6:
+        chn += 1
+        interp_ch.append([*track[iend, :], chn])
 
     return np.array(seg_interval), np.array(interp_ch)
 
