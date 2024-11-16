@@ -282,9 +282,15 @@ def _read_h5(fname, headonly=False, **kwargs):
                         'start_distance': ch1 * dx,
                         'start_time': DASDateTime.strptime(
                             attr['begin_time'], '%Y-%m-%dT%H:%M:%S.%f%z'),
-                        'data_type': attr['unit'],
-                        'origin_time':DASDateTime.strptime(
-                            attr['event_time'], '%Y-%m-%dT%H:%M:%S.%f%z')}
+                        'data_type': attr['unit']}
+            if 'event_time' in attr.keys():
+                try:
+                    origin_time = DASDateTime.strptime(
+                        attr['event_time'], '%Y-%m-%dT%H:%M:%S.%f%z')
+                except ValueError:
+                    origin_time = DASDateTime.strptime(
+                        attr['event_time'], '%Y-%m-%dT%H:%M:%S.%f')
+
         elif group == 'data_product':
             # read data
             nch = h5_file.attrs['nx']
