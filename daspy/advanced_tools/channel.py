@@ -1,6 +1,6 @@
 # Purpose: Several functions for analysis data quality and geometry of channels
 # Author: Minzhe Hu, Zefeng Li
-# Date: 2024.11.16
+# Date: 2024.11.17
 # Email: hmz2018@mail.ustc.edu.cn
 import numpy as np
 from copy import deepcopy
@@ -455,10 +455,12 @@ def equally_spaced_channels(geometry, dx, depth_info=False, verbose=False):
         else:
             dist[i] = d
 
+    print(np.argmax(dist), max(dist))
     channels_equal = [channels[0]]
     dist_equal = []
     channels_seg = []
     dist_seg = []
+    flag = True
     for i in range(1, nch-1):
         if dist[i-1] + dist[i] <= dx * 1.5:
             channels_seg.append(channels[i-1])
@@ -471,11 +473,17 @@ def equally_spaced_channels(geometry, dx, depth_info=False, verbose=False):
                                                           dist_seg, dx)
                 dist_equal.extend(dist_seg)
                 channels_equal.extend(channels_seg[1:])
+                # print(channels_seg[1:])
                 channels_seg = []
                 dist_seg = []
+                flag = False
             else:
-                channels_equal.append(channels[i-1])
-                dist_equal.append(dist[i-1])
+                if flag:
+                    channels_equal.append(channels[i-1])
+                    # print(channels[i-1])
+                    dist_equal.append(dist[i-1])
+                else:
+                    flag = True
 
     if len(channels_seg):
         channels_seg.extend(channels[i:i+2])
