@@ -1,6 +1,6 @@
 # Purpose: Module for handling Section objects.
 # Author: Minzhe Hu
-# Date: 2024.11.17
+# Date: 2024.11.18
 # Email: hmz2018@mail.ustc.edu.cn
 import warnings
 import os
@@ -186,16 +186,19 @@ class Section(object):
         return deepcopy(self)
 
     @classmethod
-    def from_obspy_stream(cls, st):
+    def from_obspy_stream(cls, st, channel_no='auto'):
         """
         Construct a Section from a obspy.core.stream.Stream instance.
 
         :param patch: obspy.core.stream.Stream. An instance of
             obspy.core.stream.Stream for construction.
+        :param channel_no: None or str. None for no channel number information,
+            'channel', 'station' for use the channel or station information of
+            each trace and 'auto' for automatically detect.
         """
         stime = min([tr.stats['starttime'] for tr in st])
         etime = max([tr.stats['endtime'] for tr in st])
-        st.trim(starttime=stime, endtime=etime, pad=True, fill_value=0)
+        st.trim(starttime=stime, endtime=etime, pad=True, fill_value=np.nan)
         matadata = [(tr.stats['sampling_rate'], tr.stats['delta'],
                      tr.stats['npts'], tr.stats['calib']) for tr in st]
         assert len(set(matadata)) == 1, ('The metadata of all traces in the '
@@ -209,16 +212,20 @@ class Section(object):
         source = type(st)
         data = np.zeros((nch, nt))
 
-        if str.isdigit(st[0].stats.channel):
-            channel_no = np.zeros(nch)
-            for i, tr in enumerate(st):
-                channel_no[i] = int(tr.stats.channel)
-            if sum(np.diff(np.sort(channel_no)) - 1) > 0:
-                channel_no = np.arange(nch)
+        if channel_no == 'channel':
+            channel_no = np.array([int(tr.stats.channel) for tr in st])
+        elif channel_no == 'station':
+            channel_no = np.array([int(tr.stats.station) for tr in st])
+        elif channel_no:
+            if str.isdigit(st[0].stats.channel):
+                channel_no = np.array([int(tr.stats.channel) for tr in st])
+            elif str.isdigit(st[0].stats.station):
+                channel_no = np.array([int(tr.stats.station) for tr in st])
         else:
-            channel_no = np.arange(nch)
+            channel_no = np.arange(nch).astype(int)
         start_channel = min(channel_no)
         channel_no -= start_channel
+        data = np.zeros((max(channel_no) + 1, nt))
         for i, tr in enumerate(st):
             data[channel_no[i]] = tr.data
 
@@ -1050,7 +1057,7 @@ class Section(object):
             self.channel_data(good_chn, replace=True)
             return self
         else:
-            return good_chn, bad_chn
+            return good_chn + self.start_channel, bad_chn + self.start_channel
 
     def turning_points(self, data_type='default', **kwargs):
         """
