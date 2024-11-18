@@ -1,6 +1,6 @@
 # Purpose: Several functions for analysis data quality and geometry of channels
 # Author: Minzhe Hu, Zefeng Li
-# Date: 2024.11.17
+# Date: 2024.11.18
 # Email: hmz2018@mail.ustc.edu.cn
 import numpy as np
 from copy import deepcopy
@@ -72,6 +72,7 @@ def channel_checking(data, deg=10, thresh=5, continuity=True, adjacent=2,
     """
     nch = len(data)
     energy = np.log10(np.sum(data**2, axis=1))
+    energy[energy == -np.inf] = -308
 
     # Remove abnormal value by robust polynomial fitting.
     fitted_energy, weights = robust_polyfit(energy, deg, thresh)
