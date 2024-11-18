@@ -456,7 +456,6 @@ def equally_spaced_channels(geometry, dx, depth_info=False, verbose=False):
         else:
             dist[i] = d
 
-    print(np.argmax(dist), max(dist))
     channels_equal = [channels[0]]
     dist_equal = []
     channels_seg = []
