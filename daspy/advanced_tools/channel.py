@@ -460,7 +460,7 @@ def equally_spaced_channels(geometry, dx, depth_info=False, verbose=False):
     dist_equal = []
     channels_seg = []
     dist_seg = []
-    flag = True
+    flag = False
     for i in range(1, nch-1):
         if dist[i-1] + dist[i] <= dx * 1.5:
             channels_seg.append(channels[i-1])
