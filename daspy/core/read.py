@@ -1,6 +1,6 @@
 # Purpose: Module for reading DAS data.
 # Author: Minzhe Hu
-# Date: 2024.11.17
+# Date: 2024.11.20
 # Email: hmz2018@mail.ustc.edu.cn
 # Partially modified from
 # https://github.com/RobbinLuo/das-toolkit/blob/main/DasTools/DasPrep.py
@@ -115,17 +115,17 @@ def _read_h5_headers(group):
 
 def _read_h5_starttime(h5_file):
     try:
-        stime = h5_file['Acquisition/Raw[0]/RawData'].\
-            attrs['PartStartTime'].decode('ascii')
+        stime = h5_file['Acquisition/Raw[0]/RawData'].attrs['PartStartTime']
     except KeyError:
         try:
-            stime = h5_file['Acquisition'].\
-                attrs['MeasurementStartTime'].decode('ascii')
+            stime = h5_file['Acquisition'].attrs['MeasurementStartTime']
         except KeyError:
             try:
                 stime = h5_file['Acquisition/Raw[0]/RawDataTime/'][0]
             except KeyError:
                 return 0
+    if isinstance(stime, bytes):
+        stime = stime.decode('ascii')
 
     if isinstance(stime, str):
         if len(stime) > 26:
@@ -216,7 +216,8 @@ def _read_h5(fname, headonly=False, **kwargs):
                         'gauge_length': gauge_length, 'geometry': geometry,
                         'scale': scale}
             metadata['start_time'] = _read_h5_starttime(h5_file)
-        elif group == 'Acquisition': # OptaSens/ODH, Silixa/iDAS, Smart Sensing/ZD DAS
+        elif group == 'Acquisition':
+            # OptaSens/ODH, Silixa/iDAS, Sintela/Onyx, Smart Sensing/ZD DAS
             # read data
             try:
                 nch = h5_file['Acquisition'].attrs['NumberOfLoci']
@@ -290,6 +291,7 @@ def _read_h5(fname, headonly=False, **kwargs):
                 except ValueError:
                     origin_time = DASDateTime.strptime(
                         attr['event_time'], '%Y-%m-%dT%H:%M:%S.%f')
+                metadata['origin_time'] = origin_time
 
         elif group == 'data_product':
             # read data

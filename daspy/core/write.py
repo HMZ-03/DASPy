@@ -1,6 +1,6 @@
 # Purpose: Module for writing DAS data.
 # Author: Minzhe Hu
-# Date: 2024.11.17
+# Date: 2024.11.20
 # Email: hmz2018@mail.ustc.edu.cn
 import os
 import warnings
@@ -180,9 +180,15 @@ def _write_h5(sec, fname, raw_fname=None):
                 _update_h5_dataset(h5_file, 'Acquisition/Raw[0]/', 'RawData',
                                    sec.data)
                 if isinstance(sec.start_time, datetime):
-                    h5_file['Acquisition/Raw[0]/RawData'].\
-                        attrs['PartStartTime'] = np.bytes_(
-                        sec.start_time.strftime('%Y-%m-%dT%H:%M:%S.%f%z'))
+                    if isinstance(h5_file['Acquisition/Raw[0]/RawData'].
+                                  attrs['PartStartTime'], bytes):
+                        h5_file['Acquisition/Raw[0]/RawData'].\
+                            attrs['PartStartTime'] = np.bytes_(
+                            sec.start_time.strftime('%Y-%m-%dT%H:%M:%S.%f%z'))
+                    else:
+                        h5_file['Acquisition/Raw[0]/RawData'].\
+                            attrs['PartStartTime'] = sec.start_time.strftime(
+                                '%Y-%m-%dT%H:%M:%S.%f%z')
                     stime = sec.start_time.timestamp() * 1e6
                     DataTime = np.arange(
                         stime, stime + sec.nt / sec.fs, 1 / sec.fs)
