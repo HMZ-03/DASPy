@@ -473,14 +473,12 @@ def equally_spaced_channels(geometry, dx, depth_info=False, verbose=False):
                                                           dist_seg, dx)
                 dist_equal.extend(dist_seg)
                 channels_equal.extend(channels_seg[1:])
-                # print(channels_seg[1:])
                 channels_seg = []
                 dist_seg = []
                 flag = False
             else:
                 if flag:
                     channels_equal.append(channels[i-1])
-                    # print(channels[i-1])
                     dist_equal.append(dist[i-1])
                 else:
                     flag = True
@@ -492,8 +490,8 @@ def equally_spaced_channels(geometry, dx, depth_info=False, verbose=False):
         dist_equal.extend(dist_seg)
         channels_equal.extend(channels_seg[1:])
     else:
-        channels_equal.append(channels[-1])
-        dist_equal.append(dist[-1])
+        channels_equal.extend(channels[-2:])
+        dist_equal.extend(dist[-2:])
 
     if verbose:
         return channels_equal, dist_equal
