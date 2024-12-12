@@ -1,6 +1,6 @@
 # Purpose: Module for handling Section objects.
 # Author: Minzhe Hu
-# Date: 2024.11.18
+# Date: 2024.12.12
 # Email: hmz2018@mail.ustc.edu.cn
 import warnings
 import os
@@ -652,7 +652,7 @@ class Section(object):
         """
         See cosin_taper.
         """
-        self.cosine_taper(self, *args, **kwargs)
+        self.cosine_taper(*args, **kwargs)
         return self
 
     def cosine_taper(self, p=0.1, side='both'):

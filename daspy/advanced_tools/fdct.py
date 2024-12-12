@@ -5,9 +5,20 @@
 # Modified from
 # http://www.curvelet.org/download-secure.php?file=CurveLab-2.1.3.tar.gz
 # (matlab version)
-from math import ceil, floor
 import numpy as np
 from numpy.fft import fftshift, ifftshift, fft2, ifft2
+
+
+def _round(x):
+    return np.round(x).astype(int)
+
+
+def _floor(x):
+    return np.floor(x).astype(int)
+
+
+def _ceil(x):
+    return np.ceil(x).astype(int)
 
 
 def fdct_wrapping_window(x):
@@ -68,7 +79,7 @@ def fdct_wrapping(x, is_real=False, finest=2,
     X = fftshift(fft2(ifftshift(x))) / np.sqrt(x.size)
     N1, N2 = X.shape
     if nbscales is None:
-        nbscales = ceil(np.log2(min(N1, N2)) - 3)
+        nbscales = _ceil(np.log2(min(N1, N2)) - 3)
 
     # Initialization: data structure
     nbangles = [1] + [nbangles_coarse * 2 ** ((nbscales - i) // 2)
@@ -86,24 +97,26 @@ def fdct_wrapping(x, is_real=False, finest=2,
 
     if finest == 1:
         # Initialization: smooth periodic extension of high frequencies
-        bigN1 = 2 * floor(2 * M1) + 1
-        bigN2 = 2 * floor(2 * M2) + 1
-        equiv_index_1 = (floor(N1 / 2) - floor(2 * M1) + np.arange(bigN1)) % N1
-        equiv_index_2 = (floor(N2 / 2) - floor(2 * M2) + np.arange(bigN2)) % N2
+        bigN1 = 2 * _floor(2 * M1) + 1
+        bigN2 = 2 * _floor(2 * M2) + 1
+        equiv_index_1 = (_floor(N1 / 2) - _floor(2 * M1) +
+                         np.arange(bigN1)) % N1
+        equiv_index_2 = (_floor(N2 / 2) - _floor(2 * M2) +
+                         np.arange(bigN2)) % N2
         X = X[np.ix_(equiv_index_1, equiv_index_2)]
 
-        window_length_1 = floor(2 * M1) - floor(M1) - (N1 % 3 == 0)
-        window_length_2 = floor(2 * M2) - floor(M2) - (N2 % 3 == 0)
+        window_length_1 = _floor(2 * M1) - _floor(M1) - (N1 % 3 == 0)
+        window_length_2 = _floor(2 * M2) - _floor(M2) - (N2 % 3 == 0)
         coord_1 = np.linspace(0, 1, window_length_1)
         coord_2 = np.linspace(0, 1, window_length_2)
         wl_1, wr_1 = fdct_wrapping_window(coord_1)
         wl_2, wr_2 = fdct_wrapping_window(coord_2)
 
-        lowpass_1 = np.concatenate((wl_1, np.ones(2 * floor(M1) + 1), wr_1))
+        lowpass_1 = np.concatenate((wl_1, np.ones(2 * _floor(M1) + 1), wr_1))
         if N1 % 3 == 0:
             lowpass_1 = np.concatenate(([0], lowpass_1, [0]))
 
-        lowpass_2 = np.concatenate((wl_2, np.ones(2 * floor(M2) + 1), wr_2))
+        lowpass_2 = np.concatenate((wl_2, np.ones(2 * _floor(M2) + 1), wr_2))
         if N2 % 3 == 0:
             lowpass_2 = np.concatenate(([0], lowpass_2, [0]))
 
@@ -115,22 +128,22 @@ def fdct_wrapping(x, is_real=False, finest=2,
         M1 /= 2
         M2 /= 2
 
-        window_length_1 = floor(2 * M1) - floor(M1)
-        window_length_2 = floor(2 * M2) - floor(M2)
+        window_length_1 = _floor(2 * M1) - _floor(M1)
+        window_length_2 = _floor(2 * M2) - _floor(M2)
         coord_1 = np.linspace(0, 1, window_length_1)
         coord_2 = np.linspace(0, 1, window_length_2)
         wl_1, wr_1 = fdct_wrapping_window(coord_1)
         wl_2, wr_2 = fdct_wrapping_window(coord_2)
 
-        lowpass_1 = np.concatenate((wl_1, np.ones(2 * floor(M1) + 1), wr_1))
-        lowpass_2 = np.concatenate((wl_2, np.ones(2 * floor(M2) + 1), wr_2))
+        lowpass_1 = np.concatenate((wl_1, np.ones(2 * _floor(M1) + 1), wr_1))
+        lowpass_2 = np.concatenate((wl_2, np.ones(2 * _floor(M2) + 1), wr_2))
         lowpass = np.outer(lowpass_1, lowpass_2)
         hipass = np.sqrt(1 - lowpass ** 2)
 
-        Xlow_index_1 = np.arange(-floor(2 * M1), floor(2 * M1) + 1) + \
-            ceil((N1 + 1) / 2) - 1
-        Xlow_index_2 = np.arange(-floor(2 * M2), floor(2 * M2) + 1) + \
-            ceil((N2 + 1) / 2) - 1
+        Xlow_index_1 = np.arange(-_floor(2 * M1),
+                                 _floor(2 * M1) + 1) + _ceil((N1 + 1) / 2) - 1
+        Xlow_index_2 = np.arange(-_floor(2 * M2),
+                                 _floor(2 * M2) + 1) + _ceil((N2 + 1) / 2) - 1
         Xlow = X[np.ix_(Xlow_index_1, Xlow_index_2)] * lowpass
         Xhi = X.copy()
         Xhi[np.ix_(Xlow_index_1, Xlow_index_2)] *= hipass
@@ -144,23 +157,23 @@ def fdct_wrapping(x, is_real=False, finest=2,
     for j in scales - 1:
         M1 /= 2
         M2 /= 2
-        window_length_1 = floor(2 * M1) - floor(M1)
-        window_length_2 = floor(2 * M2) - floor(M2)
+        window_length_1 = _floor(2 * M1) - _floor(M1)
+        window_length_2 = _floor(2 * M2) - _floor(M2)
         coord_1 = np.linspace(0, 1, window_length_1)
         coord_2 = np.linspace(0, 1, window_length_2)
         wl_1, wr_1 = fdct_wrapping_window(coord_1)
         wl_2, wr_2 = fdct_wrapping_window(coord_2)
 
-        lowpass_1 = np.concatenate((wl_1, np.ones(2 * floor(M1) + 1), wr_1))
-        lowpass_2 = np.concatenate((wl_2, np.ones(2 * floor(M2) + 1), wr_2))
+        lowpass_1 = np.concatenate((wl_1, np.ones(2 * _floor(M1) + 1), wr_1))
+        lowpass_2 = np.concatenate((wl_2, np.ones(2 * _floor(M2) + 1), wr_2))
         lowpass = np.outer(lowpass_1, lowpass_2)
         hipass = np.sqrt(1 - lowpass ** 2)
 
         Xhi = Xlow.copy()
-        Xlow_index_1 = np.arange(-floor(2 * M1), floor(2 * M1) + 1) + \
-            floor(4 * M1)
-        Xlow_index_2 = np.arange(-floor(2 * M2), floor(2 * M2) + 1) + \
-            floor(4 * M2)
+        Xlow_index_1 = np.arange(-_floor(2 * M1),
+                                 _floor(2 * M1) + 1) + _floor(4 * M1)
+        Xlow_index_2 = np.arange(-_floor(2 * M2),
+                                 _floor(2 * M2) + 1) + _floor(4 * M2)
         Xlow = Xlow[np.ix_(Xlow_index_1, Xlow_index_2)]
         Xhi[np.ix_(Xlow_index_1, Xlow_index_2)] = Xlow * hipass
         Xlow *= lowpass
@@ -172,9 +185,17 @@ def fdct_wrapping(x, is_real=False, finest=2,
         for quadrant in range(1, nbquadrants + 1):
             M_horiz = (M1, M2)[quadrant % 2]
             M_vert = (M2, M1)[quadrant % 2]
-            wedge_ticks_left = round(np.linspace(0, 1, nbangles_perquad + 1) *
-                                     floor(4 * M_horiz) + 1)
-            wedge_ticks_right = 2 * floor(4 * M_horiz) + 2 - wedge_ticks_left
+            wedge_ticks_left = _round(
+                np.linspace(
+                    0,
+                    1,
+                    nbangles_perquad +
+                    1) *
+                _floor(
+                    4 *
+                    M_horiz) +
+                1)
+            wedge_ticks_right = 2 * _floor(4 * M_horiz) + 2 - wedge_ticks_left
             if nbangles_perquad % 2:
                 wedge_ticks = np.concatenate(
                     (wedge_ticks_left, wedge_ticks_right[::-1]))
@@ -186,58 +207,58 @@ def fdct_wrapping(x, is_real=False, finest=2,
             wedge_midpoints = (wedge_endpoints[:-1] + wedge_endpoints[1:]) / 2
             # Left corner wedge
             l += 1
-            first_wedge_endpoint_vert = round(floor(4 * M_vert) /
-                                              nbangles_perquad + 1)
-            length_corner_wedge = floor(4 * M_vert) - floor(M_vert) + \
-                ceil(first_wedge_endpoint_vert / 4)
+            first_wedge_endpoint_vert = _round(
+                _floor(4 * M_vert) / nbangles_perquad + 1)
+            length_corner_wedge = _floor(4 * M_vert) - _floor(M_vert) + \
+                _ceil(first_wedge_endpoint_vert / 4)
             Y_corner = np.arange(length_corner_wedge) + 1
-            XX, YY = np.meshgrid(np.arange(2 * floor(4 * M_horiz) + 1) + 1,
-                                 Y_corner)
+            XX, YY = np.meshgrid(
+                np.arange(2 * _floor(4 * M_horiz) + 1) + 1, Y_corner)
             width_wedge = wedge_endpoints[1] + wedge_endpoints[0] - 1
-            slope_wedge = (floor(4 * M_horiz) + 1 - wedge_endpoints[0]) / \
-                floor(4 * M_vert)
-            left_line = round(2 - wedge_endpoints[0] +
-                              slope_wedge * (Y_corner - 1))
-            wrapped_data = np.zeros((length_corner_wedge, width_wedge),
-                                    dtype=complex)
-            wrapped_XX = np.zeros((length_corner_wedge, width_wedge),
-                                  dtype=int)
-            wrapped_YY = np.zeros((length_corner_wedge, width_wedge),
-                                  dtype=int)
-            first_row = floor(4 * M_vert) + 2 - \
-                ceil((length_corner_wedge + 1) / 2) + \
+            slope_wedge = (_floor(4 * M_horiz) + 1 -
+                           wedge_endpoints[0]) / _floor(4 * M_vert)
+            left_line = _round(
+                2 - wedge_endpoints[0] + slope_wedge * (Y_corner - 1))
+            wrapped_data = np.zeros(
+                (length_corner_wedge, width_wedge), dtype=complex)
+            wrapped_XX = np.zeros(
+                (length_corner_wedge, width_wedge), dtype=int)
+            wrapped_YY = np.zeros(
+                (length_corner_wedge, width_wedge), dtype=int)
+            first_row = _floor(4 * M_vert) + 2 - \
+                _ceil((length_corner_wedge + 1) / 2) + \
                 (length_corner_wedge + 1) % 2 * (quadrant - 2 == quadrant % 2)
-            first_col = floor(4 * M_horiz) + 2 - ceil((width_wedge + 1) / 2) \
+            first_col = _floor(4 * M_horiz) + 2 - _ceil((width_wedge + 1) / 2) \
                 + (width_wedge + 1) % 2 * (quadrant - 3 == (quadrant - 3) % 2)
             for row in Y_corner - 1:
                 cols = left_line[row] + \
                     (np.arange(width_wedge) - (left_line[row] - first_col)) \
                     % width_wedge
-                admissible_cols = round(0.5 * (cols + 1 + abs(cols - 1))) - 1
+                admissible_cols = _round(0.5 * (cols + 1 + abs(cols - 1))) - 1
                 new_row = (row - first_row + 1) % length_corner_wedge
                 wrapped_data[new_row, :] = Xhi[row,
                                                admissible_cols] * (cols > 0)
                 wrapped_XX[new_row, :] = XX[row, admissible_cols]
                 wrapped_YY[new_row, :] = YY[row, admissible_cols]
-            slope_wedge_right = (floor(4 * M_horiz) + 1 - wedge_midpoints[0]) \
-                / floor(4 * M_vert)
+            slope_wedge_right = (_floor(4 * M_horiz) + 1 -
+                                 wedge_midpoints[0]) / _floor(4 * M_vert)
             mid_line_right = wedge_midpoints[0] + \
                 slope_wedge_right * (wrapped_YY - 1)
-            coord_right = 0.5 + floor(4 * M_vert) / \
+            coord_right = 0.5 + _floor(4 * M_vert) / \
                 (wedge_endpoints[1] - wedge_endpoints[0]) * \
                 (wrapped_XX - mid_line_right) / \
-                (floor(4 * M_vert) + 1 - wrapped_YY)
-            C2 = 1 / (1 / (2 * (floor(4 * M_horiz)) / (wedge_endpoints[0] -
-                1) - 1) + 1 / (2 * (floor(4 * M_vert)) / (
+                (_floor(4 * M_vert) + 1 - wrapped_YY)
+            C2 = 1 / (1 / (2 * (_floor(4 * M_horiz)) / (wedge_endpoints[0] -
+                1) - 1) + 1 / (2 * (_floor(4 * M_vert)) / (
                 first_wedge_endpoint_vert - 1) - 1))
-            C1 = C2 / (2 * (floor(4 * M_vert)) /
+            C1 = C2 / (2 * (_floor(4 * M_vert)) /
                        (first_wedge_endpoint_vert - 1) - 1)
-            wrapped_XX[(wrapped_XX - 1) / floor(4 * M_horiz) +
-                       (wrapped_YY - 1) / floor(4 * M_vert) == 2] += 1
-            coord_corner = C1 + C2 * ((wrapped_XX - 1) / floor(4 * M_horiz) -
-                (wrapped_YY - 1) / floor(4 * M_vert)) / (2 -
-                ((wrapped_XX - 1) / floor(4 * M_horiz) + (wrapped_YY - 1) /
-                floor(4 * M_vert)))
+            wrapped_XX[(wrapped_XX - 1) / _floor(4 * M_horiz) +
+                       (wrapped_YY - 1) / _floor(4 * M_vert) == 2] += 1
+            coord_corner = C1 + C2 * ((wrapped_XX - 1) / _floor(4 * M_horiz) -
+                (wrapped_YY - 1) / _floor(4 * M_vert)) / (2 -
+                ((wrapped_XX - 1) / _floor(4 * M_horiz) + (wrapped_YY - 1) /
+                _floor(4 * M_vert)))
             wl_left, _ = fdct_wrapping_window(coord_corner)
             _, wr_right = fdct_wrapping_window(coord_right)
             wrapped_data = wrapped_data * wl_left * wr_right
@@ -253,24 +274,24 @@ def fdct_wrapping(x, is_real=False, finest=2,
                 C[j][l + nbangles[j] // 2] = np.sqrt(2) * x.imag
 
             # Regular wedges
-            length_wedge = floor(4 * M_vert) - floor(M_vert)
+            length_wedge = _floor(4 * M_vert) - _floor(M_vert)
             Y = np.arange(length_wedge) + 1
-            first_row = floor(4 * M_vert) + 2 - ceil((length_wedge + 1) / 2) \
+            first_row = _floor(4 * M_vert) + 2 - _ceil((length_wedge + 1) / 2) \
                 + (length_wedge + 1) % 2 * (quadrant - 2 == quadrant % 2)
             for subl in range(1, nbangles_perquad - 1):
                 l += 1
                 width_wedge = wedge_endpoints[subl +
                                               1] - wedge_endpoints[subl - 1] + 1
-                slope_wedge = ((floor(4 * M_horiz) + 1) -
-                               wedge_endpoints[subl]) / floor(4 * M_vert)
-                left_line = round(wedge_endpoints[subl - 1] +
-                                  slope_wedge * (Y - 1))
-                wrapped_data = np.zeros((length_wedge, width_wedge),
-                                        dtype=complex)
+                slope_wedge = ((_floor(4 * M_horiz) + 1) -
+                               wedge_endpoints[subl]) / _floor(4 * M_vert)
+                left_line = _round(
+                    wedge_endpoints[subl - 1] + slope_wedge * (Y - 1))
+                wrapped_data = np.zeros(
+                    (length_wedge, width_wedge), dtype=complex)
                 wrapped_XX = np.zeros((length_wedge, width_wedge), dtype=int)
                 wrapped_YY = np.zeros((length_wedge, width_wedge), dtype=int)
-                first_col = floor(4 * M_horiz) + 2 - \
-                    ceil((width_wedge + 1) / 2) + \
+                first_col = _floor(4 * M_horiz) + 2 - \
+                    _ceil((width_wedge + 1) / 2) + \
                     (width_wedge + 1) % 2 * (quadrant - 3 == (quadrant - 3) % 2)
                 for row in Y - 1:
                     cols = left_line[row] + (np.arange(width_wedge) -
@@ -279,22 +300,22 @@ def fdct_wrapping(x, is_real=False, finest=2,
                     wrapped_data[new_row, :] = Xhi[row, cols]
                     wrapped_XX[new_row, :] = XX[row, cols]
                     wrapped_YY[new_row, :] = YY[row, cols]
-                slope_wedge_left = ((floor(4 * M_horiz) + 1) -
-                    wedge_midpoints[subl - 1]) / floor(4 * M_vert)
+                slope_wedge_left = ((_floor(4 * M_horiz) + 1) -
+                    wedge_midpoints[subl - 1]) / _floor(4 * M_vert)
                 mid_line_left = wedge_midpoints[subl - 1] + \
                     slope_wedge_left * (wrapped_YY - 1)
-                coord_left = 0.5 + floor(4 * M_vert) / \
+                coord_left = 0.5 + _floor(4 * M_vert) / \
                     (wedge_endpoints[subl] - wedge_endpoints[subl - 1]) * \
                     (wrapped_XX - mid_line_left) / \
-                    (floor(4 * M_vert) + 1 - wrapped_YY)
-                slope_wedge_right = ((floor(4 * M_horiz) + 1) -
-                                     wedge_midpoints[subl]) / floor(4 * M_vert)
+                    (_floor(4 * M_vert) + 1 - wrapped_YY)
+                slope_wedge_right = ((_floor(4 * M_horiz) + 1) -
+                                     wedge_midpoints[subl]) / _floor(4 * M_vert)
                 mid_line_right = wedge_midpoints[subl] + \
                     slope_wedge_right * (wrapped_YY - 1)
-                coord_right = 0.5 + floor(4 * M_vert) / \
+                coord_right = 0.5 + _floor(4 * M_vert) / \
                     (wedge_endpoints[subl + 1] - wedge_endpoints[subl]) * \
                     (wrapped_XX - mid_line_right) / \
-                    (floor(4 * M_vert) + 1 - wrapped_YY)
+                    (_floor(4 * M_vert) + 1 - wrapped_YY)
 
                 wl_left, _ = fdct_wrapping_window(coord_left)
                 _, wr_right = fdct_wrapping_window(coord_right)
@@ -312,51 +333,51 @@ def fdct_wrapping(x, is_real=False, finest=2,
 
             # Right corner wedge
             l += 1
-            width_wedge = 4 * floor(4 * M_horiz) + 3 - wedge_endpoints[-1] - \
-                wedge_endpoints[-2]
-            slope_wedge = ((floor(4 * M_horiz) + 1) - wedge_endpoints[-1]) / \
-                floor(4 * M_vert)
-            left_line = round(wedge_endpoints[-2] +
-                              slope_wedge * (Y_corner - 1))
+            width_wedge = 4 * _floor(4 * M_horiz) + 3 - \
+                wedge_endpoints[-1] - wedge_endpoints[-2]
+            slope_wedge = ((_floor(4 * M_horiz) + 1) -
+                           wedge_endpoints[-1]) / _floor(4 * M_vert)
+            left_line = _round(
+                wedge_endpoints[-2] + slope_wedge * (Y_corner - 1))
             wrapped_data = np.zeros((length_corner_wedge, width_wedge),
                                     dtype=complex)
             wrapped_XX = np.zeros((length_corner_wedge, width_wedge), dtype=int)
             wrapped_YY = np.zeros((length_corner_wedge, width_wedge), dtype=int)
-            first_row = floor(4 * M_vert) + 2 - \
-                ceil((length_corner_wedge + 1) / 2) + \
+            first_row = _floor(4 * M_vert) + 2 - \
+                _ceil((length_corner_wedge + 1) / 2) + \
                 (length_corner_wedge + 1) % 2 * (quadrant - 2 == quadrant % 2)
-            first_col = floor(4 * M_horiz) + 2 - ceil((width_wedge + 1) / 2) + \
+            first_col = _floor(4 * M_horiz) + 2 - _ceil((width_wedge + 1) / 2) + \
                 (width_wedge + 1) % 2 * (quadrant - 3 == (quadrant - 3) % 2)
             for row in Y_corner - 1:
                 cols = left_line[row] + (np.arange(width_wedge) -
                     (left_line[row] - first_col)) % width_wedge
-                admissible_cols = round(0.5 * (cols + 2 * floor(4 * M_horiz)
-                    + 1 - np.abs(cols - (2 * floor(4 * M_horiz) + 1)))) - 1
+                admissible_cols = _round(0.5 * (cols + 2 * _floor(4 * M_horiz)
+                    + 1 - np.abs(cols - (2 * _floor(4 * M_horiz) + 1)))) - 1
                 new_row = (row - first_row + 1) % length_corner_wedge
                 wrapped_data[new_row, :] = Xhi[row, admissible_cols] * \
-                    (cols <= (2 * floor(4 * M_horiz) + 1))
+                    (cols <= (2 * _floor(4 * M_horiz) + 1))
                 wrapped_XX[new_row, :] = XX[row, admissible_cols]
                 wrapped_YY[new_row, :] = YY[row, admissible_cols]
 
-            slope_wedge_left = ((floor(4 * M_horiz) + 1) -
-                                wedge_midpoints[-1]) / floor(4 * M_vert)
+            slope_wedge_left = ((_floor(4 * M_horiz) + 1) -
+                                wedge_midpoints[-1]) / _floor(4 * M_vert)
             mid_line_left = wedge_midpoints[-1] + \
                 slope_wedge_left * (wrapped_YY - 1)
-            coord_left = 0.5 + floor(4 * M_vert) / \
+            coord_left = 0.5 + _floor(4 * M_vert) / \
                 (wedge_endpoints[-1] - wedge_endpoints[-2]) * \
                 (wrapped_XX - mid_line_left) / \
-                (floor(4 * M_vert) + 1 - wrapped_YY)
-            C2 = -1 / (2 * (floor(4 * M_horiz)) / (wedge_endpoints[-1] - 1) -
-                       1 + 1 / (2 * (floor(4 * M_vert)) /
+                (_floor(4 * M_vert) + 1 - wrapped_YY)
+            C2 = -1 / (2 * (_floor(4 * M_horiz)) / (wedge_endpoints[-1] - 1) -
+                       1 + 1 / (2 * (_floor(4 * M_vert)) /
                                 (first_wedge_endpoint_vert - 1) - 1))
-            C1 = -C2 * (2 * (floor(4 * M_horiz)) /
+            C1 = -C2 * (2 * (_floor(4 * M_horiz)) /
                         (wedge_endpoints[-1] - 1) - 1)
-            wrapped_XX[(wrapped_XX - 1) / floor(4 * M_horiz) ==
-                       (wrapped_YY - 1) / floor(4 * M_vert)] -= 1
+            wrapped_XX[(wrapped_XX - 1) / _floor(4 * M_horiz) ==
+                       (wrapped_YY - 1) / _floor(4 * M_vert)] -= 1
             coord_corner = C1 + C2 * (2 - ((wrapped_XX - 1) /
-                floor(4 * M_horiz) + (wrapped_YY - 1) / floor(4 * M_vert))) \
-                / ((wrapped_XX - 1) / floor(4 * M_horiz) - (wrapped_YY - 1) /
-                floor(4 * M_vert))
+                _floor(4 * M_horiz) + (wrapped_YY - 1) / _floor(4 * M_vert))) \
+                / ((wrapped_XX - 1) / _floor(4 * M_horiz) - (wrapped_YY - 1) /
+                _floor(4 * M_vert))
             wl_left, _ = fdct_wrapping_window(coord_left)
             _, wr_right = fdct_wrapping_window(coord_corner)
             wrapped_data = wrapped_data * wl_left * wr_right
@@ -416,18 +437,18 @@ def ifdct_wrapping(C, is_real=False, size=None):
 
     if finest == 1:
         # Initialization: preparing the lowpass filter at finest scale
-        window_length_1 = floor(2 * M1) - floor(M1) - (N1 % 3 == 0)
-        window_length_2 = floor(2 * M2) - floor(M2) - (N2 % 3 == 0)
+        window_length_1 = _floor(2 * M1) - _floor(M1) - (N1 % 3 == 0)
+        window_length_2 = _floor(2 * M2) - _floor(M2) - (N2 % 3 == 0)
         coord_1 = np.linspace(0, 1, window_length_1)
         coord_2 = np.linspace(0, 1, window_length_2)
         wl_1, wr_1 = fdct_wrapping_window(coord_1)
         wl_2, wr_2 = fdct_wrapping_window(coord_2)
 
-        lowpass_1 = np.concatenate((wl_1, np.ones(2 * floor(M1) + 1), wr_1))
+        lowpass_1 = np.concatenate((wl_1, np.ones(2 * _floor(M1) + 1), wr_1))
         if N1 % 3 == 0:
             lowpass_1 = np.concatenate(([0], lowpass_1, [0]))
 
-        lowpass_2 = np.concatenate((wl_2, np.ones(2 * floor(M2) + 1), wr_2))
+        lowpass_2 = np.concatenate((wl_2, np.ones(2 * _floor(M2) + 1), wr_2))
         if N2 % 3 == 0:
             lowpass_2 = np.concatenate(([0], lowpass_2, [0]))
 
@@ -437,22 +458,22 @@ def ifdct_wrapping(C, is_real=False, size=None):
         M1 /= 2
         M2 /= 2
 
-        window_length_1 = floor(2 * M1) - floor(M1)
-        window_length_2 = floor(2 * M2) - floor(M2)
+        window_length_1 = _floor(2 * M1) - _floor(M1)
+        window_length_2 = _floor(2 * M2) - _floor(M2)
         coord_1 = np.linspace(0, 1, window_length_1)
         coord_2 = np.linspace(0, 1, window_length_2)
         wl_1, wr_1 = fdct_wrapping_window(coord_1)
         wl_2, wr_2 = fdct_wrapping_window(coord_2)
 
-        lowpass_1 = np.concatenate((wl_1, np.ones(2 * floor(M1) + 1), wr_1))
-        lowpass_2 = np.concatenate((wl_2, np.ones(2 * floor(M2) + 1), wr_2))
+        lowpass_1 = np.concatenate((wl_1, np.ones(2 * _floor(M1) + 1), wr_1))
+        lowpass_2 = np.concatenate((wl_2, np.ones(2 * _floor(M2) + 1), wr_2))
         lowpass = np.outer(lowpass_1, lowpass_2)
         hipass_finest = np.sqrt(1 - lowpass ** 2)
 
         scales = np.arange(nbscales - 1, 1, -1)
 
-    bigN1 = 2 * floor(2 * M1) + 1
-    bigN2 = 2 * floor(2 * M2) + 1
+    bigN1 = 2 * _floor(2 * M1) + 1
+    bigN2 = 2 * _floor(2 * M2) + 1
     X = np.zeros((bigN1, bigN2), dtype=complex)
 
     # Loop: pyramidal reconstruction
@@ -463,18 +484,18 @@ def ifdct_wrapping(C, is_real=False, size=None):
         M1 /= 2
         M2 /= 2
 
-        window_length_1 = floor(2 * M1) - floor(M1)
-        window_length_2 = floor(2 * M2) - floor(M2)
+        window_length_1 = _floor(2 * M1) - _floor(M1)
+        window_length_2 = _floor(2 * M2) - _floor(M2)
         coord_1 = np.linspace(0, 1, window_length_1)
         coord_2 = np.linspace(0, 1, window_length_2)
         wl_1, wr_1 = fdct_wrapping_window(coord_1)
         wl_2, wr_2 = fdct_wrapping_window(coord_2)
 
-        lowpass_1 = np.concatenate((wl_1, np.ones(2 * floor(M1) + 1), wr_1))
-        lowpass_2 = np.concatenate((wl_2, np.ones(2 * floor(M2) + 1), wr_2))
+        lowpass_1 = np.concatenate((wl_1, np.ones(2 * _floor(M1) + 1), wr_1))
+        lowpass_2 = np.concatenate((wl_2, np.ones(2 * _floor(M2) + 1), wr_2))
         lowpass_next = np.outer(lowpass_1, lowpass_2)
         hipass = np.sqrt(1 - lowpass_next ** 2)
-        Xj = np.zeros((2 * floor(4 * M1) + 1, 2 * floor(4 * M2) + 1),
+        Xj = np.zeros((2 * _floor(4 * M1) + 1, 2 * _floor(4 * M2) + 1),
                       dtype=complex)
 
         # Loop: angles
@@ -484,64 +505,64 @@ def ifdct_wrapping(C, is_real=False, size=None):
         for quadrant in range(1, nbquadrants + 1):
             M_horiz = (M1, M2)[quadrant % 2]
             M_vert = (M2, M1)[quadrant % 2]
-            wedge_ticks_left = round(np.linspace(0, 1, nbangles_perquad + 1) *
-                                     floor(4 * M_horiz) + 1)
-            wedge_ticks_right = 2 * floor(4 * M_horiz) + 2 - wedge_ticks_left
+            wedge_ticks_left = _round(np.linspace(0, 1, nbangles_perquad + 1) *
+                                      _floor(4 * M_horiz) + 1)
+            wedge_ticks_right = 2 * _floor(4 * M_horiz) + 2 - wedge_ticks_left
             if nbangles_perquad % 2:
-                wedge_ticks = np.concatenate((wedge_ticks_left,
-                                              wedge_ticks_right[::-1]))
+                wedge_ticks = np.concatenate(
+                    (wedge_ticks_left, wedge_ticks_right[::-1]))
             else:
-                wedge_ticks = np.concatenate((wedge_ticks_left,
-                                              wedge_ticks_right[-2::-1]))
+                wedge_ticks = np.concatenate(
+                    (wedge_ticks_left, wedge_ticks_right[-2::-1]))
             wedge_endpoints = wedge_ticks[1:-1:2]
             wedge_midpoints = (wedge_endpoints[:-1] + wedge_endpoints[1:]) / 2
 
             # Left corner wedge
             l += 1
-            first_wedge_endpoint_vert = round(floor(4 * M_vert) /
-                                              nbangles_perquad + 1)
-            length_corner_wedge = floor(4 * M_vert) - floor(M_vert) + \
-                ceil(first_wedge_endpoint_vert / 4)
+            first_wedge_endpoint_vert = _round(_floor(4 * M_vert) /
+                                               nbangles_perquad + 1)
+            length_corner_wedge = _floor(4 * M_vert) - _floor(M_vert) + \
+                _ceil(first_wedge_endpoint_vert / 4)
             Y_corner = np.arange(length_corner_wedge) + 1
-            [XX, YY] = np.meshgrid(np.arange(1, 2 * floor(4 * M_horiz) + 2),
+            [XX, YY] = np.meshgrid(np.arange(1, 2 * _floor(4 * M_horiz) + 2),
                                    Y_corner)
             width_wedge = wedge_endpoints[1] + wedge_endpoints[0] - 1
-            slope_wedge = (floor(4 * M_horiz) + 1 - wedge_endpoints[0]) / \
-                floor(4 * M_vert)
-            left_line = round(2 - wedge_endpoints[0] +
-                              slope_wedge * (Y_corner - 1))
+            slope_wedge = (_floor(4 * M_horiz) + 1 -
+                           wedge_endpoints[0]) / _floor(4 * M_vert)
+            left_line = _round(2 - wedge_endpoints[0] +
+                               slope_wedge * (Y_corner - 1))
             wrapped_XX = np.zeros((length_corner_wedge, width_wedge), dtype=int)
             wrapped_YY = np.zeros((length_corner_wedge, width_wedge), dtype=int)
-            first_row = floor(4 * M_vert) + \
-                2 - ceil((length_corner_wedge + 1) / 2) + \
+            first_row = _floor(4 * M_vert) + \
+                2 - _ceil((length_corner_wedge + 1) / 2) + \
                 (length_corner_wedge + 1) % 2 * (quadrant - 2 == quadrant % 2)
-            first_col = floor(4 * M_horiz) + 2 - ceil((width_wedge + 1) / 2) \
+            first_col = _floor(4 * M_horiz) + 2 - _ceil((width_wedge + 1) / 2) \
                 + (width_wedge + 1) % 2 * (quadrant - 3 == (quadrant - 3) % 2)
             for row in Y_corner - 1:
                 cols = left_line[row] + (np.arange(width_wedge) -
                     (left_line[row] - first_col)) % width_wedge
                 new_row = (row - first_row + 1) % length_corner_wedge
-                admissible_cols = round(0.5 * (cols + 1 + abs(cols - 1))) - 1
+                admissible_cols = _round(0.5 * (cols + 1 + abs(cols - 1))) - 1
                 wrapped_XX[new_row, :] = XX[row, admissible_cols]
                 wrapped_YY[new_row, :] = YY[row, admissible_cols]
 
-            slope_wedge_right = (floor(4 * M_horiz) + 1 - wedge_midpoints[0]) \
-                / floor(4 * M_vert)
+            slope_wedge_right = (_floor(4 * M_horiz) + 1 - wedge_midpoints[0]) \
+                / _floor(4 * M_vert)
             mid_line_right = wedge_midpoints[0] + \
                 slope_wedge_right * (wrapped_YY - 1)
-            coord_right = 0.5 + floor(4 * M_vert) / (wedge_endpoints[1] -
+            coord_right = 0.5 + _floor(4 * M_vert) / (wedge_endpoints[1] -
                 wedge_endpoints[0]) * (wrapped_XX - mid_line_right) / \
-                (floor(4 * M_vert) + 1 - wrapped_YY)
-            C2 = 1 / (1 / (2 * (floor(4 * M_horiz)) /
-                (wedge_endpoints[0] - 1) - 1) + 1 / (2 * (floor(4 * M_vert))
+                (_floor(4 * M_vert) + 1 - wrapped_YY)
+            C2 = 1 / (1 / (2 * (_floor(4 * M_horiz)) /
+                (wedge_endpoints[0] - 1) - 1) + 1 / (2 * (_floor(4 * M_vert))
                 / (first_wedge_endpoint_vert - 1) - 1))
-            C1 = C2 / (2 * (floor(4 * M_vert)) /
+            C1 = C2 / (2 * (_floor(4 * M_vert)) /
                        (first_wedge_endpoint_vert - 1) - 1)
-            wrapped_XX[(wrapped_XX - 1) / floor(4 * M_horiz) +
-                       (wrapped_YY - 1) / floor(4 * M_vert) == 2] += 1
-            coord_corner = C1 + C2 * ((wrapped_XX - 1) / floor(4 * M_horiz) -
-                (wrapped_YY - 1) / floor(4 * M_vert)) / (2 - ((wrapped_XX - 1)
-                / floor(4 * M_horiz) + (wrapped_YY - 1) / floor(4 * M_vert)))
+            wrapped_XX[(wrapped_XX - 1) / _floor(4 * M_horiz) +
+                       (wrapped_YY - 1) / _floor(4 * M_vert) == 2] += 1
+            coord_corner = C1 + C2 * ((wrapped_XX - 1) / _floor(4 * M_horiz) -
+                (wrapped_YY - 1) / _floor(4 * M_vert)) / (2 - ((wrapped_XX - 1)
+                / _floor(4 * M_horiz) + (wrapped_YY - 1) / _floor(4 * M_vert)))
             wl_left, _ = fdct_wrapping_window(coord_corner)
             _, wr_right = fdct_wrapping_window(coord_right)
 
@@ -560,7 +581,7 @@ def ifdct_wrapping(C, is_real=False, size=None):
             for row in Y_corner - 1:
                 cols = left_line[row] + (np.arange(width_wedge) -
                     (left_line[row] - first_col)) % width_wedge
-                admissible_cols = round(0.5 * (cols + 1 + abs(cols - 1))) - 1
+                admissible_cols = _round(0.5 * (cols + 1 + abs(cols - 1))) - 1
                 new_row = (row - first_row + 1) % length_corner_wedge
                 Xj[row, admissible_cols] += wrapped_data[new_row, :]
                 # We use the following property: in an assignment A(B) = C where
@@ -569,22 +590,22 @@ def ifdct_wrapping(C, is_real=False, size=None):
                 # assignment.
 
             # Regular wedges
-            length_wedge = floor(4 * M_vert) - floor(M_vert)
+            length_wedge = _floor(4 * M_vert) - _floor(M_vert)
             Y = np.arange(length_wedge) + 1
-            first_row = floor(4 * M_vert) + 2 - ceil((length_wedge + 1) / 2) \
+            first_row = _floor(4 * M_vert) + 2 - _ceil((length_wedge + 1) / 2) \
                 + (length_wedge + 1) % 2 * (quadrant - 2 == quadrant % 2)
             for subl in range(1, nbangles_perquad - 1):
                 l += 1
                 width_wedge = wedge_endpoints[subl + 1] - \
                     wedge_endpoints[subl - 1] + 1
-                slope_wedge = ((floor(4 * M_horiz) + 1) -
-                               wedge_endpoints[subl]) / floor(4 * M_vert)
-                left_line = round(wedge_endpoints[subl - 1] +
-                                  slope_wedge * (Y - 1))
+                slope_wedge = ((_floor(4 * M_horiz) + 1) -
+                               wedge_endpoints[subl]) / _floor(4 * M_vert)
+                left_line = _round(wedge_endpoints[subl - 1] +
+                                   slope_wedge * (Y - 1))
                 wrapped_XX = np.zeros((length_wedge, width_wedge), dtype=int)
                 wrapped_YY = np.zeros((length_wedge, width_wedge), dtype=int)
-                first_col = floor(4 * M_horiz) + 2 - \
-                    ceil((width_wedge + 1) / 2) + \
+                first_col = _floor(4 * M_horiz) + 2 - \
+                    _ceil((width_wedge + 1) / 2) + \
                     (width_wedge + 1) % 2 * (quadrant - 3 == (quadrant - 3) % 2)
                 for row in Y - 1:
                     cols = left_line[row] + (np.arange(width_wedge) -
@@ -593,22 +614,22 @@ def ifdct_wrapping(C, is_real=False, size=None):
                     wrapped_XX[new_row, :] = XX[row, cols]
                     wrapped_YY[new_row, :] = YY[row, cols]
 
-                slope_wedge_left = ((floor(4 * M_horiz) + 1) -
-                    wedge_midpoints[subl - 1]) / floor(4 * M_vert)
+                slope_wedge_left = ((_floor(4 * M_horiz) + 1) -
+                    wedge_midpoints[subl - 1]) / _floor(4 * M_vert)
                 mid_line_left = wedge_midpoints[subl - 1] + \
                     slope_wedge_left * (wrapped_YY - 1)
-                coord_left = 0.5 + floor(4 * M_vert) / (wedge_endpoints[subl]
+                coord_left = 0.5 + _floor(4 * M_vert) / (wedge_endpoints[subl]
                     - wedge_endpoints[subl - 1]) * \
                     (wrapped_XX - mid_line_left) / \
-                    (floor(4 * M_vert) + 1 - wrapped_YY)
-                slope_wedge_right = ((floor(4 * M_horiz) + 1) -
-                                     wedge_midpoints[subl]) / floor(4 * M_vert)
+                    (_floor(4 * M_vert) + 1 - wrapped_YY)
+                slope_wedge_right = ((_floor(4 * M_horiz) + 1) -
+                                     wedge_midpoints[subl]) / _floor(4 * M_vert)
                 mid_line_right = wedge_midpoints[subl] + \
                     slope_wedge_right * (wrapped_YY - 1)
-                coord_right = 0.5 + floor(4 * M_vert) / \
+                coord_right = 0.5 + _floor(4 * M_vert) / \
                     (wedge_endpoints[subl + 1] - wedge_endpoints[subl]) * \
                     (wrapped_XX - mid_line_right) / \
-                    (floor(4 * M_vert) + 1 - wrapped_YY)
+                    (_floor(4 * M_vert) + 1 - wrapped_YY)
                 wl_left, _ = fdct_wrapping_window(coord_left)
                 _, wr_right = fdct_wrapping_window(coord_right)
                 if not is_real:
@@ -632,48 +653,50 @@ def ifdct_wrapping(C, is_real=False, size=None):
 
             # Right corner wedge
             l += 1
-            width_wedge = 4 * floor(4 * M_horiz) + 3 - wedge_endpoints[-1] - \
-                wedge_endpoints[-2]
-            slope_wedge = ((floor(4 * M_horiz) + 1) - wedge_endpoints[-1]) / \
-                floor(4 * M_vert)
-            left_line = round(wedge_endpoints[-2] +
-                              slope_wedge * (Y_corner - 1))
-            wrapped_XX = np.zeros((length_corner_wedge, width_wedge), dtype=int)
-            wrapped_YY = np.zeros((length_corner_wedge, width_wedge), dtype=int)
-            first_row = floor(4 * M_vert) + 2 - \
-                ceil((length_corner_wedge + 1) / 2) + \
+            width_wedge = 4 * _floor(4 * M_horiz) + 3 - \
+                wedge_endpoints[-1] - wedge_endpoints[-2]
+            slope_wedge = ((_floor(4 * M_horiz) + 1) -
+                           wedge_endpoints[-1]) / _floor(4 * M_vert)
+            left_line = _round(
+                wedge_endpoints[-2] + slope_wedge * (Y_corner - 1))
+            wrapped_XX = np.zeros(
+                (length_corner_wedge, width_wedge), dtype=int)
+            wrapped_YY = np.zeros(
+                (length_corner_wedge, width_wedge), dtype=int)
+            first_row = _floor(4 * M_vert) + 2 - \
+                _ceil((length_corner_wedge + 1) / 2) + \
                 (length_corner_wedge + 1) % 2 * (quadrant - 2 == quadrant % 2)
-            first_col = floor(4 * M_horiz) + 2 - ceil((width_wedge + 1) / 2) \
+            first_col = _floor(4 * M_horiz) + 2 - _ceil((width_wedge + 1) / 2) \
                 + (width_wedge + 1) % 2 * (quadrant - 3 == (quadrant - 3) % 2)
             for row in Y_corner - 1:
                 cols = left_line[row] + (np.arange(width_wedge) -
                     (left_line[row] - first_col)) % width_wedge
-                admissible_cols = round(0.5 * (cols + 2 * floor(4 * M_horiz)
-                    + 1 - np.abs(cols - (2 * floor(4 * M_horiz) + 1)))) - 1
+                admissible_cols = _round(0.5 * (cols + 2 * _floor(4 * M_horiz)
+                    + 1 - np.abs(cols - (2 * _floor(4 * M_horiz) + 1)))) - 1
                 new_row = (row - first_row + 1) % length_corner_wedge
                 wrapped_XX[new_row, :] = XX[row, admissible_cols]
                 wrapped_YY[new_row, :] = YY[row, admissible_cols]
 
-            slope_wedge_left = ((floor(4 * M_horiz) + 1) -
-                                wedge_midpoints[-1]) / floor(4 * M_vert)
+            slope_wedge_left = ((_floor(4 * M_horiz) + 1) -
+                                wedge_midpoints[-1]) / _floor(4 * M_vert)
             mid_line_left = wedge_midpoints[-1] + \
                 slope_wedge_left * (wrapped_YY - 1)
-            coord_left = 0.5 + floor(4 * M_vert) / \
+            coord_left = 0.5 + _floor(4 * M_vert) / \
                 (wedge_endpoints[-1] - wedge_endpoints[-2]) * \
                 (wrapped_XX - mid_line_left) / \
-                (floor(4 * M_vert) + 1 - wrapped_YY)
-            C2 = -1 / (2 * (floor(4 * M_horiz)) / (wedge_endpoints[-1] - 1)
-                       - 1 + 1 / (2 * (floor(4 * M_vert)) /
+                (_floor(4 * M_vert) + 1 - wrapped_YY)
+            C2 = -1 / (2 * (_floor(4 * M_horiz)) / (wedge_endpoints[-1] - 1)
+                       - 1 + 1 / (2 * (_floor(4 * M_vert)) /
                                   (first_wedge_endpoint_vert - 1) - 1))
-            C1 = -C2 * (2 * (floor(4 * M_horiz)) /
+            C1 = -C2 * (2 * (_floor(4 * M_horiz)) /
                         (wedge_endpoints[-1] - 1) - 1)
 
-            wrapped_XX[(wrapped_XX - 1) / floor(4 * M_horiz) ==
-                       (wrapped_YY - 1) / floor(4 * M_vert)] -= 1
+            wrapped_XX[(wrapped_XX - 1) / _floor(4 * M_horiz) ==
+                       (wrapped_YY - 1) / _floor(4 * M_vert)] -= 1
             coord_corner = C1 + C2 * (2 - ((wrapped_XX - 1) /
-                floor(4 * M_horiz) + (wrapped_YY - 1) / floor(4 * M_vert))) \
-                / ((wrapped_XX - 1) / floor(4 * M_horiz) - (wrapped_YY - 1) /
-                floor(4 * M_vert))
+                _floor(4 * M_horiz) + (wrapped_YY - 1) / _floor(4 * M_vert))) \
+                / ((wrapped_XX - 1) / _floor(4 * M_horiz) - (wrapped_YY - 1) /
+                _floor(4 * M_vert))
             wl_left, _ = fdct_wrapping_window(coord_left)
             _, wr_right = fdct_wrapping_window(coord_corner)
 
@@ -693,8 +716,8 @@ def ifdct_wrapping(C, is_real=False, size=None):
             for row in Y_corner - 1:
                 cols = left_line[row] + (np.arange(width_wedge) -
                     (left_line[row] - first_col)) % width_wedge
-                admissible_cols = round(1 / 2 * (cols + 2 * floor(4 * M_horiz)
-                    + 1 - abs(cols - (2 * floor(4 * M_horiz) + 1)))) - 1
+                admissible_cols = _round(1 / 2 * (cols + 2 * _floor(4 * M_horiz)
+                    + 1 - abs(cols - (2 * _floor(4 * M_horiz) + 1)))) - 1
                 new_row = (row + 1 - first_row) % length_corner_wedge
                 Xj[row, np.flip(admissible_cols)] += wrapped_data[new_row, ::-1]
                 # We use the following property: in an assignment A[B] = C where
@@ -705,18 +728,20 @@ def ifdct_wrapping(C, is_real=False, size=None):
             Xj = np.rot90(Xj)
 
         Xj *= lowpass
-        Xj_index1 = np.arange(-floor(2 * M1), floor(2 * M1) + 1) + floor(4 * M1)
-        Xj_index2 = np.arange(-floor(2 * M2), floor(2 * M2) + 1) + floor(4 * M2)
+        Xj_index1 = np.arange(-_floor(2 * M1),
+                              _floor(2 * M1) + 1) + _floor(4 * M1)
+        Xj_index2 = np.arange(-_floor(2 * M2),
+                              _floor(2 * M2) + 1) + _floor(4 * M2)
 
         Xj[np.ix_(Xj_index1, Xj_index2)] *= hipass
 
-        loc_1 = Xj_topleft_1 + np.arange(2 * floor(4 * M1) + 1) - 1
-        loc_2 = Xj_topleft_2 + np.arange(2 * floor(4 * M2) + 1) - 1
+        loc_1 = Xj_topleft_1 + np.arange(2 * _floor(4 * M1) + 1) - 1
+        loc_2 = Xj_topleft_2 + np.arange(2 * _floor(4 * M2) + 1) - 1
         X[np.ix_(loc_1, loc_2)] += Xj
 
         # Preparing for loop reentry or exit
-        Xj_topleft_1 += floor(4 * M1) - floor(2 * M1)
-        Xj_topleft_2 += floor(4 * M2) - floor(2 * M2)
+        Xj_topleft_1 += _floor(4 * M1) - _floor(2 * M1)
+        Xj_topleft_2 += _floor(4 * M2) - _floor(2 * M2)
 
         lowpass = lowpass_next
 
@@ -729,8 +754,8 @@ def ifdct_wrapping(C, is_real=False, size=None):
     M1 = M1 / 2
     M2 = M2 / 2
     Xj = fftshift(fft2(ifftshift(C[0][0]))) / np.sqrt(C[0][0].size)
-    loc_1 = Xj_topleft_1 + np.arange(2 * floor(4 * M1) + 1) - 1
-    loc_2 = Xj_topleft_2 + np.arange(2 * floor(4 * M2) + 1) - 1
+    loc_1 = Xj_topleft_1 + np.arange(2 * _floor(4 * M1) + 1) - 1
+    loc_2 = Xj_topleft_2 + np.arange(2 * _floor(4 * M2) + 1) - 1
     X[np.ix_(loc_1, loc_2)] += Xj * lowpass
 
     # Finest level
@@ -738,8 +763,8 @@ def ifdct_wrapping(C, is_real=False, size=None):
     M2 = N2 / 3
     if finest == 1:
         # Folding back onto N1-by-N2 matrix
-        shift_1 = floor(2 * M1) - floor(N1 / 2)
-        shift_2 = floor(2 * M2) - floor(N2 / 2)
+        shift_1 = _floor(2 * M1) - _floor(N1 / 2)
+        shift_2 = _floor(2 * M2) - _floor(N2 / 2)
         Y = X[:, np.arange(N2) + shift_2]
         Y[:, np.arange(N2 - shift_2, N2)] += X[:, :shift_2]
         Y[:, :shift_2] += X[:, N2 + shift_2:N2 + 2 * shift_2]
@@ -750,10 +775,10 @@ def ifdct_wrapping(C, is_real=False, size=None):
         # Extension to a N1-by-N2 matrix
         Y = fftshift(fft2(ifftshift(C[nbscales - 1][0]))) / \
             np.sqrt(C[nbscales - 1][0].size)
-        X_topleft_1 = ceil((N1 + 1) / 2) - floor(M1)
-        X_topleft_2 = ceil((N2 + 1) / 2) - floor(M2)
-        loc_1 = X_topleft_1 + np.arange(2 * floor(M1) + 1) - 1
-        loc_2 = X_topleft_2 + np.arange(2 * floor(M2) + 1) - 1
+        X_topleft_1 = _ceil((N1 + 1) / 2) - _floor(M1)
+        X_topleft_2 = _ceil((N2 + 1) / 2) - _floor(M2)
+        loc_1 = X_topleft_1 + np.arange(2 * _floor(M1) + 1) - 1
+        loc_2 = X_topleft_2 + np.arange(2 * _floor(M2) + 1) - 1
         Y[np.ix_(loc_1, loc_2)] = Y[np.ix_(loc_1, loc_2)] * hipass_finest + X
         X = Y
 
