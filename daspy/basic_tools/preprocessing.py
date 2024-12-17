@@ -23,7 +23,7 @@ def phase2strain(data, lam, e, n, gl):
     return data * (lam * 1e-9) / (e * 4 * np.pi * n * gl)
 
 
-def normalization(data, method='z-score'):
+def normalization(data, method='z-score', **kwargs):
     """
     Normalize for each individual channel using Z-score method.
 
@@ -46,6 +46,9 @@ def normalization(data, method='z-score'):
         mean = np.mean(data, axis=1, keepdims=True)
         std = np.std(data, axis=1, keepdims=True)
         std[std == 0] = std[std > 0].min()
+        if 'p' in kwargs.keys():
+            thresh = np.percentile(std, kwargs['p'])
+            std[std > thresh] = thresh
         return (data - mean) / std
 
     if method == 'one-bit':
