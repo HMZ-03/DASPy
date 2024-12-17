@@ -1,6 +1,6 @@
 <img src="./website/USTC.svg" height="170" />&emsp;<img src="./website/DAMS.png" height="150" />
 
-## DASPy
+# DASPy
 
 [![Supported Python versions](https://img.shields.io/badge/python-3.9%20|%203.10%20|%203.11%20|%203.12-blue)](https://pypi.org/project/DASPy-toolbox/)
 [![License](https://img.shields.io/pypi/l/daspy-toolbox.svg)](https://opensource.org/license/mit)
