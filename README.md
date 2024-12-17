@@ -7,7 +7,7 @@
 [![PyPI Version](https://img.shields.io/pypi/v/daspy-toolbox.svg)](https://pypi.org/project/DASPy-toolbox/)
 [![DOI](https://img.shields.io/badge/DOI-10.1785/0220240124-blue.svg)](https://doi.org/10.1785/0220240124)
 [![PyPI Downloads](https://img.shields.io/pypi/dm/daspy-toolbox.svg?label=pypi)](https://pypi.org/project/DASPy-toolbox/)
-[![Conda Downloads](https://img.shields.io/conda/dn/conda-forge/daspy-toolbox?label=conda%20downloads)](https://anaconda.org/conda-forge/daspy-toolbox)
+[![Conda Downloads](https://img.shields.io/conda/dn/conda-forge/daspy-toolbox?label=conda)](https://anaconda.org/conda-forge/daspy-toolbox)
 
 DASPy is an open-source project dedicated to provide a python package for DAS (Distributed Acoustic Sensing) data processing.
 
