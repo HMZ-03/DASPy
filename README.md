@@ -1,7 +1,7 @@
 <img src="./website/USTC.svg" height="170" />&emsp;<img src="./website/DAMS.png" height="150" />
 
 
-[![Supported Python versions](https://img.shields.io/badge/python-3.9|3.10|3.11|3.12-blue)](https://pypi.org/project/DASPy-toolbox/)
+[![Supported Python versions](https://img.shields.io/badge/python-3.9 | 3.10 | 3.11 | 3.12-blue)](https://pypi.org/project/DASPy-toolbox/)
 [![License](https://img.shields.io/pypi/l/daspy-toolbox.svg)](https://opensource.org/license/mit)
 [![PyPI Version](https://img.shields.io/pypi/v/daspy-toolbox.svg)](https://pypi.org/project/DASPy-toolbox/)
 [![DOI](https://img.shields.io/badge/DOI-10.1785/0220240124-blue.svg)](https://doi.org/10.1785/0220240124)
