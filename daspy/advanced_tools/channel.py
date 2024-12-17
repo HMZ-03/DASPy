@@ -55,8 +55,8 @@ def channel_checking(data, deg=10, thresh=5, continuity=True, adjacent=2,
     """
     Use the energy of each channel to determine which channels are bad.
 
-    :param data: 2-dimensional np.ndarray. Axis 0 is channel number and axis 1 is
-        time series
+    :param data: 2-dimensional np.ndarray. Axis 0 is channel number and axis 1
+        is time series.
     :param deg: int. Degree of the fitting polynomial
     :param thresh: int or float. The MAD multiple of bad channel energy lower
         than good channels.

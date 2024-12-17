@@ -172,7 +172,7 @@ def curvelet_denoising(data, choice=0, pad=0.3, noise=None, noise_perc=95,
                        flag=0, dx=None, fs=None, mode='remove',
                        scale_begin=3, nbscales=None, nbangles=16, finest=2):
     """
-    Use curevelet transform to filter stochastic or/and cooherent noise.
+    Use curevelet transform to filter stochastic or/and coherent noise.
     Modified from
     https://github.com/atterholt/curvelet-denoising/blob/main/CurveletDenoising.m
     {Atterholt et al., 2022 , Geophys. J. Int.}
