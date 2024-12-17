@@ -1,13 +1,12 @@
 <img src="./website/USTC.svg" height="170" />&emsp;<img src="./website/DAMS.png" height="150" />
 
+## DASPy
 
 [![Supported Python versions](https://img.shields.io/badge/python-3.9%20|%203.10%20|%203.11%20|%203.12-blue)](https://pypi.org/project/DASPy-toolbox/)
 [![License](https://img.shields.io/pypi/l/daspy-toolbox.svg)](https://opensource.org/license/mit)
 [![PyPI Version](https://img.shields.io/pypi/v/daspy-toolbox.svg)](https://pypi.org/project/DASPy-toolbox/)
 [![DOI](https://img.shields.io/badge/DOI-10.1785/0220240124-blue.svg)](https://doi.org/10.1785/0220240124)
 [![Conda](https://img.shields.io/conda/dn/conda-forge/daspy-toolbox?label=conda%20downloads)](https://anaconda.org/conda-forge/daspy-toolbox)
-
-## DASPy
 
 DASPy is an open-source project dedicated to provide a python package for DAS (Distributed Acoustic Sensing) data processing.
 
