@@ -237,7 +237,8 @@ class Collection(object):
             else:
                 if method in ['taper', 'cosine_taper']:
                     kwargs.setdefault('side', 'both')
-                elif method in cascade_method:
+                elif method in ['bandpass', 'bandstop', 'lowpass', 'highpass',
+                                'lowpass_cheby_2']:
                     kwargs.setdefault('zi', 0)
 
                 method_list.append(method)
@@ -276,7 +277,8 @@ class Collection(object):
                     kwargs_list[j]['c'] = sec.data[:, -1]
                 elif method == 'time_differential':
                     kwargs_list[j]['prepend'] = sec.data[:, -1]
-                elif method in cascade_method:
+                elif method in ['bandpass', 'bandstop', 'lowpass', 'highpass',
+                                'lowpass_cheby_2']:
                     kwargs_list[j]['zi'] = out
             
             if i % merge == 0: 
