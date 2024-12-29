@@ -1,10 +1,11 @@
 # Purpose: Module for handling Collection objects.
 # Author: Minzhe Hu
-# Date: 2024.11.17
+# Date: 2024.12.29
 # Email: hmz2018@mail.ustc.edu.cn
 import os
 import warnings
 import numpy as np
+from copy import deepcopy
 from tqdm import tqdm
 from glob import glob
 from daspy.core.read import read
@@ -131,14 +132,14 @@ class Collection(object):
                        f'               {self[1]},\n' + \
                        f'               ...,\n' + \
                        f'               {self[-1]}]\n'
-
+            
         describe += f'       ftime: {self.start_time} to {self.end_time}\n' + \
-                    f'     flength: {self.flength}\n' + \
-                    f'         nch: {self.nch}\n' + \
-                    f'          nt: {self.nt}\n' + \
-                    f'          dx: {self.dx}\n' + \
-                    f'          fs: {self.fs}\n' + \
-                    f'gauge_length: {self.gauge_length}\n'
+                    f'     flength: {self.flength}\n'
+        for key in ['nch', 'nt', 'dx', 'fs', 'gauge_length']:
+            if hasattr(self, key):
+                long_key = key.rjust(12)
+                value = getattr(self, key)
+                describe += f'{long_key}: {value}\n'
 
         return describe
 
@@ -167,6 +168,9 @@ class Collection(object):
     @property
     def duration(self):
         return self.end_time - self.start_time
+
+    def copy(self):
+        return deepcopy(self)
 
     def select(self, stime=None, etime=None, readsec=False, **kwargs):
         """
@@ -240,18 +244,26 @@ class Collection(object):
                 kwargs_list.append(kwargs)
         return method_list, kwargs_list
 
-    def process(self, operations, savepath='./processed',
+    def process(self, operations, savepath='./processed', merge=1,
                 suffix='_pro', ftype=None, **read_kwargs):
         """
-        :param savepath:
-        :param ch1: int. The first channel required.
-        :param ch2: int. The last channel required (not included).
+        :param operations: list. Each element of operations list should be [str
+            of method name, dict of kwargs].
+        :param savepath: str. Path to save processed files.
+        :param merge: int or str. int for merge several processed files into 1.
+            'all' for merge all files.
+        :param suffix: str. Suffix for processed files.
+        :param ftype: None or str. None for automatic detection, or 'pkl',
+            'pickle', 'tdms', 'h5', 'hdf5', 'segy', 'sgy', 'npy'.
+        :param read_kwargs: dict. Paramters for read function.
         """
         if not os.path.exists(savepath):
             os.makedirs(savepath)
         method_list, kwargs_list = self._optimize_for_continuity(operations)
         new_flist = []
-        for i in tqdm(range(len(self))):
+        if merge == 'all':
+            merge = len(self)
+        for i in tqdm(range(0, len(self))):
             f = self[i]
             sec = read(f, ftype=self.ftype, **read_kwargs)
             for j, method in enumerate(method_list):
@@ -266,9 +278,15 @@ class Collection(object):
                     kwargs_list[j]['prepend'] = sec.data[:, -1]
                 elif method in cascade_method:
                     kwargs_list[j]['zi'] = out
-            f0, f1 = os.path.splitext(os.path.basename(f))
-            if ftype is not None:
-                f1 = ftype
-            filepath = os.path.join(savepath, f0+suffix+f1)
-            sec.save(filepath)
-            new_flist.append(filepath)
+            
+            if i % merge == 0: 
+                if i != 0:
+                    sec.save(filepath)
+                    new_flist.append(filepath)
+                sec_merge = sec
+                f0, f1 = os.path.splitext(os.path.basename(f))
+                if ftype is not None:
+                    f1 = ftype
+                filepath = os.path.join(savepath, f0+suffix+f1)
+            else:
+                sec_merge += sec
