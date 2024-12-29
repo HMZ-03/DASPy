@@ -281,7 +281,7 @@ class Collection(object):
             
             if i % merge == 0: 
                 if i != 0:
-                    sec.save(filepath)
+                    sec_merge.save(filepath)
                     new_flist.append(filepath)
                 sec_merge = sec
                 f0, f1 = os.path.splitext(os.path.basename(f))
@@ -290,3 +290,5 @@ class Collection(object):
                 filepath = os.path.join(savepath, f0+suffix+f1)
             else:
                 sec_merge += sec
+        sec_merge.save(filepath)
+        new_flist.append(filepath)
