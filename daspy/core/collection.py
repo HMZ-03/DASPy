@@ -1,6 +1,6 @@
 # Purpose: Module for handling Collection objects.
 # Author: Minzhe Hu
-# Date: 2024.12.29
+# Date: 2025.1.1
 # Email: hmz2018@mail.ustc.edu.cn
 import os
 import warnings
@@ -169,6 +169,10 @@ class Collection(object):
     def duration(self):
         return self.end_time - self.start_time
 
+    @property
+    def file_size(self):
+        return os.path.getsize(self[1])
+
     def copy(self):
         return deepcopy(self)
 
@@ -183,6 +187,7 @@ class Collection(object):
             readsec=True.
         :param ch2: int. The last channel required (not included). Only works
             when readsec=True.
+        :param dch: int. Channel step. Only works when readsec=True.
         """
         if stime is None:
             stime = self.ftime[0]
@@ -213,9 +218,10 @@ class Collection(object):
             sec.trimming(tmin=stime, tmax=etime)
             return sec
         else:
-            self.flist = flist
-            self.ftime = ftime
-            return self
+            coll = self.copy()
+            coll.flist = flist
+            coll.ftime = ftime
+            return coll
 
     def _optimize_for_continuity(self, operations):
         method_list = []
@@ -261,8 +267,7 @@ class Collection(object):
         if not os.path.exists(savepath):
             os.makedirs(savepath)
         method_list, kwargs_list = self._optimize_for_continuity(operations)
-        new_flist = []
-        if merge == 'all':
+        if merge == 'all' or merge > len(self):
             merge = len(self)
         for i in tqdm(range(0, len(self))):
             f = self[i]
@@ -284,7 +289,6 @@ class Collection(object):
             if i % merge == 0: 
                 if i != 0:
                     sec_merge.save(filepath)
-                    new_flist.append(filepath)
                 sec_merge = sec
                 f0, f1 = os.path.splitext(os.path.basename(f))
                 if ftype is not None:
@@ -293,4 +297,3 @@ class Collection(object):
             else:
                 sec_merge += sec
         sec_merge.save(filepath)
-        new_flist.append(filepath)
