@@ -1,6 +1,6 @@
 # Purpose: Module for handling Collection objects.
 # Author: Minzhe Hu
-# Date: 2025.1.1
+# Date: 2025.1.6
 # Email: hmz2018@mail.ustc.edu.cn
 import os
 import warnings
@@ -231,8 +231,8 @@ class Collection(object):
         for opera in operations:
             method, kwargs = opera
             if method == 'downsampling':
-                if hasattr(kwargs, 'lowpass_filter') and not\
-                        kwargs['lowpass_filter']:
+                if (hasattr(kwargs, 'lowpass_filter') and not\
+                    kwargs['lowpass_filter']) or not hasattr(kwargs, 'tint'):
                     method_list.append('downsampling')
                     kwargs_list.append(kwargs)
                 else:
