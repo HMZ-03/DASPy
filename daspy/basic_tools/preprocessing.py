@@ -75,7 +75,7 @@ def detrending(data):
     return detrend(data, type='linear')
 
 
-def stacking(data: np.ndarray, N: int, step: int = None, average: bool = False):
+def stacking(data: np.ndarray, N: int, step: int = None, average: bool = True):
     """
     Stack several channels to increase the signal-noise ratio(SNR).
 
