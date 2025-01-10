@@ -1,13 +1,13 @@
 # Purpose: Plot data
 # Author: Minzhe Hu
-# Date: 2024.11.8
+# Date: 2025.1.6
 # Email: hmz2018@mail.ustc.edu.cn
 import numpy as np
 import matplotlib.pyplot as plt
 from collections.abc import Sequence
 
 
-def plot(data: np.ndarray, dx=None, fs=None, ax=None, obj='waveform', dpi=150,
+def plot(data: np.ndarray, dx=None, fs=None, ax=None, obj='waveform', dpi=300,
          title=None, transpose=False, t0=0, x0=0, pick=None, f=None, k=None,
          t=None, c=None, cmap=None, vmin=None, vmax=None, dB=False,
          xmode='distance', tmode='time', xlim=None, ylim=None, xlog=False,
@@ -29,7 +29,9 @@ def plot(data: np.ndarray, dx=None, fs=None, ax=None, obj='waveform', dpi=150,
     :param title: str. The title of this axes.
     :param transpose: bool. Transpose the figure or not.
     :param t0, x0: The beginning of time and space.
-    :param pick: Sequence of picked phases. Required if obj=='phasepick'.
+    :param pick: dictionary of sequence of picked phases. Key should be 'P' for
+        P phase, 'S' for S phase and 'N' for unknown phase type. Required if
+        obj=='phasepick'.
     :param f: Sequence of frequency. Required if obj is one of 'spectrum',
         'spectrogram', 'fk' or 'dispersion'.
     :param k: Wavenumber sequence. Required if obj=='fk'.
@@ -82,14 +84,17 @@ def plot(data: np.ndarray, dx=None, fs=None, ax=None, obj='waveform', dpi=150,
             extent = [x0 * 1e-3, (x0 + nch * dx) * 1e-3, t0 + nt / fs, t0]
 
         if obj == 'phasepick' and len(pick):
-            pck = np.array(pick).astype(float)
-            if xmode.lower() == 'distance':
-                pck[:, 0] = (x0 + pck[:, 0] * dx) * 1e-3
-            elif xmode.lower() == 'channel':
-                pck[:, 0] = x0 + pck[:, 0]
-            if tmode.lower() == 'sampling':
-                pck[:, 1] = pck[:, 1] / fs
-            ax.scatter(pck[:,0], t0 + pck[:,1], marker=',', s=0.1, c='black')
+            pick_color = {'P': 'r', 'S': 'b', 'N': 'k'}
+            for phase, pck in pick.items():
+                pck = np.array(pck).astype(float)
+                if xmode.lower() == 'distance':
+                    pck[:, 0] = (x0 + pck[:, 0] * dx) * 1e-3
+                elif xmode.lower() == 'channel':
+                    pck[:, 0] = x0 + pck[:, 0]
+                if tmode.lower() == 'sampling':
+                    pck[:, 1] = pck[:, 1] / fs
+                ax.scatter(pck[:,0], t0 + pck[:,1], marker=',', s=0.1,
+                           c=pick_color[phase])
 
     elif obj in ['spectrum', 'spectrogram', 'fk', 'dispersion']:
         if isinstance(data[0,0], (complex, np.complex64)):

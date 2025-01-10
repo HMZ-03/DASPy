@@ -84,7 +84,7 @@ def channel_checking(data, deg=10, thresh=5, continuity=True, adjacent=2,
         bad_chn = np.argwhere(deviation < -thresh * mad).ravel().tolist()
     elif mode == 'high':
         bad_chn = np.argwhere(deviation > thresh * mad).ravel().tolist()
-    elif mode == 'high':
+    elif mode == 'both':
         bad_chn = np.argwhere(deviation < -thresh * mad).ravel().tolist() + \
                 np.argwhere(deviation > thresh * mad).ravel().tolist()
     good_chn = list(set(range(nch)) - set(bad_chn))

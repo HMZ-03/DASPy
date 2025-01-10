@@ -1,6 +1,6 @@
 # Purpose: Module for handling Section objects.
 # Author: Minzhe Hu
-# Date: 2024.12.12
+# Date: 2025.1.6
 # Email: hmz2018@mail.ustc.edu.cn
 import warnings
 import os
@@ -517,7 +517,7 @@ class Section(object):
             it will be set to parameter obj.
         """
         if 'data' not in kwargs.keys():
-            if obj == 'waveform':
+            if obj == 'waveform' or 'phasepick':
                 data = deepcopy(self.data)
             elif obj == 'spectrum':
                 data, f = self.spectrum(**kwargs_pro)
@@ -537,8 +537,11 @@ class Section(object):
 
         if 'ax' not in kwargs.keys() and 'title' not in kwargs.keys():
             kwargs['title'] = obj
-            if hasattr(self, 'data_type'):
-                kwargs['title'] += f' ({self.data_type})'
+
+        if obj == 'phasepick':
+            for phase, pck in kwargs['pick'].items():
+                pck[:, 0] -= self.start_channel
+                kwargs['pick'][phase] = pck
 
         if xmode == 'channel':
             kwargs.setdefault('x0', self.start_channel)
@@ -611,8 +614,8 @@ class Section(object):
         """
         Normalize for each individual channel using Z-score method.
 
-        :param method: str. Method for normalization, should be one of 'max' or
-            'z-score'.
+        :param method: str. Method for normalization, should be one of 'max',
+            'z-score', or 'one-bit'.
         """
         self.data = normalization(self.data, method=method)
         if hasattr(self, 'data_type'):
