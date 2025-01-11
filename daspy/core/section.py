@@ -540,8 +540,9 @@ class Section(object):
 
         if obj == 'phasepick':
             for phase, pck in kwargs['pick'].items():
-                pck[:, 0] -= self.start_channel
-                kwargs['pick'][phase] = pck
+                if len(pck) != 0:
+                    pck[:, 0] -= self.start_channel
+                    kwargs['pick'][phase] = pck
 
         if xmode == 'channel':
             kwargs.setdefault('x0', self.start_channel)

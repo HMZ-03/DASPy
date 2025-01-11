@@ -86,15 +86,16 @@ def plot(data: np.ndarray, dx=None, fs=None, ax=None, obj='waveform', dpi=300,
         if obj == 'phasepick' and len(pick):
             pick_color = {'P': 'r', 'S': 'b', 'N': 'k'}
             for phase, pck in pick.items():
-                pck = np.array(pck).astype(float)
-                if xmode.lower() == 'distance':
-                    pck[:, 0] = (x0 + pck[:, 0] * dx) * 1e-3
-                elif xmode.lower() == 'channel':
-                    pck[:, 0] = x0 + pck[:, 0]
-                if tmode.lower() == 'sampling':
-                    pck[:, 1] = pck[:, 1] / fs
-                ax.scatter(pck[:,0], t0 + pck[:,1], marker=',', s=0.1,
-                           c=pick_color[phase])
+                if len(pck):
+                    pck = np.array(pck).astype(float)
+                    if xmode.lower() == 'distance':
+                        pck[:, 0] = (x0 + pck[:, 0] * dx) * 1e-3
+                    elif xmode.lower() == 'channel':
+                        pck[:, 0] = x0 + pck[:, 0]
+                    if tmode.lower() == 'sampling':
+                        pck[:, 1] = pck[:, 1] / fs
+                    ax.scatter(pck[:,0], t0 + pck[:,1], marker=',', s=0.1,
+                            c=pick_color[phase])
 
     elif obj in ['spectrum', 'spectrogram', 'fk', 'dispersion']:
         if isinstance(data[0,0], (complex, np.complex64)):

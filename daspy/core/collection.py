@@ -1,6 +1,6 @@
 # Purpose: Module for handling Collection objects.
 # Author: Minzhe Hu
-# Date: 2025.1.6
+# Date: 2025.1.11
 # Email: hmz2018@mail.ustc.edu.cn
 import os
 import warnings
@@ -218,10 +218,9 @@ class Collection(object):
             sec.trimming(tmin=stime, tmax=etime)
             return sec
         else:
-            coll = self.copy()
-            coll.flist = flist
-            coll.ftime = ftime
-            return coll
+            self.flist = flist
+            self.ftime = ftime
+            return self
 
     def _optimize_for_continuity(self, operations):
         method_list = []
