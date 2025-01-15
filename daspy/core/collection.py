@@ -211,6 +211,9 @@ class Collection(object):
                 flist.append(self.flist[i])
                 ftime.append(self.ftime[i])
 
+        if len(flist) == 0:
+            warnings.warn('Out of collection time range.')
+            return None
         if readsec:
             sec = read(flist[0], **kwargs)
             for f in flist[1:]:
