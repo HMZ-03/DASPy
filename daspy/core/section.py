@@ -1057,11 +1057,13 @@ class Section(object):
         :return: self or Good channels and bad channels.
         """
         good_chn, bad_chn = channel_checking(self.data, **kwargs)
+        good_chn = good_chn + self.start_channel
+        bad_chn = bad_chn + self.start_channel
         if use:
             self.channel_data(good_chn, replace=True)
             return self
         else:
-            return good_chn + self.start_channel, bad_chn + self.start_channel
+            return good_chn, bad_chn
 
     def turning_points(self, data_type='default', **kwargs):
         """
