@@ -1,6 +1,6 @@
 # Purpose: Module for handling DASDateTime objects.
 # Author: Minzhe Hu
-# Date: 2024.11.18
+# Date: 2025.1.19
 # Email: hmz2018@mail.ustc.edu.cn
 import time
 from typing import Iterable
@@ -71,6 +71,13 @@ class DASDateTime(datetime):
     @classmethod
     def from_obspy_UTCDateTime(cls, dt):
         return cls.from_datetime(dt.datetime)
+    
+    @classmethod
+    def from_isoformat(cls, dt):
+        try:
+            return cls.strptime(dt, '%Y-%m-%dT%H:%M:%S.%f%z')
+        except ValueError:
+            return cls.strptime(dt, '%Y-%m-%dT%H:%M:%S.%f')
 
     def to_datetime(self):
         return datetime.fromtimestamp(self.timestamp(), tz=self.tzinfo)
