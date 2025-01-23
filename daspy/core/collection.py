@@ -1,6 +1,6 @@
 # Purpose: Module for handling Collection objects.
 # Author: Minzhe Hu
-# Date: 2025.1.11
+# Date: 2025.1.23
 # Email: hmz2018@mail.ustc.edu.cn
 import os
 import warnings
@@ -63,7 +63,7 @@ class Collection(object):
                     sec.gauge_length = None
                 ftime.append(sec.start_time)
                 metadata_list.append((sec.nch, sec.nt, sec.dx, sec.fs,
-                                      sec.gauge_length))
+                                      sec.gauge_length, sec.duration))
 
             if len(set(metadata_list)) > 1:
                 warnings.warn('More than one kind of setting detected.')
@@ -71,6 +71,8 @@ class Collection(object):
             for i, key in enumerate(['nch', 'nt', 'dx', 'fs', 'gauge_length']):
                 if not hasattr(self, key):
                     setattr(self, key, metadata[i])
+                if flength is None:
+                    flength = metadata[-1]
             self.ftime = ftime
         elif meta_from_file:
             i = int(len(self.flist) > 1)
@@ -273,6 +275,16 @@ class Collection(object):
             merge = len(self)
         for i in tqdm(range(0, len(self))):
             f = self[i]
+            if os.path.getsize(f) == 0:
+                for j, method in enumerate(method_list):
+                    if method == 'time_integration':
+                        kwargs_list[j]['c'] = 0
+                    elif method == 'time_differential':
+                        kwargs_list[j]['prepend'] = 0
+                    elif method in ['bandpass', 'bandstop', 'lowpass',
+                                    'highpass', 'lowpass_cheby_2']:
+                        kwargs_list[j]['zi'] = 0
+                continue
             sec = read(f, ftype=self.ftype, **read_kwargs)
             for j, method in enumerate(method_list):
                 if method in ['taper', 'cosine_taper']:

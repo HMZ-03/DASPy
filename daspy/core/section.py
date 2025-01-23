@@ -541,6 +541,7 @@ class Section(object):
         if obj == 'phasepick':
             for phase, pck in kwargs['pick'].items():
                 if len(pck) != 0:
+                    pck = np.array(pck)
                     pck[:, 0] -= self.start_channel
                     kwargs['pick'][phase] = pck
 
