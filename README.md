@@ -1,4 +1,4 @@
-<img src="./website/logo.jpg" height="200" />
+<img src="./website/logo.png" height="200" />
 
 [![Supported Python versions](https://img.shields.io/badge/python-3.9%20|%203.10%20|%203.11%20|%203.12-blue)](https://pypi.org/project/DASPy-toolbox/)
 [![License](https://img.shields.io/pypi/l/daspy-toolbox.svg)](https://opensource.org/license/mit)
