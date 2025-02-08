@@ -1,14 +1,31 @@
-<img src="./website/logo.png" height="200" />
+<div style="display: flex; align-items: flex-start;">
+  <div style="flex: 1;">
+    <img src="https://raw.github.com/hmz-03/daspy/main/website/logo.png" alt="Logo" style="width: 100%; max-width: 400px;">
+  </div>
+  <div style="flex: 1; margin-left: 20px;">
+    <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+      <a href="https://pypi.org/project/DASPy-toolbox/" target="_blank">
+        <img src="https://img.shields.io/badge/python-3.9%20|%203.10%20|%203.11%20|%203.12-blue" alt="Supported Python Versions">
+      </a>
+      <a href="https://opensource.org/license/mit" target="_blank">
+        <img src="https://img.shields.io/pypi/l/daspy-toolbox.svg" alt="License">
+      </a>
+      <a href="https://pypi.org/project/DASPy-toolbox/" target="_blank">
+        <img src="https://img.shields.io/pypi/v/daspy-toolbox.svg" alt="PyPI Versions">
+      </a>
+      <a href="https://doi.org/10.1785/0220240124" target="_blank">
+        <img src="https://img.shields.io/badge/DOI-10.1785/0220240124-blue.svg" alt="DOI">
+      </a>
+      <a href="https://pypi.org/project/DASPy-toolbox/" target="_blank">
+        <img src="https://img.shields.io/pypi/dm/daspy-toolbox.svg?label=pypi" alt="PyPI Downloads">
+      </a>
+      <a href="https://anaconda.org/conda-forge/daspy-toolbox" target="_blank">
+        <img src="https://img.shields.io/conda/dn/conda-forge/daspy-toolbox?label=conda" alt="Conda Downloads">
+      </a>
+    </div>
+  </div>
+</div>
 
-[![Logo](./website/logo.png)](https://github.com/HMZ-03/DASPy)
-
-[![Supported Python versions](https://img.shields.io/badge/python-3.9%20|%203.10%20|%203.11%20|%203.12-blue)](https://pypi.org/project/DASPy-toolbox/)
-[![License](https://img.shields.io/pypi/l/daspy-toolbox.svg)](https://opensource.org/license/mit)
-[![PyPI Version](https://img.shields.io/pypi/v/daspy-toolbox.svg)](https://pypi.org/project/DASPy-toolbox/)
-
-[![DOI](https://img.shields.io/badge/DOI-10.1785/0220240124-blue.svg)](https://doi.org/10.1785/0220240124)
-[![PyPI Downloads](https://img.shields.io/pypi/dm/daspy-toolbox.svg?label=pypi)](https://pypi.org/project/DASPy-toolbox/)
-[![Conda Downloads](https://img.shields.io/conda/dn/conda-forge/daspy-toolbox?label=conda)](https://anaconda.org/conda-forge/daspy-toolbox)
 
 DASPy is an open-source project dedicated to provide a python package for DAS (Distributed Acoustic Sensing) data processing.
 
