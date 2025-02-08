@@ -1,4 +1,4 @@
-<img src="./website/USTC.svg" height="170" />&emsp;<img src="./website/DAMS.png" height="150" />
+<img src="./website/logo.jpg" height="170" />
 
 # DASPy
 
