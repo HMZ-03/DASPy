@@ -1,6 +1,6 @@
 <div style="display: flex; align-items: flex-start;">
-  <div style="flex: 1;">
-    <img src="https://raw.github.com/hmz-03/daspy/main/website/logo.png" alt="Logo" style="width: 100%; max-width: 400px;">
+  <div style="flex: 3;">
+    <img src="https://raw.github.com/hmz-03/daspy/main/website/logo.png" alt="Logo" height="300">
   </div>
   <div style="flex: 1; margin-left: 20px;">
     <div style="display: flex; flex-wrap: wrap; gap: 10px;">
