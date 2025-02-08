@@ -1,4 +1,4 @@
-<img src="./website/logo.jpg" height="170" />
+<img src="./website/logo.jpg" height="300" />
 
 # DASPy
 
