@@ -1,6 +1,6 @@
 # Purpose: Module for handling DASDateTime objects.
 # Author: Minzhe Hu
-# Date: 2025.1.19
+# Date: 2025.2.11
 # Email: hmz2018@mail.ustc.edu.cn
 import time
 from typing import Iterable
@@ -71,13 +71,6 @@ class DASDateTime(datetime):
     @classmethod
     def from_obspy_UTCDateTime(cls, dt):
         return cls.from_datetime(dt.datetime)
-    
-    @classmethod
-    def from_isoformat(cls, dt):
-        try:
-            return cls.strptime(dt, '%Y-%m-%dT%H:%M:%S.%f%z')
-        except ValueError:
-            return cls.strptime(dt, '%Y-%m-%dT%H:%M:%S.%f')
 
     def to_datetime(self):
         return datetime.fromtimestamp(self.timestamp(), tz=self.tzinfo)
@@ -85,3 +78,25 @@ class DASDateTime(datetime):
     def to_obspy_UTCDateTime(self):
         from obspy import UTCDateTime
         return UTCDateTime(UTCDateTime(self.to_datetime()))
+
+    @classmethod
+    def strptime(cls, date_string, format):
+        """
+        string, format -> new datetime parsed from a string
+        (like time.strptime()).
+        """
+        from _strptime import _strptime
+        tt, fraction, gmtoff_fraction = _strptime(date_string, format)
+        tzname, gmtoff = tt[-2:]
+        args = tt[:6] + (fraction,)
+        if gmtoff is not None:
+            tzdelta = timedelta(seconds=gmtoff, microseconds=gmtoff_fraction)
+            if tzname:
+                tz = timezone(tzdelta, tzname)
+            else:
+                tz = timezone(tzdelta)
+            args += (tz,)
+        elif tt[-3] == 0:
+            args += (utc,)
+
+        return cls(*args)
