@@ -517,7 +517,7 @@ class Section(object):
             it will be set to parameter obj.
         """
         if 'data' not in kwargs.keys():
-            if obj == 'waveform' or 'phasepick':
+            if obj == 'waveform' or obj == 'phasepick':
                 data = deepcopy(self.data)
             elif obj == 'spectrum':
                 data, f = self.spectrum(**kwargs_pro)
