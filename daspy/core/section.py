@@ -1,6 +1,6 @@
 # Purpose: Module for handling Section objects.
 # Author: Minzhe Hu
-# Date: 2025.2.25
+# Date: 2025.3.6
 # Email: hmz2018@mail.ustc.edu.cn
 import warnings
 import os
@@ -169,6 +169,10 @@ class Section(object):
     @property
     def distance(self):
         return self.nch * self.dx
+    
+    @property
+    def channel_distance(self):
+        return self.dx * np.arange(self.nch) + self.start_channel
 
     @property
     def end_distance(self):
@@ -497,7 +501,10 @@ class Section(object):
         :param xlog, ylog: bool. If True, set the x-axis' or y-axis' scale as
             log.
         :param xinv, yinv: bool. If True, invert x-axis or y-axis.
-        :param xaxis, yaxis: bool. Show ticks and labels for x-axis or y-axis.
+        :param xlabel, ylabel: bool or str. Whether to plot a label or what
+            label to plot for x-axis or y-axis.
+        :param xticklabels, yticklabels: bool or sequence of str. Whether to
+            plot ticklabels or what ticklabels to plot for x-axis or y-axis.
         :param colorbar: bool, str or Matplotlib.axes.Axes. Bool means plot
             colorbar or not. Str means the location of colorbar. Axes means the
             Axes into which the colorbar will be drawn.
