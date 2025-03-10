@@ -1,6 +1,6 @@
 # Purpose: Several functions for analysis data quality and geometry of channels
 # Author: Minzhe Hu, Zefeng Li
-# Date: 2024.11.18
+# Date: 2025.3.11
 # Email: hmz2018@mail.ustc.edu.cn
 import numpy as np
 from copy import deepcopy
@@ -365,62 +365,36 @@ def turning_points(data, data_type='coordinate', thresh=5, depth_info=False,
         raise ValueError('Data_type should be \'coordinate\' or \'waveform\'.')
 
 
-def _equally_spacing(channels, dist, dx):
-    if len(channels) > 20:
-        return _equally_spacing_2(channels, dist, dx)
-    else:
-        return _equally_spacing_1(channels, dist, dx)
-
-
-def _equally_spacing_1(channels, dist, dx):
-    nch = len(channels)
-    residual = np.inf
-    for i in range(2 ** (nch - 2)):
-        state = bin(i)[2:].rjust(nch - 2, '0')
-        dist_new = [dist[0]]
-        channels_new = [channels[0]]
-        idx = 0
-        for j, s in enumerate(state):
-            if s == '0':
-                dist_new[idx] += dist[j+1]
-            else:
-                dist_new.append(dist[j+1])
-                channels_new.append(channels[j+1])
-                idx += 1
-        res = sum([abs(d - dx) for d in dist_new])    
-        if res < residual:
-            residual = res
-            dist_equal = dist_new
-            channels_equal = channels_new
-    channels_equal.append(channels[-1])
-    return channels_equal, dist_equal
-
-
-def _equally_spacing_2(channels, dist, dx):
-    channels_equal = [channels[0]]
-    dist_equal = []
-    i = 0
-    while i < len(dist):
-        d = dist[i]
-        if d < dx and i < len(dist) - 1:
-            d1 = d + dist[i + 1]
-            while d1 < dx and i < len(dist) - 2:
-                d = d1
-                i += 1
-                d1 += dist[i + 1]
-            if abs(d - dx) <= abs(d1 - dx):
-                channels_equal.append(channels[i + 1])
-                dist_equal.append(d)
-            else:
-                i += 1
-                channels_equal.append(channels[i + 1])
-                dist_equal.append(d1)
+def _equally_spacing(dist, dx):
+    index = [[], []]
+    residual = [0, abs(dist[0]-dx)]
+    for i in range(2, len(dist)+1):
+        res = []
+        for j in range(i):
+            res.append(residual[j] + abs(dx - sum(dist[j:i])))
+        residual.append(min(res))
+        k = np.argmin(res)
+        if k > 0:
+            index.append(index[k] + [k])
         else:
-            channels_equal.append(channels[i + 1])
-            dist_equal.append(d)
-        i += 1
+            index.append(index[k])
+        # print(index, residual)
+    
+    return index[-1]
 
-    return channels_equal, dist_equal
+def channel_spacing(geometry, depth_info=False):
+    nch = len(geometry)
+    dist = np.zeros(nch - 1)
+    for i in range(nch - 1):
+        lon0, lat0 = geometry[i, :2]
+        lon1, lat1 = geometry[i+1, :2]
+        d = Geodesic.WGS84.Inverse(lat0, lon0, lat1, lon1)['s12']
+        if depth_info:
+            dist[i] = np.sqrt(d**2 + (geometry[i+1, 2] - geometry[i, 2]) ** 2)
+        else:
+            dist[i] = d
+
+    return dist
 
 
 def equally_spaced_channels(geometry, dx, depth_info=False, verbose=False):
@@ -446,53 +420,36 @@ def equally_spaced_channels(geometry, dx, depth_info=False, verbose=False):
         channels = geometry[:, 0].astype(int)
         geometry = geometry[:, 1:]
 
-    dist = np.zeros(nch - 1)
-    for i in range(nch - 1):
-        lon0, lat0 = geometry[i, :2]
-        lon1, lat1 = geometry[i+1, :2]
-        d = Geodesic.WGS84.Inverse(lat0, lon0, lat1, lon1)['s12']
-        if depth_info:
-            dist[i] = np.sqrt(d**2 + (geometry[i+1, 2] - geometry[i, 2]) ** 2)
-        else:
-            dist[i] = d
+    dist = channel_spacing(geometry, depth_info=False)
 
-    channels_equal = [channels[0]]
-    dist_equal = []
-    channels_seg = []
-    dist_seg = []
-    flag = False
-    for i in range(1, nch-1):
-        if dist[i-1] + dist[i] <= dx * 1.5:
-            channels_seg.append(channels[i-1])
-            dist_seg.append(dist[i-1])
-        else:
-            if len(channels_seg):
-                channels_seg.extend(channels[i-1:i+1])
-                dist_seg.append(dist[i-1])
-                channels_seg, dist_seg = _equally_spacing(channels_seg,
-                                                          dist_seg, dx)
-                dist_equal.extend(dist_seg)
-                channels_equal.extend(channels_seg[1:])
-                channels_seg = []
-                dist_seg = []
-                flag = False
-            else:
-                if flag:
-                    channels_equal.append(channels[i-1])
-                    dist_equal.append(dist[i-1])
-                else:
-                    flag = True
+    s = 0
+    idx_equal = [0]
+    for i in range(nch-2):
+        if dist[i] > dx * 2:
+            e = i
+            if e == s + 1:
+                idx_equal.append(e)
+            elif e >= s + 2:
+                idx_equal.extend([idx + s for idx in
+                                  _equally_spacing(dist[s:e], dx)])
+                idx_equal.append(e)
+            s = e + 1
+            idx_equal.append(s)
+        elif dist[i] + dist[i+1] > dx * 1.5:
+            e = i + 1
+            if e == s + 1:
+                idx_equal.append(e)
+            elif e >= s + 2:
+                idx_equal.extend([idx + s for idx in
+                                  _equally_spacing(dist[s:e], dx)])
+                idx_equal.append(e)
+            s = e
+    e = nch - 1
+    if e == s + 1:
+        idx_equal.append(e)
+    elif e >= s + 2:
+        idx_equal.extend([idx + s for idx in
+                        _equally_spacing(dist[e:s], dx)])
+        idx_equal.append(e)
 
-    if len(channels_seg):
-        channels_seg.extend(channels[i:i+2])
-        dist_seg.append(dist[i])
-        channels_seg, dist_seg = _equally_spacing(channels_seg, dist_seg, dx)
-        dist_equal.extend(dist_seg)
-        channels_equal.extend(channels_seg[1:])
-    else:
-        channels_equal.extend(channels[-2:])
-        dist_equal.extend(dist[-2:])
-
-    if verbose:
-        return channels_equal, dist_equal
-    return channels_equal
+    return channels[idx_equal]
