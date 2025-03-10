@@ -1,6 +1,6 @@
 # Purpose: Module for handling Section objects.
 # Author: Minzhe Hu
-# Date: 2025.3.6
+# Date: 2025.3.10
 # Email: hmz2018@mail.ustc.edu.cn
 import warnings
 import os
@@ -624,7 +624,7 @@ class Section(object):
         Normalize for each individual channel using Z-score method.
 
         :param method: str. Method for normalization, should be one of 'max',
-            'z-score', or 'one-bit'.
+            'z-score', 'MAD' or 'one-bit'.
         """
         self.data = normalization(self.data, method=method)
         if hasattr(self, 'data_type'):

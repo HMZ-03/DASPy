@@ -1,6 +1,6 @@
 # Purpose: Some preprocess methods
 # Author: Minzhe Hu
-# Date: 2024.10.25
+# Date: 2025.3.10
 # Email: hmz2018@mail.ustc.edu.cn
 import numpy as np
 from scipy.signal import detrend
@@ -29,7 +29,7 @@ def normalization(data, method='z-score', **kwargs):
 
     :param data: numpy.ndarray. Data to normalize.
     :param method: str. Method for normalization, should be one of 'max',
-        'z-score', or 'one-bit'.
+        'z-score', 'MAD' or 'one-bit'.
     :return: Normalized data.
     """
     if data.ndim == 1:
@@ -37,21 +37,21 @@ def normalization(data, method='z-score', **kwargs):
     elif data.ndim != 2:
         raise ValueError("Data should be 1-D or 2-D array")
 
-    if method == 'max':
+    if method.lower() == 'max':
         amp = np.max(abs(data), 1, keepdims=True)
         amp[amp == 0] = amp[amp > 0].min()
         return data / amp
-
-    if method == 'z-score':
+    elif method.lower() == 'z-score':
         mean = np.mean(data, axis=1, keepdims=True)
         std = np.std(data, axis=1, keepdims=True)
         std[std == 0] = std[std > 0].min()
-        if 'p' in kwargs.keys():
-            thresh = np.percentile(std, kwargs['p'])
-            std[std > thresh] = thresh
         return (data - mean) / std
-
-    if method == 'one-bit':
+    elif method.lower() == 'mad':
+        median = np.median(data, axis=1, keepdims=True)
+        mad = np.median(data - median, axis=1, keepdims=True)
+        mad[mad == 0] = mad[mad > 0].min()
+        return (data - median) / mad
+    elif method.lower() == 'one-bit':
         return np.sign(data)
 
 
