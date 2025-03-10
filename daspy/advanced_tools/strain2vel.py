@@ -1,6 +1,6 @@
 # Purpose: Convert strain rate data to velocity
 # Author: Minzhe Hu
-# Date: 2024.6.8
+# Date: 2024.3.10
 # Email: hmz2018@mail.ustc.edu.cn
 import numpy as np
 from numpy.fft import irfft2, ifftshift
@@ -103,7 +103,6 @@ def curvelet_conversion(data, dx, fs, pad=0.3, scale_begin=2, nbscales=None,
     :return: numpy.ndarray. Converted data.
     """
     if turning is not None:
-        print(1)
         data_vel = np.zeros_like(data)
         start_ch = [0, *turning]
         end_ch = [*turning, len(data)]
