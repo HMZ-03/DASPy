@@ -449,7 +449,7 @@ def equally_spaced_channels(geometry, dx, depth_info=False, verbose=False):
         idx_equal.append(e)
     elif e >= s + 2:
         idx_equal.extend([idx + s for idx in
-                        _equally_spacing(dist[e:s], dx)])
+                        _equally_spacing(dist[s:e], dx)])
         idx_equal.append(e)
 
     return channels[idx_equal]
