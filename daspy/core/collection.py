@@ -1,6 +1,6 @@
 # Purpose: Module for handling Collection objects.
 # Author: Minzhe Hu
-# Date: 2025.1.23
+# Date: 2025.3.30
 # Email: hmz2018@mail.ustc.edu.cn
 import os
 import warnings
@@ -18,7 +18,8 @@ cascade_method = ['time_integration', 'time_differential', 'downsampling',
 
 class Collection(object):
     def __init__(self, fpath, ftype=None, flength=None, meta_from_file=True,
-                 timeinfo_format=None, timeinfo_from_basename=True, **kwargs):
+                 timeinfo_slice=slice(None), timeinfo_format=None, 
+                 timeinfo_tz=None, timeinfo_from_basename=True, **kwargs):
         """
         :param fpath: str or Sequence of str. File path(s) containing data.
         :param ftype: None or str. None for automatic detection, or 'pkl',
@@ -28,7 +29,11 @@ class Collection(object):
             and gauge_length. True for extracting dt, dx, fs and gauge_length
             from first 2 file. 'all' for exracting and checking these metadata
             from all file.
-        :param timeinfo_format: str or (slice, str). Format for extracting start
+        :param timeinfo_slice: slice. Slice for extracting start time from file
+            name.
+        :param timeinfo_format: str. Format for extracting start time from file
+            name.
+        :param timeinfo_tz: datetime.timezone. Time zone for extracting start
             time from file name.
         :param timeinfo_from_basename: bool. If True, timeinfo_format will use
             DASDateTime.strptime to basename of fpath.
@@ -90,17 +95,22 @@ class Collection(object):
                     setattr(self, key, metadata[i])
 
         if not hasattr(self, 'ftime'):
-            if isinstance(timeinfo_format, tuple):
-                timeinfo_slice, timeinfo_format = timeinfo_format
-            else:
-                timeinfo_slice = slice(None)
             if timeinfo_from_basename:
-                self.ftime = [DASDateTime.strptime(
-                    os.path.basename(f)[timeinfo_slice], timeinfo_format)
-                    for f in self.flist]
+                flist_use = [os.path.basename(f) for f in self.flist]
             else:
+                flist_use = self.flist
+            if timeinfo_tz is None:
                 self.ftime = [DASDateTime.strptime(f[timeinfo_slice],
-                    timeinfo_format) for f in self.flist]
+                    timeinfo_format) for f in flist_use]
+            else:
+                if '%z' in timeinfo_format.lower():
+                    self.ftime = [DASDateTime.strptime(f[timeinfo_slice],
+                        timeinfo_format).astimezone(timeinfo_tz) for f in
+                        flist_use]
+                else:
+                    self.ftime = [DASDateTime.strptime(f[timeinfo_slice],
+                        timeinfo_format).replace(tzinfo=timeinfo_tz) for f in
+                        flist_use]
 
         self._sort()
         if flength is None:
@@ -311,3 +321,15 @@ class Collection(object):
             else:
                 sec_merge += sec
         sec_merge.save(filepath)
+
+    def set_tz(tz=None):
+        """
+        Set timezone for all files in the collection.
+
+        :param tz: str. Timezone string.
+        """
+        if tz is None:
+            tz = 'UTC'
+        for i in range(len(self)):
+            self.ftime[i] = self.ftime[i].replace(tzinfo=tz)
+        return None
