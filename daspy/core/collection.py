@@ -321,15 +321,3 @@ class Collection(object):
             else:
                 sec_merge += sec
         sec_merge.save(filepath)
-
-    def set_tz(tz=None):
-        """
-        Set timezone for all files in the collection.
-
-        :param tz: str. Timezone string.
-        """
-        if tz is None:
-            tz = 'UTC'
-        for i in range(len(self)):
-            self.ftime[i] = self.ftime[i].replace(tzinfo=tz)
-        return None
