@@ -1,6 +1,6 @@
 # Purpose: Module for handling DASDateTime objects.
 # Author: Minzhe Hu
-# Date: 2025.2.11
+# Date: 2025.3.29
 # Email: hmz2018@mail.ustc.edu.cn
 import time
 from typing import Iterable
@@ -48,10 +48,10 @@ class DASDateTime(datetime):
     def __gt__(self, other):
         return datetime.__gt__(*self._unify_tz(other))
 
-    def _unify_tz(self, other):
-        if self.tzinfo and not other.tzinfo:
+    def _unify_tz(self, other: datetime):
+        if self.tzinfo and (not other.tzinfo):
             return self, other.replace(tzinfo=self.tzinfo)
-        elif not self.tzinfo and other.tzinfo:
+        elif (not self.tzinfo) and other.tzinfo:
             return self.replace(tzinfo=other.tzinfo), other
         return self, other
 
