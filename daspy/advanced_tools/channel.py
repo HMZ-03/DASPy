@@ -1,6 +1,6 @@
 # Purpose: Several functions for analysis data quality and geometry of channels
 # Author: Minzhe Hu, Zefeng Li
-# Date: 2025.3.11
+# Date: 2025.3.31
 # Email: hmz2018@mail.ustc.edu.cn
 import numpy as np
 from copy import deepcopy
@@ -382,6 +382,7 @@ def _equally_spacing(dist, dx):
     
     return index[-1]
 
+
 def channel_spacing(geometry, depth_info=False):
     nch = len(geometry)
     dist = np.zeros(nch - 1)
@@ -395,6 +396,31 @@ def channel_spacing(geometry, depth_info=False):
             dist[i] = d
 
     return dist
+
+
+def closest_channel_to_point(geometry, point):
+    """
+    Find the channel number closest to a given point.
+
+    :param geometry: numpy.ndarray. It needs to consist of longitude, latitude
+        or channel number, longitude, latitude.
+    :param point: tuple or numpy.ndarray. A tuple consisting of latitude and longitude.
+    :return: int. The channel number closest to the given point.
+    """
+    if geometry.shape[1] == 2:
+        channels = np.arange(len(geometry)).astype(int)
+    else:
+        geometry = geometry[geometry[:, 0].argsort()]
+        channels = geometry[:, 0].astype(int)
+        geometry = geometry[:, 1:]
+
+    lat, lon = point
+    distances = np.array([
+        Geodesic.WGS84.Inverse(lat, lon, geometry[i, 0], geometry[i, 1])['s12']
+        for i in range(len(geometry))
+    ])
+    closest_index = np.argmin(distances)
+    return int(channels[closest_index])
 
 
 def equally_spaced_channels(geometry, dx, depth_info=False, verbose=False):
