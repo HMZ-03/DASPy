@@ -398,13 +398,16 @@ def channel_spacing(geometry, depth_info=False):
     return dist
 
 
-def closest_channel_to_point(geometry, point):
+def closest_channel_to_point(geometry, point, verbose=False):
     """
     Find the channel number closest to a given point.
 
     :param geometry: numpy.ndarray. It needs to consist of longitude, latitude
         or channel number, longitude, latitude.
-    :param point: tuple or numpy.ndarray. A tuple consisting of latitude and longitude.
+    :param point: tuple or numpy.ndarray. A tuple consisting of longitude and
+        latitude.
+    :param verbose: bool. Return the channel and the distance to the closest
+        channel if True.
     :return: int. The channel number closest to the given point.
     """
     if geometry.shape[1] == 2:
@@ -414,12 +417,14 @@ def closest_channel_to_point(geometry, point):
         channels = geometry[:, 0].astype(int)
         geometry = geometry[:, 1:]
 
-    lat, lon = point
+    lon, lat = point
     distances = np.array([
-        Geodesic.WGS84.Inverse(lat, lon, geometry[i, 0], geometry[i, 1])['s12']
-        for i in range(len(geometry))
+        Geodesic.WGS84.Inverse(lat, lon, geo[1], geo[0])['s12']
+        for geo in geometry
     ])
     closest_index = np.argmin(distances)
+    if verbose:
+        return int(channels[closest_index]), min(distances)
     return int(channels[closest_index])
 
 
