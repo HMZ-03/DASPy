@@ -398,34 +398,62 @@ def channel_spacing(geometry, depth_info=False):
     return dist
 
 
-def closest_channel_to_point(geometry, point, verbose=False):
+def distance_to_channels(geometry, points):
+    """
+    Calculate the distance from a point to each channel.
+
+    :param geometry: numpy.ndarray. It needs to consist of two columns (
+        longitude, latitude), three columns (longitude, latitude and depth).
+    :param points: numpy.ndarray. A array consisting of longitude and
+        latitude or longitude, latitude and depth.
+    :return: numpy.ndarray. The distance from the given point to each channel.
+    """
+    if geometry.shape[1] == 3:
+        depth_info = True
+    else:
+        depth_info = False
+
+    nch = len(geometry)
+    points = np.array(points)
+    if points.ndim == 1:
+        points = points.reshape(1, -1)
+    npt = len(points)
+    dist = np.zeros((npt, nch))
+    for i, pt in enumerate(points):
+        for j, geo in enumerate(geometry):
+            d = Geodesic.WGS84.Inverse(pt[1], pt[0], geo[1], geo[0])['s12']
+            if depth_info:
+                dist[i, j] = np.sqrt(d**2 + (pt[2] - geo[2]) ** 2)
+            else:
+                dist[i, j] = d
+    return dist
+
+
+def closest_channel_to_point(geometry, points, verbose=False):
     """
     Find the channel number closest to a given point.
 
     :param geometry: numpy.ndarray. It needs to consist of longitude, latitude
-        or channel number, longitude, latitude.
-    :param point: tuple or numpy.ndarray. A tuple consisting of longitude and
-        latitude.
+        (and depth) or channel number, longitude, latitude (and depth).
+    :param points: numpy.ndarray. A tuple consisting of longitude and
+        latitude (and depth).
     :param verbose: bool. Return the channel and the distance to the closest
         channel if True.
     :return: int. The channel number closest to the given point.
     """
-    if geometry.shape[1] == 2:
-        channels = np.arange(len(geometry)).astype(int)
+    nch = len(geometry)
+    if points.shape[1] == geometry.shape[1]:
+        channels = np.arange(nch).astype(int)
     else:
         geometry = geometry[geometry[:, 0].argsort()]
         channels = geometry[:, 0].astype(int)
         geometry = geometry[:, 1:]
 
-    lon, lat = point
-    distances = np.array([
-        Geodesic.WGS84.Inverse(lat, lon, geo[1], geo[0])['s12']
-        for geo in geometry
-    ])
-    closest_index = np.argmin(distances)
+    dist = distance_to_channels(points, geometry)
+    closest_index = np.argmin(dist, axis=1)
     if verbose:
-        return int(channels[closest_index]), min(distances)
-    return int(channels[closest_index])
+        return channels[closest_index], np.min(dist, axis=1)
+    return channels[closest_index]
 
 
 def equally_spaced_channels(geometry, dx, depth_info=False, verbose=False):
