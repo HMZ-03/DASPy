@@ -12,8 +12,6 @@ local_tz = timezone(timedelta(seconds=-time.altzone))
 
 
 class DASDateTime(datetime):
-
-
     def __add__(self, other):
         if isinstance(other, Iterable):
             out = []
