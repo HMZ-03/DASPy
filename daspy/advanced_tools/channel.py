@@ -365,24 +365,6 @@ def turning_points(data, data_type='coordinate', thresh=5, depth_info=False,
         raise ValueError('Data_type should be \'coordinate\' or \'waveform\'.')
 
 
-def _equally_spacing(dist, dx):
-    index = [[], []]
-    residual = [0, abs(dist[0]-dx)]
-    for i in range(2, len(dist)+1):
-        res = []
-        for j in range(i):
-            res.append(residual[j] + abs(dx - sum(dist[j:i])))
-        residual.append(min(res))
-        k = np.argmin(res)
-        if k > 0:
-            index.append(index[k] + [k])
-        else:
-            index.append(index[k])
-        # print(index, residual)
-    
-    return index[-1]
-
-
 def channel_spacing(geometry, depth_info=False):
     nch = len(geometry)
     dist = np.zeros(nch - 1)
@@ -454,6 +436,23 @@ def closest_channel_to_point(geometry, points, verbose=False):
     if verbose:
         return channels[closest_index], np.min(dist, axis=1)
     return channels[closest_index]
+
+
+def _equally_spacing(dist, dx):
+    index = [[], []]
+    residual = [0, abs(dist[0]-dx)]
+    for i in range(2, len(dist)+1):
+        res = []
+        for j in range(i):
+            res.append(residual[j] + abs(dx - sum(dist[j:i])))
+        residual.append(min(res))
+        k = np.argmin(res)
+        if k > 0:
+            index.append(index[k] + [k])
+        else:
+            index.append(index[k])
+    
+    return index[-1]
 
 
 def equally_spaced_channels(geometry, dx, depth_info=False, verbose=False):
