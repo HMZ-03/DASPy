@@ -1,6 +1,6 @@
 # Purpose: Module for handling Section objects.
 # Author: Minzhe Hu
-# Date: 2025.4.2
+# Date: 2025.4.20
 # Email: hmz2018@mail.ustc.edu.cn
 import warnings
 import os
@@ -455,6 +455,33 @@ class Section(object):
             write(self, fname, ftype=ftype, raw_fname=self.source)
         else:
             write(self, fname, ftype=ftype)
+
+        return self
+
+    def concat(self, other, reverse=True):
+        """
+        Concatenate two sections in space.
+
+        :param other: Section. Another section to concatenate.
+        :param reverse: bool. If True, the start channels of the two are
+            connected, and the channel numbers of the original Section instances
+            becomes a negative number.
+        """
+        if isinstance(other, Section):
+            assert self.fs == other.fs, 'The sampling rate of the two ' \
+                'sections should be the same.'
+            assert self.dx == other.dx, 'The channel interval of the two ' \
+                'sections should be the same.'
+            assert self.duration == other.duration, 'The duration of the two ' \
+                'sections should be the same.'
+            if reverse:
+                self.start_channel = -self.end_channel
+                self.start_distance = -self.end_distance
+                self.data = np.vstack((self.data[::-1], other.data))
+            else:
+                self.data = np.vstack((self.data, other.data))
+        else:
+            raise TypeError('The input should be Section.')
 
         return self
 
