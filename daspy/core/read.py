@@ -58,6 +58,7 @@ def read(fname=None, output_type='section', ftype=None, headonly=False,
     if output_type.lower() == 'section':
         metadata['source'] = Path(fname)
         metadata['source_type'] = ftype
+        data[np.isnan(data)] = 0
         return Section(data.astype(float), **metadata)
     elif output_type.lower() == 'array':
         return data, metadata
@@ -340,7 +341,7 @@ def _read_h5(fname, headonly=False, **kwargs):
             else:
                 if len(dataset.shape) == 3: # Febus A1-R
                     data = dataset[:, :, ch1 - start_channel:ch2 - start_channel
-                                   :dch].T.reshape(((ch2 - ch1) // dch, -1))
+                                   :dch].reshape((-1, (ch2 - ch1) // dch)).T
                 elif len(dataset.shape) == 2: # Febus A1
                     data = dataset[:, ch1 - start_channel:ch2 - start_channel:
                                    dch].T
