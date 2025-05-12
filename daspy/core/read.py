@@ -10,6 +10,7 @@ import pickle
 import numpy as np
 import h5py
 import segyio
+from typing import Union
 from pathlib import Path
 from nptdms import TdmsFile
 from daspy.core.section import Section
@@ -17,7 +18,7 @@ from daspy.core.dasdatetime import DASDateTime, utc
 
 
 def read(fname=None, output_type='section', ftype=None, headonly=False,
-         **kwargs):
+         **kwargs) -> Union[Section, tuple]:
     """
     Read a .pkl/.pickle, .tdms, .h5/.hdf5, .segy/.sgy file.
 
