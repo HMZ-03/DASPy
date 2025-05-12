@@ -164,7 +164,7 @@ class Section(object):
 
     @property
     def channel_number(self):
-        return np.arange(self.nch) + self.start_channel
+        return np.arange(self.nch).astype(int) + self.start_channel
 
     @property
     def end_channel(self):
