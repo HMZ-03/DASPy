@@ -163,6 +163,10 @@ class Section(object):
         return self.data.shape[1]
 
     @property
+    def channel_number(self):
+        return np.arange(self.nch) + self.start_channel
+
+    @property
     def end_channel(self):
         return self.start_channel + self.nch - 1
 
@@ -172,7 +176,7 @@ class Section(object):
     
     @property
     def channel_distance(self):
-        return self.dx * np.arange(self.nch) + self.start_channel
+        return self.dx * np.arange(self.nch) + self.start_distance
 
     @property
     def end_distance(self):
