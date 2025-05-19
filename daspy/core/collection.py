@@ -1,6 +1,6 @@
 # Purpose: Module for handling Collection objects.
 # Author: Minzhe Hu
-# Date: 2025.3.30
+# Date: 2025.5.19
 # Email: hmz2018@mail.ustc.edu.cn
 import os
 import warnings
@@ -11,10 +11,6 @@ from glob import glob
 from daspy.core.read import read
 from daspy.core.dasdatetime import DASDateTime
 
-
-cascade_method = ['time_integration', 'time_differential', 'downsampling',
-                  'bandpass', 'bandstop', 'lowpass', 'highpass',
-                  'lowpass_cheby_2']
 
 class Collection(object):
     def __init__(self, fpath, ftype=None, flength=None, meta_from_file=True,
@@ -265,6 +261,16 @@ class Collection(object):
                 kwargs_list.append(kwargs)
         return method_list, kwargs_list
 
+    def _kwargs_initialization(method_list, kwargs_list):
+        for j, method in enumerate(method_list):
+            if method == 'time_integration':
+                kwargs_list[j]['c'] = 0
+            elif method == 'time_differential':
+                kwargs_list[j]['prepend'] = 0
+            elif method in ['bandpass', 'bandstop', 'lowpass',
+                            'highpass', 'lowpass_cheby_2']:
+                kwargs_list[j]['zi'] = 0
+
     def process(self, operations, savepath='./processed', merge=1,
                 suffix='_pro', ftype=None, **read_kwargs):
         """
@@ -283,25 +289,25 @@ class Collection(object):
         method_list, kwargs_list = self._optimize_for_continuity(operations)
         if merge == 'all' or merge > len(self):
             merge = len(self)
-        for i in tqdm(range(0, len(self))):
+        for i in tqdm(range(len(self))):
             f = self[i]
             if os.path.getsize(f) == 0:
-                for j, method in enumerate(method_list):
-                    if method == 'time_integration':
-                        kwargs_list[j]['c'] = 0
-                    elif method == 'time_differential':
-                        kwargs_list[j]['prepend'] = 0
-                    elif method in ['bandpass', 'bandstop', 'lowpass',
-                                    'highpass', 'lowpass_cheby_2']:
-                        kwargs_list[j]['zi'] = 0
+                self._kwargs_initialization(method_list, kwargs_list)
                 continue
-            sec = read(f, ftype=self.ftype, **read_kwargs)
+            try:
+                sec = read(f, ftype=self.ftype, **read_kwargs)
+            except Exception as e:
+                warnings.warn(f'Error reading {f}: {e}')
+                self._kwargs_initialization(method_list, kwargs_list)
+                continue
             for j, method in enumerate(method_list):
                 if method in ['taper', 'cosine_taper']:
-                    if not ((i==0 and kwargs_list[j] != 'right') or
-                             (i == len(self) - 1 and kwargs_list[j] != 'left')):
+                    if not ((i==0 and kwargs_list[j]['side'] != 'right') or
+                             (i == len(self) - 1 and kwargs_list[j]['side'] !=
+                              'left')):
                         continue
-                out = eval(f'sec.{method}')(**kwargs_list[j])
+                out = getattr(sec, method)(**kwargs_list[j])
+                # out = eval(f'sec.{method}')(**kwargs_list[j])
                 if method == 'time_integration':
                     kwargs_list[j]['c'] = sec.data[:, -1]
                 elif method == 'time_differential':
@@ -321,3 +327,30 @@ class Collection(object):
             else:
                 sec_merge += sec
         sec_merge.save(filepath)
+
+# Dynamically add methods for cascade_methods
+def _create_cascade_method(method_name):
+    def cascade_method(self, savepath='./processed', merge=1,
+                        suffix=f'_{method_name}', ftype=None, **kwargs):
+        """
+        Automatically generated method for {method_name}.
+        Applies the {method_name} operation to the data and saves the result.
+
+        :param savepath: str. Path to save processed files.
+        :param merge: int or str. int for merge several processed files into 1.
+            'all' for merge all files.
+        :param suffix: str. Suffix for processed files.
+        :param ftype: None or str. None for automatic detection, or 'pkl',
+            'pickle', 'tdms', 'h5', 'hdf5', 'segy', 'sgy', 'npy'.
+        :param kwargs: dict. Parameters for the {method_name} operation.
+        """
+        operations = [[method_name, kwargs]]
+        self.process(operations, savepath=savepath, merge=merge,
+                        suffix=suffix, ftype=ftype)
+    return cascade_method
+
+
+for method in ['time_integration', 'time_differential', 'downsampling',
+               'bandpass', 'bandstop', 'lowpass', 'highpass',
+               'lowpass_cheby_2']:
+    setattr(Collection, method, _create_cascade_method(method))

@@ -1,6 +1,6 @@
 # Purpose: Plot data
 # Author: Minzhe Hu
-# Date: 2025.1.6
+# Date: 2025.5.15
 # Email: hmz2018@mail.ustc.edu.cn
 import numpy as np
 import matplotlib.pyplot as plt
@@ -9,11 +9,11 @@ from collections.abc import Sequence
 
 def plot(data: np.ndarray, dx=None, fs=None, ax=None, obj='waveform', dpi=300,
          title=None, transpose=False, t0=0, x0=0, pick=None, f=None, k=None,
-         t=None, c=None, cmap=None, vmin=None, vmax=None, dB=False,
-         xmode='distance', tmode='time', xlim=None, ylim=None, xlog=False,
-         ylog=False, xinv=False, yinv=False, xlabel=True, ylabel=True,
-         xticklabels=True, yticklabels=True, colorbar=True, colorbar_label=None,
-         savefig=None):
+         t=None, c=None, cmap=None, vmin=None, vmin_per=None, vmax=None,
+         vmax_per=None, dB=False, xmode='distance', tmode='time', xlim=None,
+         ylim=None, xlog=False, ylog=False, xinv=False, yinv=False, xlabel=True,
+         ylabel=True, xticklabels=True, yticklabels=True, colorbar=True,
+         colorbar_label=None, savefig=None):
     """
     Plot several types of 2-D seismological data.
 
@@ -40,6 +40,8 @@ def plot(data: np.ndarray, dx=None, fs=None, ax=None, obj='waveform', dpi=300,
     :param cmap: str or Colormap. The Colormap instance or registered colormap
         name used to map scalar data to colors.
     :param vmin, vmax: Define the data range that the colormap covers.
+    :param vmin_per, vmax_per: float. Define the data range that the colormap
+        covers by percentile.
     :param dB: bool. Transfer data unit to dB and take 1 as the reference value.
     :param xmode: str. 'distance' or 'channel'.
     :param tmode: str. 'time' or 'sampling'.
@@ -67,7 +69,9 @@ def plot(data: np.ndarray, dx=None, fs=None, ax=None, obj='waveform', dpi=300,
 
     if obj in ['waveform', 'phasepick']:
         cmap = 'RdBu' if cmap is None else cmap
-        vmax = np.percentile(abs(data), 80) if vmax is None else vmax
+        if vmax is None:
+            vmax_per = 80 if vmax_per is None else vmax_per
+            vmax = np.percentile(data, vmax_per)
         vmin = -vmax if vmin is None else vmin
         origin = 'upper'
         if fs is None or tmode == 'sampling':
@@ -103,8 +107,14 @@ def plot(data: np.ndarray, dx=None, fs=None, ax=None, obj='waveform', dpi=300,
         if dB:
             data = 20 * np.log10(data)
         cmap = 'jet' if cmap is None else cmap
-        vmax = np.percentile(abs(data), 80) if vmax is None else vmax
-        vmin = np.percentile(abs(data), 20) if vmin is None else vmin
+
+        if vmax is None:
+            vmax_per = 80 if vmax_per is None else vmax_per
+            vmax = np.percentile(data, vmax_per)
+        if vmin is None:
+            vmin_per = 20 if vmin_per is None else vmin_per
+            vmin = np.percentile(data, vmin_per)
+
         if obj == 'spectrum':
             origin = 'lower'
             if dx is None or xmode.lower() == 'channel':

@@ -1,6 +1,6 @@
 # Purpose: Module for handling Section objects.
 # Author: Minzhe Hu
-# Date: 2025.4.20
+# Date: 2025.5.15
 # Email: hmz2018@mail.ustc.edu.cn
 import warnings
 import os
@@ -526,6 +526,8 @@ class Section(object):
         :param cmap: str or Colormap. The Colormap instance or registered
             colormap name used to map scalar data to colors.
         :param vmin, vmax: Define the data range that the colormap covers.
+        :param vmin_per, vmax_per: float. Define the data range that the
+            colormap covers by percentile.
         :param xlim, ylim: Set the x-axis and y-axis view limits.
         :param dB: bool. Transfer data unit to dB and take 1 as the reference
             value.
