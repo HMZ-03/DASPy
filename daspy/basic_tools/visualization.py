@@ -1,6 +1,6 @@
 # Purpose: Plot data
 # Author: Minzhe Hu
-# Date: 2025.5.15
+# Date: 2025.5.20
 # Email: hmz2018@mail.ustc.edu.cn
 import numpy as np
 import matplotlib.pyplot as plt
@@ -102,7 +102,7 @@ def plot(data: np.ndarray, dx=None, fs=None, ax=None, obj='waveform', dpi=300,
                             c=pick_color[phase])
 
     elif obj in ['spectrum', 'spectrogram', 'fk', 'dispersion']:
-        if isinstance(data[0,0], (complex, np.complex64)):
+        if np.iscomplex(data).any():
             data = abs(data)
         if dB:
             data = 20 * np.log10(data)
