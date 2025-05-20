@@ -1,6 +1,6 @@
 # Purpose: Module for handling Collection objects.
 # Author: Minzhe Hu
-# Date: 2025.5.19
+# Date: 2025.5.20
 # Email: hmz2018@mail.ustc.edu.cn
 import os
 import warnings
@@ -307,7 +307,6 @@ class Collection(object):
                               'left')):
                         continue
                 out = getattr(sec, method)(**kwargs_list[j])
-                # out = eval(f'sec.{method}')(**kwargs_list[j])
                 if method == 'time_integration':
                     kwargs_list[j]['c'] = sec.data[:, -1]
                 elif method == 'time_differential':
@@ -316,7 +315,7 @@ class Collection(object):
                                 'lowpass_cheby_2']:
                     kwargs_list[j]['zi'] = out
             
-            if i % merge == 0: 
+            if i % merge == 0:
                 if i != 0:
                     sec_merge.save(filepath)
                 sec_merge = sec
@@ -345,8 +344,8 @@ def _create_cascade_method(method_name):
         :param kwargs: dict. Parameters for the {method_name} operation.
         """
         operations = [[method_name, kwargs]]
-        self.process(operations, savepath=savepath, merge=merge,
-                        suffix=suffix, ftype=ftype)
+        self.process(operations, savepath=savepath, merge=merge, suffix=suffix,
+                     ftype=ftype)
     return cascade_method
 
 
