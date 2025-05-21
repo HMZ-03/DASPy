@@ -1,6 +1,6 @@
 # Purpose: Some preprocess methods
 # Author: Minzhe Hu
-# Date: 2025.3.10
+# Date: 2025.5.21
 # Email: hmz2018@mail.ustc.edu.cn
 import numpy as np
 from scipy.signal import detrend
@@ -181,7 +181,7 @@ def trimming(data, dx=None, fs=None, xmin=0, xmax=None, tmin=0, tmax=None,
         tmin = round(tmin * fs)
         tmax = (round(tmax * fs), nt)[tmax is None]
 
-    return data[xmin:xmax, tmin:tmax]
+    return data[xmin:xmax, tmin:tmax].copy()
 
 
 def padding(data, dn, reverse=False):
