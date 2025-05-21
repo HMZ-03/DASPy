@@ -335,7 +335,8 @@ class Collection(object):
 # Dynamically add methods for cascade_methods
 def _create_cascade_method(method_name):
     def cascade_method(self, savepath='./processed', merge=1,
-                        suffix=f'_{method_name}', ftype=None, **kwargs):
+                       suffix=f'_{method_name}', ftype=None, dtype=None,
+                       **kwargs):
         """
         Automatically generated method for {method_name}.
         Applies the {method_name} operation to the data and saves the result.
@@ -347,10 +348,11 @@ def _create_cascade_method(method_name):
         :param ftype: None or str. None for automatic detection, or 'pkl',
             'pickle', 'tdms', 'h5', 'hdf5', 'segy', 'sgy', 'npy'.
         :param kwargs: dict. Parameters for the {method_name} operation.
+        :param dtype: str. The data type of the saved data.
         """
         operations = [[method_name, kwargs]]
         self.process(operations, savepath=savepath, merge=merge, suffix=suffix,
-                     ftype=ftype)
+                     ftype=ftype, dtype=dtype)
     return cascade_method
 
 
