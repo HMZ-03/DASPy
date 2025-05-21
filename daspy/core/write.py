@@ -1,6 +1,6 @@
 # Purpose: Module for writing DAS data.
 # Author: Minzhe Hu
-# Date: 2024.11.20
+# Date: 2025.5.21
 # Email: hmz2018@mail.ustc.edu.cn
 import os
 import warnings
@@ -175,6 +175,12 @@ def _write_h5(sec, fname, raw_fname=None):
                 if hasattr(sec, 'gauge_length'):
                     _update_h5_dataset(h5_file, '/', 'GaugeLength',
                                        sec.gauge_length)
+            elif len(h5_file.keys()) == 3:
+                _update_h5_dataset(h5_file, '/', 'data', sec.data)
+                _update_h5_dataset(h5_file, '/', 'x_axis',
+                    sec.start_distance + np.arange(sec.nch) * sec.dx)
+                _update_h5_dataset(h5_file, '/', 't_axis',
+                                   sec.start_time + np.arange(sec.nt) * sec.dt)
             elif group == 'Acquisition':
                 h5_file['Acquisition'].attrs['NumberOfLoci'] = sec.nch
                 _update_h5_dataset(h5_file, 'Acquisition/Raw[0]/', 'RawData',

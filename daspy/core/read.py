@@ -1,6 +1,6 @@
 # Purpose: Module for reading DAS data.
 # Author: Minzhe Hu
-# Date: 2024.11.20
+# Date: 2025.5.21
 # Email: hmz2018@mail.ustc.edu.cn
 # Partially modified from
 # https://github.com/RobbinLuo/das-toolkit/blob/main/DasTools/DasPrep.py
@@ -18,7 +18,7 @@ from daspy.core.dasdatetime import DASDateTime, utc
 
 
 def read(fname=None, output_type='section', ftype=None, headonly=False,
-         **kwargs) -> Union[Section, tuple]:
+         dtype=None, **kwargs) -> Union[Section, tuple]:
     """
     Read a .pkl/.pickle, .tdms, .h5/.hdf5, .segy/.sgy file.
 
@@ -35,6 +35,7 @@ def read(fname=None, output_type='section', ftype=None, headonly=False,
     :param ch1: int. The first channel required.
     :param ch2: int. The last channel required (not included).
     :param dch: int. Channel step.
+    :param dtype: str. The data type of the returned data.
     :return: An instance of daspy.Section, or numpy.array for data and a
         dictionary for metadata.
     """
@@ -56,11 +57,13 @@ def read(fname=None, output_type='section', ftype=None, headonly=False,
             ftype = ftype.replace(*rtp)
         data, metadata = fun_map[ftype](fname, headonly=headonly, **kwargs)
 
+    if dtype is not None:
+        data = data.astype(dtype)
     if output_type.lower() == 'section':
         metadata['source'] = Path(fname)
         metadata['source_type'] = ftype
         data[np.isnan(data)] = 0
-        return Section(data.astype(float), **metadata)
+        return Section(data, **metadata)
     elif output_type.lower() == 'array':
         return data, metadata
 
@@ -186,6 +189,22 @@ def _read_h5(fname, headonly=False, **kwargs):
                         'dx': dx * dch, 'start_channel': ch1,
                         'start_distance': ch1 * dx,
                         'gauge_length': h5_file.get('GaugeLength')[()]}
+        elif len(h5_file.keys()) == 3: # OpataSense
+            nch = h5_file['data'].shape[1]
+            ch1 = kwargs.pop('ch1', 0)
+            ch2 = kwargs.pop('ch2', nch)
+            dch = kwargs.pop('dch', 1)
+            if headonly:
+                data = np.zeros_like(h5_file['data'])
+            else:
+                data = h5_file['data'][ch1:ch2:dch, :]
+            dx = (h5_file['x_axis'][-1] - h5_file['x_axis'][0]) / \
+                (len(h5_file['x_axis']) - 1)
+            fs = (len(h5_file['t_axis']) - 1) / (h5_file['t_axis'][-1] -
+                                                 h5_file['t_axis'][0])
+            metadata = {'dx': dx, 'fs': fs, 'start_channel': ch1,
+                        'start_distance': h5_file['x_axis'][0] + dx * ch1,
+                        'start_time': h5_file['t_axis'][0]}
         elif set(h5_file.keys()) == {'Mapping', 'Acquisition'}: # Silixa/iDAS
             nch = h5_file['Acquisition/Raw[0]'].attrs['NumberOfLoci']
             ch1 = kwargs.pop('ch1', 0)
@@ -276,7 +295,7 @@ def _read_h5(fname, headonly=False, **kwargs):
             ch2 = kwargs.pop('ch2', nch)
             dch = kwargs.pop('dch', 1)
             if headonly:
-                data = np.zeros_like(h5_file['raw_data'])
+                data = np.zeros_like(h5_file['data'])
             else:
                 data = h5_file['data'][ch1:ch2:dch, :]
             attr = h5_file['data'].attrs
