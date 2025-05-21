@@ -145,14 +145,14 @@ def downsampling(data, xint=None, tint=None, stack=True, lowpass_filter=True):
         if stack:
             data_ds = stacking(data, xint)
         else:
-            data_ds = data_ds[::xint]
+            data_ds = data_ds[::xint].copy()
     if tint and tint > 1:
         if lowpass_filter:
             data_ds = lowpass_cheby_2(data_ds, 1, 1 / 2 / tint)
         if len(data_ds.shape) == 1:
-            data_ds = data_ds[::tint]
+            data_ds = data_ds[::tint].copy()
         else:
-            data_ds = data_ds[:, ::tint]
+            data_ds = data_ds[:, ::tint].copy()
     return data_ds
 
 

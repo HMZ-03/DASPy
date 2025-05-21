@@ -1,8 +1,9 @@
 # Purpose: Module for handling Collection objects.
 # Author: Minzhe Hu
-# Date: 2025.5.20
+# Date: 2025.5.21
 # Email: hmz2018@mail.ustc.edu.cn
 import os
+import gc
 import warnings
 import numpy as np
 from copy import deepcopy
@@ -308,9 +309,9 @@ class Collection(object):
                         continue
                 out = getattr(sec, method)(**kwargs_list[j])
                 if method == 'time_integration':
-                    kwargs_list[j]['c'] = sec.data[:, -1]
+                    kwargs_list[j]['c'] = sec.data[:, -1].copy()
                 elif method == 'time_differential':
-                    kwargs_list[j]['prepend'] = sec.data[:, -1]
+                    kwargs_list[j]['prepend'] = sec.data[:, -1].copy()
                 elif method in ['bandpass', 'bandstop', 'lowpass', 'highpass',
                                 'lowpass_cheby_2']:
                     kwargs_list[j]['zi'] = out
@@ -325,6 +326,8 @@ class Collection(object):
                 filepath = os.path.join(savepath, f0+suffix+f1)
             else:
                 sec_merge += sec
+            del sec
+            gc.collect()
         sec_merge.save(filepath)
 
 # Dynamically add methods for cascade_methods
