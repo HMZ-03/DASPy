@@ -285,7 +285,7 @@ def _write_segy(sec, fname, raw_fname=None):
         with segyio.create(fname, spec) as new_file:
             new_file.header.length = sec.nch
             new_file.header.segy._filename = fname
-            new_file.trace = sec.data.astype(np.float32)
+            new_file.trace = sec.data # .astype(np.float32)
     else:
         with segyio.open(raw_fname, ignore_geometry=True) as raw_file:
             spec.sorting = raw_file.sorting

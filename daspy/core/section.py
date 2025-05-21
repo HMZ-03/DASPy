@@ -236,10 +236,10 @@ class Section(object):
         data = np.zeros((max(channel_no) + 1, nt))
         for i, tr in enumerate(st):
             data[channel_no[i]] = tr.data
-
+        # data = data.astype(float)
         warnings.warn('obspy.core.stream.Stream doesn\'t include channel '
                       'interval. Please set dx manually.')
-        return cls(data.astype(float), None, fs, start_channel=start_channel,
+        return cls(data, None, fs, start_channel=start_channel,
                    start_time=start_time, scale=scale, source=source)
 
     @classmethod
