@@ -422,7 +422,7 @@ class Section(object):
                      start_channel=self.start_channel, channel_spacing=self.dx,
                      unit=unit)
 
-    def save(self, fname=None, ftype=None, keep_format=False):
+    def save(self, fname=None, ftype=None, keep_format=False, dtype=None):
         """
         Save the instance as a pickle file or update the raw file and resave as
         new file.
@@ -434,6 +434,7 @@ class Section(object):
         :param keep_format: bool. If True, we will make a copy of the
             self.source file and make changes to it. This will strictly preserve
             the original format, but will cost more IO resources.
+        :param dtype: str. The data type of the saved data.
         """
         if fname is None:
             if hasattr(self, 'source'):
@@ -456,9 +457,9 @@ class Section(object):
                 raise ValueError('self.source is not a file.')
             if ftype != self.source_type:
                 raise ValueError('self.source_type is different from ftype.')
-            write(self, fname, ftype=ftype, raw_fname=self.source)
+            write(self, fname, ftype=ftype, raw_fname=self.source, dtype=dtype)
         else:
-            write(self, fname, ftype=ftype)
+            write(self, fname, ftype=ftype, dtype=dtype)
 
         return self
 

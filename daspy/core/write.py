@@ -13,12 +13,15 @@ from nptdms import TdmsFile, TdmsWriter, RootObject, GroupObject, ChannelObject
 from datetime import datetime
 
 
-def write(sec, fname, ftype=None, raw_fname=None):
+def write(sec, fname, ftype=None, raw_fname=None, dtype=None):
     fun_map = {'tdms': _write_tdms, 'h5': _write_h5, 'sgy': _write_segy}
     if ftype is None:
         ftype = str(fname).lower().split('.')[-1]
     ftype.replace('hdf5', 'h5')
     ftype.replace('segy', 'sgy')
+    if dtype is not None:
+        sec = sec.copy()
+        sec.data = sec.data.astype(dtype)
     if ftype == 'pkl':
         write_pkl(sec, fname)
     elif ftype == 'npy':

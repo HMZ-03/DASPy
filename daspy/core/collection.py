@@ -273,7 +273,7 @@ class Collection(object):
                 kwargs_list[j]['zi'] = 0
 
     def process(self, operations, savepath='./processed', merge=1,
-                suffix='_pro', ftype=None, **read_kwargs):
+                suffix='_pro', ftype=None, dtype=None, **read_kwargs):
         """
         :param operations: list. Each element of operations list should be [str
             of method name, dict of kwargs].
@@ -281,8 +281,10 @@ class Collection(object):
         :param merge: int or str. int for merge several processed files into 1.
             'all' for merge all files.
         :param suffix: str. Suffix for processed files.
-        :param ftype: None or str. None for automatic detection, or 'pkl',
-            'pickle', 'tdms', 'h5', 'hdf5', 'segy', 'sgy', 'npy'.
+        :param ftype: None or str. File format for saving. None for automatic
+            detection, or 'pkl', 'pickle', 'tdms', 'h5', 'hdf5', 'segy', 'sgy',
+            'npy'.
+        :param dtype: str. The data type of the saved data.
         :param read_kwargs: dict. Paramters for read function.
         """
         if not os.path.exists(savepath):
@@ -318,7 +320,7 @@ class Collection(object):
             
             if i % merge == 0:
                 if i != 0:
-                    sec_merge.save(filepath)
+                    sec_merge.save(filepath, dtype=dtype)
                 sec_merge = sec
                 f0, f1 = os.path.splitext(os.path.basename(f))
                 if ftype is not None:
@@ -328,7 +330,7 @@ class Collection(object):
                 sec_merge += sec
             del sec
             gc.collect()
-        sec_merge.save(filepath)
+        sec_merge.save(filepath, dtype=dtype)
 
 # Dynamically add methods for cascade_methods
 def _create_cascade_method(method_name):
