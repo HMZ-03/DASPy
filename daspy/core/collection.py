@@ -185,6 +185,10 @@ class Collection(object):
     def copy(self):
         return deepcopy(self)
 
+    def file_interruption(self):
+        time_diff = np.round(np.diff(self.ftime[1:]).astype(float))
+        return np.where(time_diff > self.flength)[0]
+
     def select(self, stime=None, etime=None, readsec=False, **kwargs):
         """
         Select a period of data.
@@ -262,7 +266,7 @@ class Collection(object):
                 kwargs_list.append(kwargs)
         return method_list, kwargs_list
 
-    def _kwargs_initialization(method_list, kwargs_list):
+    def _kwargs_initialization(self, method_list, kwargs_list):
         for j, method in enumerate(method_list):
             if method == 'time_integration':
                 kwargs_list[j]['c'] = 0
@@ -292,15 +296,22 @@ class Collection(object):
         method_list, kwargs_list = self._optimize_for_continuity(operations)
         if merge == 'all' or merge > len(self):
             merge = len(self)
+        m = 0
         for i in tqdm(range(len(self))):
             f = self[i]
             if os.path.getsize(f) == 0:
+                if m > 0:
+                    sec_merge.save(filepath, dtype=dtype)
+                    m = 0
                 self._kwargs_initialization(method_list, kwargs_list)
                 continue
             try:
                 sec = read(f, ftype=self.ftype, **read_kwargs)
             except Exception as e:
                 warnings.warn(f'Error reading {f}: {e}')
+                if m > 0:
+                    sec_merge.save(filepath, dtype=dtype)
+                    m = 0
                 self._kwargs_initialization(method_list, kwargs_list)
                 continue
             for j, method in enumerate(method_list):
@@ -318,19 +329,19 @@ class Collection(object):
                                 'lowpass_cheby_2']:
                     kwargs_list[j]['zi'] = out
             
-            if i % merge == 0:
-                if i != 0:
-                    sec_merge.save(filepath, dtype=dtype)
+            if m == 0:
                 sec_merge = sec
                 f0, f1 = os.path.splitext(os.path.basename(f))
-                if ftype is not None:
-                    f1 = ftype
+                f1 = f1 if ftype is None else ftype
                 filepath = os.path.join(savepath, f0+suffix+f1)
             else:
                 sec_merge += sec
-            del sec
-            gc.collect()
-        sec_merge.save(filepath, dtype=dtype)
+            m += 1
+            if m == merge:
+                sec_merge.save(filepath, dtype=dtype)
+                m = 0
+        if m > 0:
+            sec_merge.save(filepath, dtype=dtype)
 
 # Dynamically add methods for cascade_methods
 def _create_cascade_method(method_name):
