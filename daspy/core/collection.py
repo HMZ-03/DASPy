@@ -187,7 +187,7 @@ class Collection(object):
 
     def file_interruption(self):
         time_diff = np.round(np.diff(self.ftime[1:]).astype(float))
-        return np.where(time_diff > self.flength)[0]
+        return np.where(time_diff > self.flength)[0] + 1
 
     def select(self, stime=None, etime=None, readsec=False, **kwargs):
         """
