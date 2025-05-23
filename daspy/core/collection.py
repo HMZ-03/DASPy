@@ -1,10 +1,10 @@
 # Purpose: Module for handling Collection objects.
 # Author: Minzhe Hu
-# Date: 2025.5.21
+# Date: 2025.5.23
 # Email: hmz2018@mail.ustc.edu.cn
 import os
-import gc
 import warnings
+import pickle
 import numpy as np
 from copy import deepcopy
 from tqdm import tqdm
@@ -279,8 +279,9 @@ class Collection(object):
     def process(self, operations, savepath='./processed', merge=1,
                 suffix='_pro', ftype=None, dtype=None, **read_kwargs):
         """
-        :param operations: list. Each element of operations list should be [str
-            of method name, dict of kwargs].
+        :param operations: list or None. Each element of operations list
+            should be [str of method name, dict of kwargs]. None for read
+            files related to operations in savepath.
         :param savepath: str. Path to save processed files.
         :param merge: int or str. int for merge several processed files into 1.
             'all' for merge all files.
@@ -293,55 +294,94 @@ class Collection(object):
         """
         if not os.path.exists(savepath):
             os.makedirs(savepath)
-        method_list, kwargs_list = self._optimize_for_continuity(operations)
+        method_file = os.path.join(savepath, 'method_list.pkl')
+        kwargs_file = os.path.join(savepath, 'kwargs_list.pkl')
+        if operations is None:
+            if (not os.path.exists(method_file)) or \
+                (not os.path.exists(kwargs_file)):
+                raise ValueError('No operations input and no method_list.pkl '
+                                 'and kwargs_list.pkl found in savepath.')
+            with open(os.path.join(savepath, 'method_list.pkl'), 'wb') as f:
+                method_list = pickle.load(f)
+            with open(os.path.join(savepath, 'kwargs_list.pkl'), 'wb') as f:
+                kwargs_list = pickle.load(f)
+        else:
+            method_list, kwargs_list = self._optimize_for_continuity(operations)
         if merge == 'all' or merge > len(self):
             merge = len(self)
         m = 0
-        for i in tqdm(range(len(self))):
-            f = self[i]
-            if os.path.getsize(f) == 0:
-                if m > 0:
+        try:
+            for i in tqdm(range(len(self))):
+                f = self[i]
+                if os.path.getsize(f) == 0:
+                    warnings.warn(f'{f} is an empty file. Continuous data is '
+                                  'interrupted here.')
+                    if m > 0:
+                        sec_merge.save(filepath, dtype=dtype)
+                        m = 0
+                    self._kwargs_initialization(method_list, kwargs_list)
+                    continue
+                try:
+                    sec = read(f, ftype=self.ftype, **read_kwargs)
+                except Exception as e:
+                    warnings.warn(f'Error reading {f}: {e}. Continuous data is '
+                                  'interrupted here.')
+                    if m > 0:
+                        sec_merge.save(filepath, dtype=dtype)
+                        m = 0
+                    self._kwargs_initialization(method_list, kwargs_list)
+                    continue
+                for j, method in enumerate(method_list):
+                    if method in ['taper', 'cosine_taper']:
+                        if not ((i==0 and kwargs_list[j]['side'] != 'right') or
+                                (i == len(self) - 1 and kwargs_list[j]['side'] !=
+                                'left')):
+                            continue
+                    out = getattr(sec, method)(**kwargs_list[j])
+                    if method == 'time_integration':
+                        kwargs_list[j]['c'] = sec.data[:, -1].copy()
+                    elif method == 'time_differential':
+                        kwargs_list[j]['prepend'] = sec.data[:, -1].copy()
+                    elif method in ['bandpass', 'bandstop', 'lowpass', 'highpass',
+                                    'lowpass_cheby_2']:
+                        kwargs_list[j]['zi'] = out
+                
+                if m == 0:
+                    sec_merge = sec
+                    f0, f1 = os.path.splitext(os.path.basename(f))
+                    f1 = f1 if ftype is None else ftype
+                    filepath = os.path.join(savepath, f0+suffix+f1)
+                elif abs(sec_merge.end_time - sec.start_time) <= 0.5:
+                    sec_merge += sec
+                else:
+                    warnings.warn(f'The start time of {f} does not correspond '
+                                  'to the end time of the previous file. '
+                                  'Continuous data is interrupted here.')
+                    sec_merge.save(filepath, dtype=dtype)
+                    sec_merge = sec
+                    f0, f1 = os.path.splitext(os.path.basename(f))
+                    f1 = f1 if ftype is None else ftype
+                    filepath = os.path.join(savepath, f0+suffix+f1)
+                    m = 0
+                m += 1
+                if m == merge:
                     sec_merge.save(filepath, dtype=dtype)
                     m = 0
-                self._kwargs_initialization(method_list, kwargs_list)
-                continue
-            try:
-                sec = read(f, ftype=self.ftype, **read_kwargs)
-            except Exception as e:
-                warnings.warn(f'Error reading {f}: {e}')
-                if m > 0:
-                    sec_merge.save(filepath, dtype=dtype)
-                    m = 0
-                self._kwargs_initialization(method_list, kwargs_list)
-                continue
-            for j, method in enumerate(method_list):
-                if method in ['taper', 'cosine_taper']:
-                    if not ((i==0 and kwargs_list[j]['side'] != 'right') or
-                             (i == len(self) - 1 and kwargs_list[j]['side'] !=
-                              'left')):
-                        continue
-                out = getattr(sec, method)(**kwargs_list[j])
-                if method == 'time_integration':
-                    kwargs_list[j]['c'] = sec.data[:, -1].copy()
-                elif method == 'time_differential':
-                    kwargs_list[j]['prepend'] = sec.data[:, -1].copy()
-                elif method in ['bandpass', 'bandstop', 'lowpass', 'highpass',
-                                'lowpass_cheby_2']:
-                    kwargs_list[j]['zi'] = out
-            
-            if m == 0:
-                sec_merge = sec
-                f0, f1 = os.path.splitext(os.path.basename(f))
-                f1 = f1 if ftype is None else ftype
-                filepath = os.path.join(savepath, f0+suffix+f1)
-            else:
-                sec_merge += sec
-            m += 1
-            if m == merge:
+            if m > 0:
                 sec_merge.save(filepath, dtype=dtype)
-                m = 0
-        if m > 0:
-            sec_merge.save(filepath, dtype=dtype)
+            if os.path.exists(method_file):
+                os.remove(method_file)
+            if os.path.exists(kwargs_file):
+                os.remove(kwargs_file)
+        except KeyboardInterrupt as e:
+            with open(method_file, 'wb') as f:
+                pickle.dump(method_list, f)
+            with open(kwargs_file, 'wb') as f:
+                pickle.dump(kwargs_list, f)
+            print(f'Process interrupted. Saving method_list and kwargs_list.')
+        finally:
+            raise e
+
 
 # Dynamically add methods for cascade_methods
 def _create_cascade_method(method_name):
