@@ -1,6 +1,6 @@
 # Purpose: Module for handling Collection objects.
 # Author: Minzhe Hu
-# Date: 2025.5.23
+# Date: 2025.5.31
 # Email: hmz2018@mail.ustc.edu.cn
 import os
 import warnings
@@ -246,8 +246,8 @@ class Collection(object):
         for opera in operations:
             method, kwargs = opera
             if method == 'downsampling':
-                if (hasattr(kwargs, 'lowpass_filter') and not\
-                    kwargs['lowpass_filter']) or not hasattr(kwargs, 'tint'):
+                if ('lowpass_filter' in kwargs.keys() and not\
+                    kwargs['lowpass_filter']) or 'tint' not in kwargs.keys():
                     method_list.append('downsampling')
                     kwargs_list.append(kwargs)
                 else:
@@ -277,7 +277,8 @@ class Collection(object):
                 kwargs_list[j]['zi'] = 0
 
     def process(self, operations, savepath='./processed', merge=1,
-                suffix='_pro', ftype=None, dtype=None, **read_kwargs):
+                suffix='_pro', ftype=None, dtype=None, save_operations=False,
+                **read_kwargs):
         """
         :param operations: list or None. Each element of operations list
             should be [str of method name, dict of kwargs]. None for read
@@ -290,6 +291,8 @@ class Collection(object):
             detection, or 'pkl', 'pickle', 'tdms', 'h5', 'hdf5', 'segy', 'sgy',
             'npy'.
         :param dtype: str. The data type of the saved data.
+        :parma save_operations: bool. If True, save the operations to
+            method_list.pkl and kwargs_list.pkl in savepath.
         :param read_kwargs: dict. Paramters for read function.
         """
         if not os.path.exists(savepath):
@@ -323,6 +326,12 @@ class Collection(object):
                     continue
                 try:
                     sec = read(f, ftype=self.ftype, **read_kwargs)
+                    if sec.data.size == 0:
+                        if m > 0:
+                            sec_merge.save(filepath, dtype=dtype)
+                            m = 0
+                        self._kwargs_initialization(method_list, kwargs_list)
+                        continue
                 except Exception as e:
                     warnings.warn(f'Error reading {f}: {e}. Continuous data is '
                                   'interrupted here.')
@@ -369,25 +378,32 @@ class Collection(object):
                     m = 0
             if m > 0:
                 sec_merge.save(filepath, dtype=dtype)
-            if os.path.exists(method_file):
-                os.remove(method_file)
-            if os.path.exists(kwargs_file):
-                os.remove(kwargs_file)
         except KeyboardInterrupt as e:
             with open(method_file, 'wb') as f:
                 pickle.dump(method_list, f)
             with open(kwargs_file, 'wb') as f:
                 pickle.dump(kwargs_list, f)
             print(f'Process interrupted. Saving method_list and kwargs_list.')
-        finally:
             raise e
+        else:
+            if save_operations:
+                with open(method_file, 'wb') as f:
+                    pickle.dump(method_list, f)
+                with open(kwargs_file, 'wb') as f:
+                    pickle.dump(kwargs_list, f)
+                print(f'Operations saved to {method_file} and {kwargs_file}.')
+            else:
+                if os.path.exists(method_file):
+                    os.remove(method_file)
+                if os.path.exists(kwargs_file):
+                    os.remove(kwargs_file)
 
 
 # Dynamically add methods for cascade_methods
 def _create_cascade_method(method_name):
     def cascade_method(self, savepath='./processed', merge=1,
                        suffix=f'_{method_name}', ftype=None, dtype=None,
-                       **kwargs):
+                       save_operations=False, **kwargs):
         """
         Automatically generated method for {method_name}.
         Applies the {method_name} operation to the data and saves the result.
@@ -398,12 +414,14 @@ def _create_cascade_method(method_name):
         :param suffix: str. Suffix for processed files.
         :param ftype: None or str. None for automatic detection, or 'pkl',
             'pickle', 'tdms', 'h5', 'hdf5', 'segy', 'sgy', 'npy'.
-        :param kwargs: dict. Parameters for the {method_name} operation.
         :param dtype: str. The data type of the saved data.
+        :parma save_operations: bool. If True, save the operations to
+            method_list.pkl and kwargs_list.pkl in savepath.
+        :param kwargs: dict. Parameters for the {method_name} operation.
         """
         operations = [[method_name, kwargs]]
         self.process(operations, savepath=savepath, merge=merge, suffix=suffix,
-                     ftype=ftype, dtype=dtype)
+                     ftype=ftype, dtype=dtype, save_operations=save_operations)
     return cascade_method
 
 
