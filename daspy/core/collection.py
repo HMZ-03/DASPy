@@ -1,6 +1,6 @@
 # Purpose: Module for handling Collection objects.
 # Author: Minzhe Hu
-# Date: 2025.5.31
+# Date: 2025.6.1
 # Email: hmz2018@mail.ustc.edu.cn
 import os
 import warnings
@@ -186,8 +186,8 @@ class Collection(object):
         return deepcopy(self)
 
     def file_interruption(self):
-        time_diff = np.round(np.diff(self.ftime[1:]).astype(float))
-        return np.where(time_diff > self.flength)[0] + 1
+        time_diff = np.round(np.diff(self.ftime).astype(float))
+        return np.where(time_diff != self.flength)[0]
 
     def select(self, stime=None, etime=None, readsec=False, **kwargs):
         """
@@ -219,10 +219,21 @@ class Collection(object):
 
         flist = []
         ftime = []
+        flag = False
         for i in range(len(self)):
-            if (stime - self.flength) < self.ftime[i] < etime:
-                flist.append(self.flist[i])
-                ftime.append(self.ftime[i])
+            if flag:
+                if self.ftime[i] < etime:
+                    flist.append(self.flist[i])
+                    ftime.append(self.ftime[i])
+            else:
+                if self.ftime[i] > stime:
+                    flist.extend(self.flist[i-1:i+1])
+                    ftime.extend(self.ftime[i-1:i+1])
+                    flag = True
+                elif self.ftime[i] == stime:
+                    flist.append(self.flist[i])
+                    ftime.append(self.ftime[i])
+                    flag = True
 
         if len(flist) == 0:
             warnings.warn('Out of collection time range.')
