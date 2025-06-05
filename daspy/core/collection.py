@@ -1,6 +1,6 @@
 # Purpose: Module for handling Collection objects.
 # Author: Minzhe Hu
-# Date: 2025.6.1
+# Date: 2025.6.4
 # Email: hmz2018@mail.ustc.edu.cn
 import os
 import warnings
@@ -9,6 +9,7 @@ import numpy as np
 from copy import deepcopy
 from tqdm import tqdm
 from glob import glob
+from datetime import datetime
 from daspy.core.read import read
 from daspy.core.dasdatetime import DASDateTime
 
@@ -185,15 +186,16 @@ class Collection(object):
     def copy(self):
         return deepcopy(self)
 
-    def file_interruption(self):
-        time_diff = np.round(np.diff(self.ftime).astype(float))
-        return np.where(time_diff != self.flength)[0]
+    def file_interruption(self, tolerance=0.5):
+        time_diff = np.diff(self.ftime)
+        return np.where(abs(time_diff - self.flength) > tolerance)[0]
 
-    def select(self, stime=None, etime=None, readsec=False, **kwargs):
+    def select(self, start=0, end=None, readsec=False, **kwargs):
         """
         Select a period of data.
 
-        :param stime, etime: DASDateTime. Start and end time of required data.
+        :param stime, etime: DASDateTime or int. Start and end time or index of
+            required data.
         :param readsec: bool. If True, read as a instance of daspy.Section and
             return. If False, update self.flist.
         :param ch1: int. The first channel required. Only works when
@@ -202,51 +204,54 @@ class Collection(object):
             when readsec=True.
         :param dch: int. Channel step. Only works when readsec=True.
         """
-        if stime is None:
-            stime = self.ftime[0]
-        elif stime - self.ftime[0] < 0:
-            warnings.warn('stime is earlier than the start time of the first '
-                          'file. Set stime to self.ftime[0].')
+        if end is None:
+            end = len(self.flist)
+        if 'stime' in kwargs.keys():
+            start = kwargs.pop('stime')
+            warnings.warn('In future versions, the parameter \'stime\' will be '
+                          'replaced by \'start\'.')
+        if 'etime' in kwargs.keys():
+            end = kwargs.pop('etime')
+            warnings.warn('In future versions, the parameter \'etime\' will be '
+                          'replaced by \'end\'.')
 
-        if etime is None:
-            etime = self.ftime[-1] + self.flength
-        elif etime - self.ftime[-1] > self.flength:
-            warnings.warn('etime is later than the end time of the last file. '
-                          'Set etime to self.ftime[-1] + self.flength.')
+        if isinstance(start, datetime):
+            for i, ftime in enumerate(self.ftime):
+                if ftime > start:
+                    s = i - 1
+                    break
+                elif ftime == start:
+                    s = i
+                    break
+        elif isinstance(start, int):
+            s = start
 
-        if stime > etime:
-            raise ValueError('Start time can\'t be later than end time.')
+        if isinstance(end, datetime):
+            for i, ftime in enumerate(self.ftime[s:]):
+                if ftime == end:
+                    e = s + i - 1
+                    break
+                elif ftime > end:
+                    e = s + i
+                    break
+        elif isinstance(start, int):
+            e = end
 
-        flist = []
-        ftime = []
-        flag = False
-        for i in range(len(self)):
-            if flag:
-                if self.ftime[i] < etime:
-                    flist.append(self.flist[i])
-                    ftime.append(self.ftime[i])
-            else:
-                if self.ftime[i] > stime:
-                    flist.extend(self.flist[i-1:i+1])
-                    ftime.extend(self.ftime[i-1:i+1])
-                    flag = True
-                elif self.ftime[i] == stime:
-                    flist.append(self.flist[i])
-                    ftime.append(self.ftime[i])
-                    flag = True
-
+        flist = self.flist[s:e]
         if len(flist) == 0:
-            warnings.warn('Out of collection time range.')
+            warnings.warn('No valid data was selected.')
             return None
+
         if readsec:
             sec = read(flist[0], **kwargs)
             for f in flist[1:]:
                 sec += read(f, **kwargs)
-            sec.trimming(tmin=stime, tmax=etime)
+            sec.trimming(tmin=start if isinstance(start, datetime) else None,
+                         tmax=end if isinstance(end, datetime) else None)
             return sec
         else:
             self.flist = flist
-            self.ftime = ftime
+            self.ftime = self.ftime[s:e]
             return self
 
     def _optimize_for_continuity(self, operations):
@@ -289,7 +294,7 @@ class Collection(object):
 
     def process(self, operations, savepath='./processed', merge=1,
                 suffix='_pro', ftype=None, dtype=None, save_operations=False,
-                **read_kwargs):
+                tolerance=0.5, **read_kwargs):
         """
         :param operations: list or None. Each element of operations list
             should be [str of method name, dict of kwargs]. None for read
@@ -304,6 +309,7 @@ class Collection(object):
         :param dtype: str. The data type of the saved data.
         :parma save_operations: bool. If True, save the operations to
             method_list.pkl and kwargs_list.pkl in savepath.
+        :param tolerance: float. Tolerance for checking continuity of data.
         :param read_kwargs: dict. Paramters for read function.
         """
         if not os.path.exists(savepath):
@@ -371,7 +377,7 @@ class Collection(object):
                     f0, f1 = os.path.splitext(os.path.basename(f))
                     f1 = f1 if ftype is None else ftype
                     filepath = os.path.join(savepath, f0+suffix+f1)
-                elif abs(sec_merge.end_time - sec.start_time) <= 0.5:
+                elif abs(sec_merge.end_time - sec.start_time) <= tolerance:
                     sec_merge += sec
                 else:
                     warnings.warn(f'The start time of {f} does not correspond '
