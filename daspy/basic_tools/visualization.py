@@ -99,7 +99,7 @@ def plot(data: np.ndarray, dx=None, fs=None, ax=None, obj='waveform', dpi=300,
                     if tmode.lower() == 'sampling':
                         pck[:, 1] = pck[:, 1] / fs
                     ax.scatter(pck[:,0], t0 + pck[:,1], marker=',', s=0.1,
-                            c=pick_color[phase])
+                               c=pick_color[phase])
 
     elif obj in ['spectrum', 'spectrogram', 'fk', 'dispersion']:
         if np.iscomplex(data).any():
