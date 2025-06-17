@@ -223,8 +223,8 @@ class Collection(object):
                 elif ftime == start:
                     s = i
                     break
-        elif isinstance(start, int):
-            s = start
+        else:
+            s = int(start)
 
         if isinstance(end, datetime):
             for i, ftime in enumerate(self.ftime[s:]):
@@ -234,8 +234,8 @@ class Collection(object):
                 elif ftime > end:
                     e = s + i
                     break
-        elif isinstance(start, int):
-            e = end
+        else:
+            e = int(end)
 
         flist = self.flist[s:e]
         if len(flist) == 0:
