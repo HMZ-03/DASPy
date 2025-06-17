@@ -1,6 +1,6 @@
 # Purpose: Module for handling Collection objects.
 # Author: Minzhe Hu
-# Date: 2025.6.4
+# Date: 2025.6.17
 # Email: hmz2018@mail.ustc.edu.cn
 import os
 import warnings
@@ -190,7 +190,7 @@ class Collection(object):
         time_diff = np.diff(self.ftime)
         return np.where(abs(time_diff - self.flength) > tolerance)[0]
 
-    def select(self, start=0, end=None, readsec=False, **kwargs):
+    def select(self, start=0, end=None, readsec=False, tolerance=1, **kwargs):
         """
         Select a period of data.
 
@@ -202,6 +202,8 @@ class Collection(object):
             readsec=True.
         :param ch2: int. The last channel required (not included). Only works
             when readsec=True.
+        :param tolerance: float. The maximum error allowed between ftime and the
+            actual file start time
         :param dch: int. Channel step. Only works when readsec=True.
         """
         if end is None:
@@ -217,23 +219,21 @@ class Collection(object):
 
         if isinstance(start, datetime):
             for i, ftime in enumerate(self.ftime):
-                if ftime > start:
-                    s = i - 1
+                if ftime > start - tolerance:
+                    i -= 1
                     break
-                elif ftime == start:
-                    s = i
+                elif ftime == start - tolerance:
                     break
+            s = i
         else:
             s = int(start)
 
         if isinstance(end, datetime):
             for i, ftime in enumerate(self.ftime[s:]):
-                if ftime == end:
-                    e = s + i - 1
+                if ftime >= end + tolerance:
+                    i -= 1
                     break
-                elif ftime > end:
-                    e = s + i
-                    break
+            e = s + i + 1
         else:
             e = int(end)
 
