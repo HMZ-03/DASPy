@@ -1,6 +1,6 @@
 # Purpose: Plot data
 # Author: Minzhe Hu
-# Date: 2025.5.20
+# Date: 2025.6.17
 # Email: hmz2018@mail.ustc.edu.cn
 import numpy as np
 import matplotlib.pyplot as plt
@@ -24,7 +24,7 @@ def plot(data: np.ndarray, dx=None, fs=None, ax=None, obj='waveform', dpi=300,
         figsize. If not specified, the function will directly display the image
         using matplotlib.pyplot.show().
     :param obj: str. Type of data to plot. It should be one of 'waveform',
-        'phasepick', 'spectrum', 'spectrogram', 'fk', or 'dispersion'.
+        'phasepick', 'spectrum', 'psd', 'spectrogram', 'fk', or 'dispersion'.
     :param dpi: int. The resolution of the figure in dots-per-inch.
     :param title: str. The title of this axes.
     :param transpose: bool. Transpose the figure or not.
@@ -33,7 +33,7 @@ def plot(data: np.ndarray, dx=None, fs=None, ax=None, obj='waveform', dpi=300,
         P phase, 'S' for S phase and 'N' for unknown phase type. Required if
         obj=='phasepick'.
     :param f: Sequence of frequency. Required if obj is one of 'spectrum',
-        'spectrogram', 'fk' or 'dispersion'.
+        'psd', 'spectrogram', 'fk' or 'dispersion'.
     :param k: Wavenumber sequence. Required if obj=='fk'.
     :param t: Time sequence. Required if obj=='spectrogram'.
     :param c: Phase velocity sequence. Required if obj=='dispersion'.
@@ -101,12 +101,15 @@ def plot(data: np.ndarray, dx=None, fs=None, ax=None, obj='waveform', dpi=300,
                     ax.scatter(pck[:,0], t0 + pck[:,1], marker=',', s=0.1,
                                c=pick_color[phase])
 
-    elif obj in ['spectrum', 'spectrogram', 'fk', 'dispersion']:
+    elif obj in ['spectrum', 'spectrogram', 'psd', 'fk', 'dispersion']:
         if np.iscomplex(data).any():
             data = abs(data)
         if dB:
             data = 20 * np.log10(data)
-        cmap = 'jet' if cmap is None else cmap
+        if obj == 'psd':
+            cmap = 'viridis' if cmap is None else cmap
+        else:
+            cmap = 'jet' if cmap is None else cmap
 
         if vmax is None:
             vmax_per = 80 if vmax_per is None else vmax_per
@@ -115,7 +118,7 @@ def plot(data: np.ndarray, dx=None, fs=None, ax=None, obj='waveform', dpi=300,
             vmin_per = 20 if vmin_per is None else vmin_per
             vmin = np.percentile(data, vmin_per)
 
-        if obj == 'spectrum':
+        if obj in ['spectrum', 'psd']:
             origin = 'lower'
             if dx is None or xmode.lower() == 'channel':
                 xlabel_default = 'Channel'

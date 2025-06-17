@@ -1,6 +1,6 @@
 # Purpose: Module for handling Section objects.
 # Author: Minzhe Hu
-# Date: 2025.5.15
+# Date: 2025.6.17
 # Email: hmz2018@mail.ustc.edu.cn
 import warnings
 import os
@@ -20,7 +20,7 @@ from daspy.basic_tools.preprocessing import (phase2strain, normalization,
                                              distance_integration)
 from daspy.basic_tools.filter import (bandpass, bandstop, lowpass,
                                       lowpass_cheby_2, highpass, envelope)
-from daspy.basic_tools.freqattributes import (spectrum, spectrogram,
+from daspy.basic_tools.freqattributes import (spectrum, spectrogram, psd,
                                               fk_transform)
 from daspy.advanced_tools.channel import channel_checking, turning_points
 from daspy.advanced_tools.denoising import (curvelet_denoising,
@@ -514,10 +514,11 @@ class Section(object):
         :param tmode: str. 'origin', 'start', 'time' or 'sampling'. If
             origin_time is not defined, 'origin' and 'start' is the same.
         :param obj: str. Type of data to plot. It should be one of 'waveform',
-            'phasepick', 'spectrum', 'spectrogram', 'fk', or 'dispersion'.
-        :param kwargs_pro: dict. If obj is one of 'spectrum', 'spectrogram',
-            'fk' and data is not specified, this parameter will be used to
-            process the data to plot.
+            'phasepick', 'spectrum', 'psd', 'spectrogram', 'fk', or
+            'dispersion'.
+        :param kwargs_pro: dict. If obj is one of 'spectrum', 'psd',
+            'spectrogram', 'fk' and data is not specified, this parameter will
+            be used to process the data to plot.
         :param ax: Matplotlib.axes.Axes or tuple. Axes to plot. A tuple for new
             figsize. If not specified, the function will directly display the
             image using matplotlib.pyplot.show().
@@ -549,7 +550,8 @@ class Section(object):
         :param data: numpy.ndarray. Data to plot. Required if obj is not
             'spectrum', 'spectrogram' and 'fk'.
         :param f: Frequency sequence. Required if obj is one of 'spectrum',
-            'spectrogram', 'fk' and data is specified, or obj is 'dispersion'.
+            'psd', 'spectrogram', 'fk' and data is specified, or obj is
+            'dispersion'.
         :param k: Wavenumber sequence. Required if obj=='fk' and data is
             specified.
         :param t: Time sequence. Required if obj=='spectrogram' and data is
@@ -562,6 +564,9 @@ class Section(object):
                 data = deepcopy(self.data)
             elif obj == 'spectrum':
                 data, f = self.spectrum(**kwargs_pro)
+                kwargs['f'] = f
+            elif obj == 'psd':
+                data, f = self.psd(**kwargs_pro)
                 kwargs['f'] = f
             elif obj == 'spectrogram':
                 data, f, t = self.spectrogram(**kwargs_pro)
@@ -1028,6 +1033,28 @@ class Section(object):
         :return: Spectrum and frequency sequence.
         """
         return spectrum(self.data, self.fs, taper=taper, nfft=nfft)
+
+    def psd(self, nperseg=256, noverlap=None, nfft=None, detrend=False):
+        """
+        Computes the power spectral density of the given data.
+
+        :param data: numpy.ndarray. Data to make spectrum of.
+        :param fs: Sampling rate in Hz.
+        :param nperseg: int. Length of each segment. Defaults to None, but if
+            window is str or tuple, is set to 256, and if window is array_like,
+            is set to the length of the window.
+        :param noverlap: int. Number of points to overlap between segments. If
+            None, noverlap = nperseg // 2. Defaults to None.
+        :param nfft: int. Length of the FFT used, if a zero padded FFT is
+            desired. If None, the FFT length is nperseg. Defaults to None.
+        :param detrend : str or bool. Specifies whether and how to detrend each
+            segment.  'linear' or 'detrend' or True = detrend, 'constant' or
+            'demean' = demean.
+        :return: Power spectral density or power spectrum and array of sample
+            frequencies.
+        """
+        return psd(self.data, self.fs, nperseg=nperseg, noverlap=noverlap,
+                   nfft=nfft, detrend=detrend)
 
     def spectrogram(self, **kwargs):
         """

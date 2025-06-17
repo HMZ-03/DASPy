@@ -1,10 +1,10 @@
 # Purpose: Analyze frequency attribute and transform in frequency domain
 # Author: Minzhe Hu
-# Date: 2024.6.8
+# Date: 2024.6.17
 # Email: hmz2018@mail.ustc.edu.cn
 import numpy as np
 from numpy.fft import rfft, rfft2, fftshift, fftfreq, rfftfreq
-from scipy.signal import stft
+from scipy.signal import stft, welch
 from daspy.basic_tools.preprocessing import demeaning, detrending, cosine_taper
 
 
@@ -45,6 +45,35 @@ def spectrum(data, fs, taper=0.05, nfft='default'):
     f = rfftfreq(nfft, d=1 / fs)
 
     return spec, f
+
+
+def psd(data, fs, nperseg=256, noverlap=None, nfft=None, detrend=False):
+    """
+    Computes the power spectral density of the given data.
+
+    :param data: numpy.ndarray. Data to make spectrum of.
+    :param fs: Sampling rate in Hz.
+    :param nperseg: int. Length of each segment. Defaults to None, but if window
+        is str or tuple, is set to 256, and if window is array_like, is set to
+        the length of the window.
+    :param noverlap: int. Number of points to overlap between segments. If None,
+        noverlap = nperseg // 2. Defaults to None.
+    :param nfft: int. Length of the FFT used, if a zero padded FFT is desired.
+        If None, the FFT length is nperseg. Defaults to None.
+    :param detrend : str or bool. Specifies whether and how to detrend each
+        segment.  'linear' or 'detrend' or True = detrend, 'constant' or
+        'demean' = demean.
+    :return: Power spectral density or power spectrum and array of sample
+        frequencies.
+    """
+    if len(data.shape) == 1:
+        data = data.reshape(1, len(data))
+    elif len(data.shape) != 2:
+        raise ValueError("Data should be 1-D or 2-D array")
+
+    f, psd = welch(data, fs=fs, nperseg=nperseg, noverlap=noverlap,
+                       nfft=nfft, detrend=detrend, axis=1)
+    return psd, f
 
 
 def spectrogram(data, fs, nperseg=256, noverlap=None, nfft=None, detrend=False,
