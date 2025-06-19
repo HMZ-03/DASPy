@@ -1034,7 +1034,8 @@ class Section(object):
         """
         return spectrum(self.data, self.fs, taper=taper, nfft=nfft)
 
-    def psd(self, nperseg=256, noverlap=None, nfft=None, detrend=False):
+    def psd(self, nperseg=256, noverlap=None, nfft=None, detrend=False,
+            average='mean'):
         """
         Computes the power spectral density of the given data.
 
@@ -1050,11 +1051,13 @@ class Section(object):
         :param detrend : str or bool. Specifies whether and how to detrend each
             segment.  'linear' or 'detrend' or True = detrend, 'constant' or
             'demean' = demean.
+        :param average: 'mean' or 'median. Method to use when averaging
+            periodograms. Defaults to 'mean'.
         :return: Power spectral density or power spectrum and array of sample
             frequencies.
         """
         return psd(self.data, self.fs, nperseg=nperseg, noverlap=noverlap,
-                   nfft=nfft, detrend=detrend)
+                   nfft=nfft, detrend=detrend, average=average)
 
     def spectrogram(self, **kwargs):
         """

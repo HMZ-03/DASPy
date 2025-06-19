@@ -47,7 +47,8 @@ def spectrum(data, fs, taper=0.05, nfft='default'):
     return spec, f
 
 
-def psd(data, fs, nperseg=256, noverlap=None, nfft=None, detrend=False):
+def psd(data, fs, nperseg=256, noverlap=None, nfft=None, detrend=False,
+        average='mean'):
     """
     Computes the power spectral density of the given data.
 
@@ -60,9 +61,11 @@ def psd(data, fs, nperseg=256, noverlap=None, nfft=None, detrend=False):
         noverlap = nperseg // 2. Defaults to None.
     :param nfft: int. Length of the FFT used, if a zero padded FFT is desired.
         If None, the FFT length is nperseg. Defaults to None.
-    :param detrend : str or bool. Specifies whether and how to detrend each
+    :param detrend: str or bool. Specifies whether and how to detrend each
         segment.  'linear' or 'detrend' or True = detrend, 'constant' or
         'demean' = demean.
+    :param average: 'mean' or 'median. Method to use when averaging
+        periodograms. Defaults to 'mean'.
     :return: Power spectral density or power spectrum and array of sample
         frequencies.
     """
@@ -72,7 +75,7 @@ def psd(data, fs, nperseg=256, noverlap=None, nfft=None, detrend=False):
         raise ValueError("Data should be 1-D or 2-D array")
 
     f, psd = welch(data, fs=fs, nperseg=nperseg, noverlap=noverlap,
-                       nfft=nfft, detrend=detrend, axis=1)
+                       nfft=nfft, detrend=detrend, axis=1, average=average)
     return psd, f
 
 
