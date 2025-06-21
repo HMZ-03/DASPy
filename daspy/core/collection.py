@@ -1,6 +1,6 @@
 # Purpose: Module for handling Collection objects.
 # Author: Minzhe Hu
-# Date: 2025.6.17
+# Date: 2025.6.21
 # Email: hmz2018@mail.ustc.edu.cn
 import os
 import warnings
@@ -312,8 +312,7 @@ class Collection(object):
         :param tolerance: float. Tolerance for checking continuity of data.
         :param read_kwargs: dict. Paramters for read function.
         """
-        if not os.path.exists(savepath):
-            os.makedirs(savepath)
+        os.makedirs(savepath, exist_ok=True)
         method_file = os.path.join(savepath, 'method_list.pkl')
         kwargs_file = os.path.join(savepath, 'kwargs_list.pkl')
         if operations is None:
