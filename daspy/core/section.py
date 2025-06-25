@@ -1,6 +1,6 @@
 # Purpose: Module for handling Section objects.
 # Author: Minzhe Hu
-# Date: 2025.6.17
+# Date: 2025.6.25
 # Email: hmz2018@mail.ustc.edu.cn
 import warnings
 import os
@@ -14,7 +14,7 @@ from daspy.basic_tools.visualization import plot
 from daspy.basic_tools.preprocessing import (phase2strain, normalization,
                                              demeaning, detrending, stacking,
                                              cosine_taper, downsampling,
-                                             padding, trimming,
+                                             padding, _trimming_index,
                                              time_integration,
                                              time_differential,
                                              distance_integration)
@@ -159,8 +159,14 @@ class Section(object):
         return len(self.data)
 
     @property
-    def nt(self):
+    def nsp(self):
         return self.data.shape[1]
+
+    @property
+    def nt(self):
+        warnings.warn("'nt' attribute will be renamed to 'nsp' in a future '"
+                      "release.", FutureWarning)
+        return self.nsp
 
     @property
     def channel_number(self):
@@ -184,11 +190,11 @@ class Section(object):
 
     @property
     def duration(self):
-        return self.nt / self.fs
+        return self.nsp / self.fs
 
     @property
     def end_time(self):
-        return self.start_time + self.nt / self.fs
+        return self.start_time + self.nsp / self.fs
 
     def copy(self):
         return deepcopy(self)
@@ -212,13 +218,13 @@ class Section(object):
         assert len(set(matadata)) == 1, ('The metadata of all traces in the '
                                          'stream should be the same.')
         nch = len(st)
-        nt = st[0].stats.npts
+        nsp = st[0].stats.npts
         fs = st[0].stats.sampling_rate
         start_time = DASDateTime.from_datetime(st[0].stats.starttime.datetime).\
             replace(tzinfo=utc)
         scale = st[0].stats.calib
         source = type(st)
-        data = np.zeros((nch, nt))
+        data = np.zeros((nch, nsp))
 
         if channel_no == 'channel':
             channel_no = np.array([int(tr.stats.channel) for tr in st])
@@ -233,7 +239,7 @@ class Section(object):
             channel_no = np.arange(nch).astype(int)
         start_channel = min(channel_no)
         channel_no -= start_channel
-        data = np.zeros((max(channel_no) + 1, nt))
+        data = np.zeros((max(channel_no) + 1, nsp))
         for i, tr in enumerate(st):
             data[channel_no[i]] = tr.data
         # data = data.astype(float)
@@ -742,87 +748,41 @@ class Section(object):
             self.fs /= tint
         return self
 
-    def trimming(self, mode=1, xmin=None, xmax=None, tmin=None, tmax=None):
+    def trimming(self, xmin=None, xmax=None, chmin=None, chmax=None, tmin=None,
+                 tmax=None, spmin=None, spmax=None, **kwargs):
         """
         Cut data to given start and end distance/channel or time/sampling
         points.
 
-        :param mode: int. 0 means the unit of boundary is channel number and
-            sampling points; 1 means the unit of boundary is meters and seconds.
-        :param xmin, xmax: int or float. Boundary of channel number (mode=0)
-            or boundary of distance (mode=1).
-            in meters.
-        :param tmin, tmax: int, float or DASDateTime. Boundary of sampling
-            points (mode=0) or boundary of time (mode=1). When mode=1,
-            start_time is of type DASDateTime and tmin/tmax are floats,
-            tmin/tmax means the time relative to start_time.
+        :param xmin, xmax: float. Range of distance.
+        :param chmin, chmax: int. Channel number range.
+        :param tmin, tmax: float or DASDateTime. Range of time.
+        :param spmin, spmax: int. Sampling point range.
         """
-        if mode == 1:
-            if tmin is not None:
-                try:
-                    tmin = round((tmin - self.start_time) * self.fs)
-                except TypeError:
-                    tmin = round(tmin * self.fs)
-                if tmin < 0:
-                    warnings.warn('tmin is earlier than start_time. Set tmin '
-                                  'to start_time.')
-                    tmin = 0
-                elif tmin >= self.nt:
-                    raise ValueError('tmin is later than end_time.')
-            else:
-                tmin = 0
+        # Compatible with old interfaces and remind users
+        if 'mode' in kwargs:
+            warnings.warn("In future versions, the mode parameter will be "
+                          "deprecated. xmin/xmax will only control the "
+                          "distance range, tmin/tmax will only control the "
+                          "time range; please use chmin/chmax to control the "
+                          "channel number range, and spmin/spmax to control "
+                          "the sampling point range", FutureWarning)
+            if kwargs['mode'] == 0:
+                chmin, chmax = xmin, xmax
+                xmin, xmax = None, None
+                spmin, spmax = tmin, tmax
+                tmin, tmax = None, None
+        i0, i1, j0, j1 = _trimming_index(self.nch, self.nsp, dx=self.dx,
+            fs=self.fs, start_channel=self.start_channel,
+            start_distance=self.start_distance, start_time=self.start_time,
+            xmin=xmin, xmax=xmax, chmin=chmin, chmax=chmax, tmin=tmin,
+            tmax=tmax, spmin=spmin, spmax=spmax)
 
-            if tmax is not None:
-                try:
-                    tmax = round((tmax - self.start_time) * self.fs)
-                except TypeError:
-                    tmax = round(tmax * self.fs)
-                if tmax <= 0:
-                    raise ValueError('tmax is earlier than start_time.')
-                if tmax > self.nt:
-                    warnings.warn('tmax is later than end_time. Set tmax to the'
-                                  ' end_time.')
-                    tmax = self.nt
+        self.data = self.data[i0:i1, j0:j1].copy()
 
-            if xmin is not None:
-                xmin = round((xmin - self.start_distance) / self.dx)
-                if xmin < 0:
-                    warnings.warn('xmin is smaller than start_distance. Set '
-                                  'xmin to 0.')
-                    xmin = 0
-                elif xmin >= self.nch:
-                    raise ValueError('xmin is later than end_distance.')
-            else:
-                xmin = 0
-
-            if xmax is not None:
-                xmax = round((xmax - self.start_distance) / self.dx)
-                if xmax <= 0:
-                    raise ValueError('xmax is smaller than start_distance.')
-                if xmax > self.nch:
-                    warnings.warn('xmax is later than end_distance. Set xmax '
-                                  'to the array length.')
-                    xmax = self.nch
-
-        elif mode == 0:
-            if tmin is None:
-                tmin = 0
-            else:
-                tmin = int(tmin)
-            if xmin is None:
-                xmin = 0
-            else:
-                xmin = int(xmin - self.start_channel)
-            if xmax is not None:
-                xmax = int(xmax - self.start_channel)
-
-        self.data = trimming(self.data, dx=self.dx, fs=self.fs, xmin=xmin,
-                             xmax=xmax, tmin=tmin, tmax=tmax)
-
-        self.start_time += tmin / self.fs
-        self.start_distance += xmin * self.dx
-        self.start_channel += xmin
-
+        self.start_time += j0 / self.fs
+        self.start_distance += i0 * self.dx
+        self.start_channel += i0
         return self
 
     def padding(self, dn, reverse=False):

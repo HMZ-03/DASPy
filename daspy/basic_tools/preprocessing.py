@@ -1,7 +1,8 @@
 # Purpose: Some preprocess methods
 # Author: Minzhe Hu
-# Date: 2025.5.21
+# Date: 2025.6.25
 # Email: hmz2018@mail.ustc.edu.cn
+import warnings
 import numpy as np
 from scipy.signal import detrend
 from scipy.signal.windows import tukey
@@ -89,11 +90,11 @@ def stacking(data: np.ndarray, N: int, step: int = None, average: bool = True):
         return data
     if step is None:
         step = N
-    nch, nt = data.shape
+    nch, nsp = data.shape
     begin = np.arange(0, nch - N + 1, step)
     end = begin + N
     nx1 = len(begin)
-    data_stacked = np.zeros((nx1, nt))
+    data_stacked = np.zeros((nx1, nsp))
     for i in range(nx1):
         data_stacked[i, :] = np.sum(data[begin[i]:end[i], :], axis=0)
     if average:
@@ -115,9 +116,9 @@ def cosine_taper(data, p=0.1, side='both'):
     """
     if data.ndim == 1:
         data = data.reshape(1, -1)
-    nch, nt = data.shape
+    nch, nsp = data.shape
     if not isinstance(p, (tuple, list, np.ndarray)):
-        win = tukey(nt, p)
+        win = tukey(nsp, p)
         if side == 'left':
             win[round(nch/2):] = 1
         elif side == 'right':
@@ -125,7 +126,7 @@ def cosine_taper(data, p=0.1, side='both'):
         return data * np.tile(win, (nch, 1))
     else:
         if p[0] > 0:
-            data = data * np.tile(tukey(nch, p[0]), (nt, 1)).T
+            data = data * np.tile(tukey(nch, p[0]), (nsp, 1)).T
         return cosine_taper(data, p[1], side=side)
 
 
@@ -156,32 +157,144 @@ def downsampling(data, xint=None, tint=None, stack=True, lowpass_filter=True):
     return data_ds
 
 
-def trimming(data, dx=None, fs=None, xmin=0, xmax=None, tmin=0, tmax=None,
-             mode=0):
+def _trimming_index(nch, nsp, dx=None, fs=None, start_channel=0,
+                    start_distance=0, start_time=0, xmin=None, xmax=None,
+                    chmin=None, chmax=None, tmin=None, tmax=None, spmin=None,
+                    spmax=None):
+    assert None in [tmin, spmin], \
+        "Please do not set tmin and spmin at the same time."
+    assert None in [tmax, spmax], \
+        "Please do not set tmax and spmax at the same time."
+    assert None in [xmin, chmin], \
+        "Please do not set xmin and chmin at the same time."
+    assert None in [xmax, chmax], \
+        "Please do not set xmax and chmax at the same time."
+    if dx is None:
+        assert xmin is None and xmax is None, "Please set dx"
+    if fs is None:
+        assert tmin is None and tmax is None, "Please set fs"
+
+    if xmin is None:
+        if chmin is None:
+            i0 = 0
+        else:
+            i0 = int(chmin - start_channel)
+            if i0 < 0:
+                warnings.warn('chmin < start_channel . Set chmin to '
+                                'start_channel.')
+                i0 = 0
+            elif i0 >= nch:
+                raise ValueError('chmin >= end_channel.')
+    else:
+        i0 = round((xmin - start_distance) / dx)
+        if i0 < 0:
+            warnings.warn('xmin is smaller than start_distance. Set xmin '
+                            'to 0.')
+            i0 = 0
+        elif i0 >= nch:
+            raise ValueError('xmin is later than end_distance.')
+
+    if xmax is None:
+        if chmax is None:
+            i1 = nch
+        else:
+            i1 = int(chmax - start_channel)
+            if i1 <= 0:
+                raise ValueError('chmax <= start_channel.')
+            elif i1 > nch:
+                warnings.warn('chmax > end_channel. Set chmax to '
+                                'end_channel.')
+                i1 = nch
+    else:
+        i1 = round((xmax - start_distance) / dx)
+        if i1 <= 0:
+            raise ValueError('xmax is smaller than start_distance.')
+        if i1 > nch:
+            warnings.warn('xmax is later than end_distance. Set xmax '
+                            'to the array length.')
+            i1 = nch
+
+    if tmin is None:
+        if spmin is None:
+            j0 = 0
+        else:
+            j0 = int(spmin)
+            if j0 < 0:
+                warnings.warn('spmin < 0. Set spmin to 0.')
+                j0 = 0
+            elif j0 >= nsp:
+                raise ValueError('spmin > nsp.')
+    else:
+        try:
+            j0 = round((tmin - start_time) * fs)
+        except TypeError:
+            j0 = round(tmin * fs)
+        if j0 < 0:
+            warnings.warn('tmin is earlier than start_time. Set tmin '
+                            'to start_time.')
+            j0 = 0
+        elif j0 >= nsp:
+            raise ValueError('tmin is later than end_time.')
+
+    if tmax is None:
+        if spmax is None:
+            j1 = nsp
+        else:
+            j1 = int(spmax)
+            if j1 <= 0:
+                raise ValueError('spmax < 0.')
+            elif j1 > nsp:
+                warnings.warn('spmax > nsp. Set spmax to nsp.')
+                j1 = nsp
+    else:
+        try:
+            j1 = round((tmax - start_time) * fs)
+        except TypeError:
+            j1 = round(tmax * fs)
+        if j1 <= 0:
+            raise ValueError('tmax is earlier than start_time.')
+        if j1 > nsp:
+            warnings.warn('tmax is later than end_time. Set tmax to the'
+                            ' end_time.')
+            j1 = nsp
+    return i0, i1, j0, j1
+
+
+def trimming(data, dx=None, fs=None, xmin=None, xmax=None, chmin=None,
+             chmax=None, tmin=None, tmax=None, spmin=None, spmax=None,
+             **kwargs):
     """
     Cut data to given start and end distance/channel or time/sampling points.
 
     :param data: numpy.ndarray. Data to trim can be 1-D or 2-D.
     :param dx: Channel interval in m.
     :param fs: Sampling rate in Hz.
-    :param xmin, xmax, tmin, tmax: Boundary for trimming.
-    :param mode: 0 means the unit of boundary is channel number and sampling
-        points; 1 means the unit of boundary is meters and seconds.
+    :param xmin, xmax: float. Range of distance.
+    :param chmin, chmax: int. Channel number range.
+    :param tmin, tmax: float or DASDateTime. Range of time.
+    :param spmin, spmax: int. Sampling point range.
     :return: Trimmed data.
     """
-    nch, nt = data.shape
-    if mode == 0:
-        if xmax is None:
-            xmax = nch
-        if tmax is None:
-            tmax = nt
-    elif mode == 1:
-        xmin = round(xmin / dx)
-        xmax = (round(xmax / dx), nch)[xmax is None]
-        tmin = round(tmin * fs)
-        tmax = (round(tmax * fs), nt)[tmax is None]
+    # Compatible with old interfaces and remind users
+    if 'mode' in kwargs:
+        warnings.warn('In future versions, the mode parameter will be '
+                        'deprecated. xmin/xmax will only control the distance'
+                        ' range, tmin/tmax will only control the time range; '
+                        'please use chmin/chmax to control the channel number'
+                        ' range, and spmin/spmax to control the sampling '
+                        'point range', FutureWarning)
+        if kwargs['mode'] == 0:
+            chmin, chmax = xmin, xmax
+            xmin, xmax = None, None
+            spmin, spmax = tmin, tmax
+            tmin, tmax = None, None
+    nch, nsp = data.shape
+    i0, i1, j0, j1 = _trimming_index(nch, nsp, dx=dx, fs=fs, xmin=xmin,
+                                     xmax=xmax, chmin=chmin, chmax=chmax,
+                                     tmin=tmin, tmax=tmax, spmin=spmin,
+                                     spmax=spmax)
 
-    return data[xmin:xmax, tmin:tmax].copy()
+    return data[i0:i1, j0:j1].copy()
 
 
 def padding(data, dn, reverse=False):
@@ -194,16 +307,16 @@ def padding(data, dn, reverse=False):
     :param reverse: bool. Set True to reverse the operation.
     :return: Padded data.
     """
-    nch, nt = data.shape
+    nch, nsp = data.shape
     if isinstance(dn, int):
         dn = (dn, dn)
 
     pad = (dn[0] // 2, dn[0] - dn[0] // 2, dn[1] // 2, dn[1] - dn[1] // 2)
     if reverse:
-        return data[pad[0]:nch - pad[1], pad[2]:nt - pad[3]]
+        return data[pad[0]:nch - pad[1], pad[2]:nsp - pad[3]]
     else:
-        data_pd = np.zeros((nch + dn[0], nt + dn[1]))
-        data_pd[pad[0]:nch + pad[0], pad[2]:nt + pad[2]] = data
+        data_pd = np.zeros((nch + dn[0], nsp + dn[1]))
+        data_pd[pad[0]:nch + pad[0], pad[2]:nsp + pad[2]] = data
         return data_pd
 
 
