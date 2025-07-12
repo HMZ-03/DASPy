@@ -55,6 +55,7 @@ class Section(object):
         :param headers: dict. Other headers.
         :param source: str or pathlib.PosixPath. Path to the source file.
         :param source_type: str. Raw type it read from.
+        :param device: str. Device corresponding to the data structure.
         """
         if data.ndim == 1:
             data = data[np.newaxis, :]
@@ -66,7 +67,7 @@ class Section(object):
         self.start_time = start_time
         opt_attrs = ['origin_time', 'gauge_length', 'data_type', 'scale',
                      'geometry', 'turning_channels', 'headers', 'source',
-                     'source_type']
+                     'source_type', 'file_format']
         for attr in opt_attrs:
             if attr in kwargs:
                 setattr(self, attr, kwargs.pop(attr))
@@ -74,12 +75,17 @@ class Section(object):
     def __str__(self):
         n = max(map(len, self.__dict__.keys()))
         describe = '{}: shape{}\n'.format('data'.rjust(n), self.data.shape)
-        for key, value in self.__dict__.items():
-            if key == 'data':
+        for key in ['dx', 'fs', 'start_channel', 'start_distance', 'distance',
+                    'start_time', 'duration','origin_time', 'gauge_length',
+                    'data_type', 'scale', 'geometry', 'turning_channels',
+                    'headers', 'source', 'source_type', 'file_format']:
+            if hasattr(self, key):
+                value = getattr(self, key)
+            else:
                 continue
             if key == 'geometry':
                 describe += '{}: shape{}\n'.format(key.rjust(n), value.shape)
-            elif key in ['dx', 'start_distance', 'gauge_length']:
+            elif key in ['dx', 'start_distance', 'gauge_length', 'distance']:
                 describe += '{}: {} m\n'.format(key.rjust(n), value)
             elif key == 'fs':
                 describe += '{}: {} Hz\n'.format(key.rjust(n), value)
@@ -88,6 +94,11 @@ class Section(object):
                     describe += '{}: {}\n'.format(key.rjust(n), value)
                 else:
                     describe += '{}: {} s\n'.format(key.rjust(n), value)
+            elif key == 'headers':
+                value_str = str(value)
+                if len(value_str) > 1000:
+                    value_str = value_str[:1000] + '...}'
+                describe += '{}: {}\n'.format(key.rjust(n), value_str)
             else:
                 describe += '{}: {}\n'.format(key.rjust(n), value)
         return describe
@@ -178,6 +189,8 @@ class Section(object):
 
     @property
     def distance(self):
+        if self.dx is None:
+            return None
         return self.nch * self.dx
     
     @property
@@ -760,7 +773,7 @@ class Section(object):
         :param spmin, spmax: int. Sampling point range.
         """
         # Compatible with old interfaces and remind users
-        if 'mode' in kwargs:
+        if 'mode' in kwargs.keys():
             warnings.warn("In future versions, the mode parameter will be "
                           "deprecated. xmin/xmax will only control the "
                           "distance range, tmin/tmax will only control the "

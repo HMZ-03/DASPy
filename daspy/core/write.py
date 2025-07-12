@@ -1,6 +1,6 @@
 # Purpose: Module for writing DAS data.
 # Author: Minzhe Hu
-# Date: 2025.5.21
+# Date: 2025.7.10
 # Email: hmz2018@mail.ustc.edu.cn
 import os
 import warnings
@@ -13,21 +13,22 @@ from nptdms import TdmsFile, TdmsWriter, RootObject, GroupObject, ChannelObject
 from datetime import datetime
 
 
-def write(sec, fname, ftype=None, raw_fname=None, dtype=None):
+def write(sec, fname, ftype=None, raw_fname=None, dtype=None,
+          file_format='auto'):
     fun_map = {'tdms': _write_tdms, 'h5': _write_h5, 'sgy': _write_segy}
     if ftype is None:
         ftype = str(fname).lower().split('.')[-1]
-    ftype.replace('hdf5', 'h5')
-    ftype.replace('segy', 'sgy')
+    for rtp in [('pickle', 'pkl'), ('hdf5', 'h5'), ('segy', 'sgy')]:
+        ftype = ftype.replace(*rtp)
     if dtype is not None:
         sec = sec.copy()
         sec.data = sec.data.astype(dtype)
-    if ftype == 'pkl':
-        write_pkl(sec, fname)
-    elif ftype == 'npy':
+    if ftype == 'npy':
         np.save(fname, sec.data)
+    elif ftype == 'pkl':
+        write_pkl(sec, fname)
     else:
-        fun_map[ftype](sec, fname, raw_fname=raw_fname)
+        fun_map[ftype](sec, fname, raw_fname=raw_fname, file_format=file_format)
     return None
 
 

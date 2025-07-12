@@ -1,6 +1,6 @@
 # Purpose: Module for reading DAS data.
 # Author: Minzhe Hu
-# Date: 2025.5.21
+# Date: 2025.7.9
 # Email: hmz2018@mail.ustc.edu.cn
 # Partially modified from
 # https://github.com/RobbinLuo/das-toolkit/blob/main/DasTools/DasPrep.py
@@ -18,10 +18,10 @@ from daspy.core.dasdatetime import DASDateTime, utc
 from daspy.basic_tools.preprocessing import _trimming_index
 
 
-def read(fname=None, output_type='section', ftype=None, headonly=False,
-         dtype=None, **kwargs) -> Union[Section, tuple]:
+def read(fname=None, output_type='section', ftype=None, file_format='auto',
+         headonly=False, dtype=None, **kwargs) -> Union[Section, tuple]:
     """
-    Read a .pkl/.pickle, .tdms, .h5/.hdf5, .segy/.sgy file.
+    Read a .pkl/.pickle, .h5/.hdf5, .tdms, .segy/.sgy file.
 
     :param fname: str or pathlib.PosixPath. Path of DAS data file.
     :param output_type: str. 'Section' means return an instance of
@@ -41,23 +41,32 @@ def read(fname=None, output_type='section', ftype=None, headonly=False,
     :return: An instance of daspy.Section, or numpy.array for data and a
         dictionary for metadata.
     """
-    fun_map = {'pkl': _read_pkl, 'tdms': _read_tdms, 'h5': _read_h5,
+    fun_map = {'pkl': _read_pkl, 'h5': _read_h5, 'tdms': _read_tdms,
                'sgy': _read_segy, 'npy': _read_npy}
     if fname is None:
         fname = Path(__file__).parent / 'example.pkl'
         ftype = 'pkl'
-    if ftype is None:
+    elif ftype is None:
         ftype = str(fname).split('.')[-1].lower()
 
+    if 'ch1' in kwargs.keys() or 'ch2' in kwargs.keys():
+        warnings.warn("In future versions, parameter 'ch1' and 'ch2' will be "
+                      "replaced by 'chmin' and 'chmax'", FutureWarning)
+        kwargs['chmin'] = kwargs.pop('ch1', None)
+        kwargs['chmax'] = kwargs.pop('ch2', None)
     if callable(ftype):
         try:
             data, metadata = ftype(fname, headonly=headonly, **kwargs)
         except TypeError:
             data, metadata = ftype(fname)
+            si, sj, metadata = _trimming_slice_metadata(data.shape,
+                metadata=metadata, **kwargs)
+            data = data[si, sj]
     else:
         for rtp in [('pickle', 'pkl'), ('hdf5', 'h5'), ('segy', 'sgy')]:
             ftype = ftype.replace(*rtp)
-        data, metadata = fun_map[ftype](fname, headonly=headonly, **kwargs)
+        data, metadata = fun_map[ftype](fname, headonly=headonly, dtype=dtype,
+                                        file_format=file_format, **kwargs)
 
     if dtype is not None:
         data = data.astype(dtype)
@@ -70,6 +79,74 @@ def read(fname=None, output_type='section', ftype=None, headonly=False,
         return data, metadata
 
 
+def _device_standardized_name(file_format: str) -> str:
+    file_format = file_format.lower()
+    file_format = file_format.replace('-', '').replace(' ', '').\
+        replace('(', '').replace(')', '').replace(',', '')
+    allowed_format = {
+        'AP Sensing': ['apsensing', 'aps'],
+        'Aragón Photonics HDAS': ['aragónphotonics', 'aragonphotonics',
+                                  'aragónphotonicshdas', 'aragonphotonicshdas',
+                                  'hdas'],
+        'ASN OptoDAS': ['asnoptodas', 'asn', 'optodas'],
+        'Febus A1-R': ['febusa1r', 'febus', 'a1r'],
+        'Febus A1': ['febusa1', 'a1'],
+        'OptaSense ODH3': ['optasenseodh3', 'odh3'],
+        'OptaSense ODH4': ['optasenseodh4', 'odh4'],
+        'OptaSense ODH4+': ['optasenseodh4+', 'odh4+', 'optasenseodh4plus',
+                            'odh4plus'],
+        'OptaSense QuantX': ['optasensequantx', 'quantx'],
+        'Silixa iDAS': ['silixaidas', 'silixaidasv1', 'idasv1', 'idas'],
+        'Silixa iDAS-v2': ['silixaidasv2', 'idasv2'],
+        'Silixa iDAS-v3': ['silixaidasv3', 'idasv3'],
+        'Silixa iDAS-MG': ['silixaidasmg', 'idasmg'],
+        'Silixa Carina': ['silixacarina', 'carina'],
+        'Sintela Onyx v1.0': ['sintelaonyxv1.0', 'sintelaonyxv1', 'sintalaonyx',
+                              'sintela', 'onyxv1.0', 'onyxv1', 'onyx'],
+        'T8 Sensor': ['t8sensor', 't8'],
+        'Smart Earth ZD-DAS': ['smartearthzddas', 'smartearth', 'zddas',
+                               'smartearthsensingzddas', 'smartearthsensing',
+                               'zhidisensing', 'zhidi', 'zhididas'],
+        'Institute of Semiconductors, CAS': ['iscas', 'cas',
+                                             'instituteofsemiconductors'
+                                             'instituteofsemiconductorscas'],
+        'AI4EPS': ['ai4eps', 'daseventdata'],
+        'INGV': ['ingv', 'istitutonazionaledigeofisicaevulcanologia'],
+        'JAMSTEC': ['jamstec', 'japanagencyformarineearthscienceandtechnology'],
+        'FORESEE': ['forsee', 'fiberopticforenvironmentsenseing'],
+        'Unknown': ['unknown', 'other']
+        }
+    for standardized_format_name, allowed_name in allowed_format.items():
+        if file_format in allowed_name:
+            return standardized_format_name
+    return 'Unknown'
+
+
+def _trimming_slice_metadata(shape, metadata={'dx': None, 'fs': None},
+                             chmin=None, chmax=None, dch=1, xmin=None,
+                             xmax=None, tmin=None, tmax=None, spmin=None,
+                             spmax=None):
+    nch, nsp = shape
+    metadata.setdefault('dx', None)
+    metadata.setdefault('fs', None)
+    metadata.setdefault('start_channel', 0)
+    metadata.setdefault('start_distance', 0)
+    metadata.setdefault('start_time', 0)
+    i0, i1, j0, j1 = _trimming_index(nch, nsp, dx=metadata['dx'],
+        fs=metadata['fs'], start_channel=metadata['start_channel'],
+        start_distance=metadata['start_distance'],
+        start_time=metadata['start_time'],
+        xmin=xmin, xmax=xmax, chmin=chmin, chmax=chmax, tmin=tmin, tmax=tmax,
+        spmin=spmin, spmax=spmax)
+    metadata['start_channel'] += i0
+    if metadata['dx'] is not None:
+        metadata['start_distance'] += i0 * metadata['dx']
+        metadata['dx'] *= dch
+    if metadata['fs'] is not None:
+        metadata['start_time'] += j0 / metadata['fs']
+    return slice(i0, i1, dch), slice(j0, j1), metadata
+
+
 def _read_pkl(fname, headonly=False, chmin=None, chmax=None, dch=1, xmin=None,
               xmax=None, tmin=None, tmax=None, spmin=None, spmax=None):
     with open(fname, 'rb') as f:
@@ -77,39 +154,25 @@ def _read_pkl(fname, headonly=False, chmin=None, chmax=None, dch=1, xmin=None,
         if isinstance(pkl_data, np.ndarray):
             warnings.warn('This data format doesn\'t include channel interval'
                           'and sampling rate. Please set manually')
+            si, sj, metadata = _trimming_slice_metadata(pkl_data.shape,
+                chmin=chmin, chmax=chmax, dch=dch, xmin=xmin, xmax=xmax,
+                tmin=tmin, tmax=tmax, spmin=spmin, spmax=spmax)
             if headonly:
-                return np.zeros_like(pkl_data), {'dx': None, 'fs': None}
+                data = np.zeros_like(pkl_data[si, sj])
             else:
-                nch, nsp = pkl_data.shape
-                i0, i1, j0, j1 = _trimming_index(nch, nsp, chmin=chmin,
-                                                 chmax=chmax, spmin=spmin,
-                                                 spmax=spmax)
-                return pkl_data[i0:i1:dch, j0:j1], \
-                    {'dx': None, 'fs': None}
+                data = pkl_data[si, sj]
+            return data, metadata
         elif isinstance(pkl_data, dict):
             data = pkl_data.pop('data')
+            si, sj, metadata = _trimming_slice_metadata(data.shape,
+                metadata=pkl_data, chmin=chmin, chmax=chmax, dch=dch,
+                xmin=xmin, xmax=xmax, tmin=tmin, tmax=tmax, spmin=spmin,
+                spmax=spmax)
             if headonly:
-                data = np.zeros_like(data)
+                data = np.zeros_like(data[si, sj])
             else:
-                pkl_data.setdefault('dx', None)
-                pkl_data.setdefault('fs', None)
-                pkl_data.setdefault('start_channel', 0)
-                pkl_data.setdefault('start_distance', 0)
-                pkl_data.setdefault('start_time', 0)
-                i0, i1, j0, j1 = _trimming_index(nch, nsp,
-                    dx=pkl_data['dx'], fs=pkl_data['fs'],
-                    start_channel=pkl_data['start_channel'],
-                    start_distance=pkl_data['start_distance'],
-                    start_time=pkl_data['start_time'],
-                    xmin=xmin, xmax=xmax, chmin=chmin, chmax=chmax, tmin=tmin,
-                    tmax=tmax, spmin=spmin, spmax=spmax)
-                data = data[i0:i1:dch, j0:j1].copy()
-                pkl_data['start_channel'] += i0
-                if pkl_data['dx'] is not None:
-                    pkl_data['start_distance'] += i0 * pkl_data['dx']
-                if pkl_data['fs'] is not None:
-                    pkl_data['start_time'] += j0 / pkl_data['fs']
-            return data, pkl_data
+                data = data[si, sj]
+            return data, metadata
         else:
             raise TypeError('Unknown data type.')
 
@@ -131,414 +194,465 @@ def _read_h5_headers(group):
     return headers
 
 
-def _read_h5_starttime(h5_file):
-    try:
-        stime = h5_file['Acquisition/Raw[0]/RawData'].attrs['PartStartTime']
-    except KeyError:
-        try:
-            stime = h5_file['Acquisition'].attrs['MeasurementStartTime']
-        except KeyError:
-            try:
-                stime = h5_file['Acquisition/Raw[0]/RawDataTime/'][0]
-            except KeyError:
-                return 0
-    if isinstance(stime, bytes):
-        stime = stime.decode('ascii')
-
-    if isinstance(stime, str):
-        if len(stime) > 26:
-            stime = DASDateTime.strptime(stime, '%Y-%m-%dT%H:%M:%S.%f%z')
-        else:
-            stime = DASDateTime.strptime(stime, '%Y-%m-%dT%H:%M:%S.%f').\
-                astimezone(utc)
-    else:
-        stime = DASDateTime.fromtimestamp(stime / 1e6).astimezone(utc)
-
-    return stime
-
-
-# def _extract_ASN_h5(h5_file, **kwargs):
-
-def _read_h5(fname, headonly=False, **kwargs):
-    h5_file = h5py.File(fname, 'r')
-    dch = kwargs.pop('dch', 1)
-    group = list(h5_file.keys())[0]
-    if len(h5_file.keys()) >= 10: # ASN/OptoDAS https://github.com/ASN-Norway/simpleDAS
-        ch1 = kwargs.pop('ch1', 0)
-        if h5_file['header/dimensionNames'][0] == b'time':
-            nch = h5_file['data'].shape[1]
-            if headonly:
-                data = np.zeros_like(h5_file['data']).T
-            else:
-                ch2 = kwargs.pop('ch2', nch)
-                data = h5_file['data'][:, ch1:ch2:dch].T
-        elif h5_file['header/dimensionNames'][0] == b'distance':
-            nch = h5_file['data'].shape[1]
-            if headonly:
-                data = np.zeros_like(h5_file['data'])
-            else:
-                ch2 = kwargs.pop('ch2', nch)
-                data = h5_file['data'][ch1:ch2:dch, :]
-        dx = h5_file['header/dx'][()]
-        start_time = DASDateTime.fromtimestamp(
-            h5_file['header/time'][()]).utc()
-        metadata = {'dx': dx * dch, 'fs': 1 / h5_file['header/dt'][()],
-                    'start_time': start_time, 'start_channel': ch1,
-                    'start_distance': ch1 * dx,
-                    'scale': h5_file['header/dataScale'][()]}
-        if h5_file['header/gaugeLength'][()] != np.nan:
-            metadata['guage_length'] = h5_file['header/gaugeLength'][()]
-    elif len(h5_file.keys()) == 5: # AP Sensing
-        # read data
-        nch = h5_file['strain'].shape[1]
-        ch1 = kwargs.pop('ch1', 0)
-        ch2 = kwargs.pop('ch2', nch)
-        if headonly:
-            data = np.zeros_like(h5_file['strain']).T
-        else:
-            data = h5_file['strain'][:, ch1:ch2:dch].T
-
-        # read metadata
-        dx = h5_file['spatialsampling'][()]
-        metadata = {'fs': h5_file['RepetitionFrequency'][()],
-                    'dx': dx * dch, 'start_channel': ch1,
-                    'start_distance': ch1 * dx,
-                    'gauge_length': h5_file.get('GaugeLength')[()]}
-    elif len(h5_file.keys()) == 3: # OpataSense
-        nch = h5_file['data'].shape[1]
-        ch1 = kwargs.pop('ch1', 0)
-        ch2 = kwargs.pop('ch2', nch)
-        dch = kwargs.pop('dch', 1)
-        if headonly:
-            data = np.zeros_like(h5_file['data'])
-        else:
-            data = h5_file['data'][ch1:ch2:dch, :]
-        dx = (h5_file['x_axis'][-1] - h5_file['x_axis'][0]) / \
-            (len(h5_file['x_axis']) - 1)
-        fs = (len(h5_file['t_axis']) - 1) / (h5_file['t_axis'][-1] -
-                                                h5_file['t_axis'][0])
-        metadata = {'dx': dx, 'fs': fs, 'start_channel': ch1,
-                    'start_distance': h5_file['x_axis'][0] + dx * ch1,
-                    'start_time': h5_file['t_axis'][0]}
-    elif set(h5_file.keys()) == {'Mapping', 'Acquisition'}: # Silixa/iDAS
-        nch = h5_file['Acquisition/Raw[0]'].attrs['NumberOfLoci']
-        ch1 = kwargs.pop('ch1', 0)
-        ch2 = kwargs.pop('ch2', nch)
-        if h5_file['Acquisition/Raw[0]/RawData/'].shape[0] == nch:
-            if headonly:
-                data = np.zeros_like(h5_file['Acquisition/Raw[0]/RawData/'])
-            else:
-                data = h5_file['Acquisition/Raw[0]/RawData/']\
-                    [ch1:ch2:dch, :]
-        else:
-            if headonly:
-                data = np.zeros_like(
-                    h5_file['Acquisition/Raw[0]/RawData/']).T
-            else:
-                data = h5_file['Acquisition/Raw[0]/RawData/']\
-                    [:, ch1:ch2:dch].T
-
-        dx = np.mean(h5_file['Mapping/MeasuredSpatialResolution'])
-        start_distance = h5_file['Acquisition/Custom/UserSettings'].\
-                attrs['StartDistance'] + ch1 * dx
-        h5_file['Acquisition/Raw[0]/RawData'].attrs['PartStartTime']
-        fs = h5_file['Acquisition/Raw[0]'].attrs['OutputDataRate']
-        gauge_length = h5_file['Acquisition'].attrs['GaugeLength']
-        scale = h5_file['Acquisition/Raw[0]'].attrs['AmpScaling']
-        geometry = np.vstack((h5_file['Mapping/Lon'],
-                                h5_file['Mapping/Lat'])).T
-        metadata = {'dx': dx * dch, 'fs': fs, 'start_channel': ch1,
-                    'start_distance': ch1 * dx,
-                    'gauge_length': gauge_length, 'geometry': geometry,
-                    'scale': scale}
-        metadata['start_time'] = _read_h5_starttime(h5_file)
-    elif group == 'Acquisition':
-        # OptaSens/ODH, Silixa/iDAS, Sintela/Onyx, Smart Sensing/ZD DAS
-        # read data
-        try:
-            nch = h5_file['Acquisition'].attrs['NumberOfLoci']
-        except KeyError:
-            nch = len(h5_file['Acquisition/Raw[0]/RawData/'])
-        ch1 = kwargs.pop('ch1', 0)
-        ch2 = kwargs.pop('ch2', nch)
-        if h5_file['Acquisition/Raw[0]/RawData/'].shape[0] == nch:
-            if headonly:
-                data = np.zeros_like(h5_file['Acquisition/Raw[0]/RawData/'])
-            else:
-                data = h5_file['Acquisition/Raw[0]/RawData/']\
-                    [ch1:ch2:dch, :]
-        else:
-            if headonly:
-                data = np.zeros_like(
-                    h5_file['Acquisition/Raw[0]/RawData/']).T
-            else:
-                data = h5_file['Acquisition/Raw[0]/RawData/']\
-                    [:, ch1:ch2:dch].T
-
-        # read metadata
-        try:
-            fs = h5_file['Acquisition/Raw[0]'].attrs['OutputDataRate']
-        except KeyError:
-            time_arr = h5_file['Acquisition/Raw[0]/RawDataTime/']
-            fs = 1 / (np.diff(time_arr).mean() / 1e6)
-
-        dx = h5_file['Acquisition'].attrs['SpatialSamplingInterval']
-        gauge_length = h5_file['Acquisition'].attrs['GaugeLength']
-        metadata = {'dx': dx * dch, 'fs': fs, 'start_channel': ch1,
-                    'start_distance': ch1 * dx,
-                    'gauge_length': gauge_length}
-
-        metadata['start_time'] = _read_h5_starttime(h5_file)
-    elif group == 'raw':
-        nch = len(h5_file['raw'])
-        ch1 = kwargs.pop('ch1', 0)
-        ch2 = kwargs.pop('ch2', nch)
-        if headonly:
-            data = np.zeros_like(h5_file['raw'])
-        else:
-            data = h5_file['raw'][ch1:ch2:dch, :]
-        fs = round(1 / np.diff(h5_file['timestamp']).mean())
-        start_time = DASDateTime.fromtimestamp(
-            h5_file['timestamp'][0]).astimezone(utc)
-        warnings.warn('This data format doesn\'t include channel interval. '
-                        'Please set manually')
-        metadata = {'dx': None, 'fs': fs, 'start_channel': ch1,
-                    'start_time': start_time}
-    elif group == 'data': # https://ai4eps.github.io/homepage/ml4earth/seismic_event_format_das/
-        nch = h5_file['data'].shape[1]
-        ch1 = kwargs.pop('ch1', 0)
-        ch2 = kwargs.pop('ch2', nch)
-        dch = kwargs.pop('dch', 1)
-        if headonly:
-            data = np.zeros_like(h5_file['data'])
-        else:
-            data = h5_file['data'][ch1:ch2:dch, :]
-        attr = h5_file['data'].attrs
-        dx = attr['dx_m']
-        metadata = {'dx': dx, 'fs': 1 / attr['dt_s'], 'start_channel': ch1,
-                    'start_distance': ch1 * dx,
-                    'start_time': DASDateTime.strptime(
-                        attr['begin_time'], '%Y-%m-%dT%H:%M:%S.%f%z'),
-                    'data_type': attr['unit']}
-        if 'event_time' in attr.keys():
-            try:
-                origin_time = DASDateTime.strptime(
-                    attr['event_time'], '%Y-%m-%dT%H:%M:%S.%f%z')
-            except ValueError:
-                origin_time = DASDateTime.strptime(
-                    attr['event_time'], '%Y-%m-%dT%H:%M:%S.%f')
-            metadata['origin_time'] = origin_time
-
-    elif group == 'data_product':
-        # read data
-        nch = h5_file.attrs['nx']
-        ch1 = kwargs.pop('ch1', 0)
-        ch2 = kwargs.pop('ch2', nch)
-        array_shape = h5_file['data_product/data'].shape
-        if array_shape[0] == nch:
-            if headonly:
-                data = np.zeros_like(h5_file['data_product/data'])
-            else:
-                data = h5_file['data_product/data'][ch1:ch2:dch, :]
-        else:
-            if headonly:
-                data = np.zeros_like(h5_file['data_product/data']).T
-            else:
-                data = h5_file['data_product/data'][:, ch1:ch2:dch].T
-
-        # read metadata
-        fs = 1 / h5_file.attrs['dt_computer']
-        dx = h5_file.attrs['dx']
-        gauge_length = h5_file.attrs['gauge_length']
-        if h5_file.attrs['saving_start_gps_time'] > 0:
-            start_time = DASDateTime.fromtimestamp(
-                h5_file.attrs['file_start_gps_time'])
-        else:
-            start_time = DASDateTime.fromtimestamp(
-                h5_file.attrs['file_start_computer_time'])
-        data_type = h5_file.attrs['data_product']
-
-        metadata = {'dx': dx * dch, 'fs': fs, 'start_channel': ch1,
-                    'start_distance': ch1 * dx,
-                    'start_time': start_time.astimezone(utc),
-                    'gauge_length': gauge_length, 'data_type': data_type}
-    else: # Febus
-        acquisition = list(h5_file[f'{group}/Source1/Zone1'].keys())[0]
-        # read data
-        start_channel = int(h5_file[f'{group}/Source1/Zone1'].
-                            attrs['Extent'][0])
-        dataset = h5_file[f'{group}/Source1/Zone1/{acquisition}']
-        nch = dataset.shape[-1]
-        ch1 = kwargs.pop('ch1', start_channel)
-        ch2 = kwargs.pop('ch2', start_channel + nch)
-        if headonly:
-            data = np.zeros_like(dataset).T.reshape((nch, -1))
-        else:
-            if len(dataset.shape) == 3: # Febus A1-R
-                data = dataset[:, :, ch1 - start_channel:ch2 - start_channel
-                                :dch].reshape((-1, (ch2 - ch1) // dch)).T
-            elif len(dataset.shape) == 2: # Febus A1
-                data = dataset[:, ch1 - start_channel:ch2 - start_channel:
-                                dch].T
-        # read metadata
-        attrs = h5_file[f'{group}/Source1/Zone1'].attrs
-        dx = attrs['Spacing'][0]
-        try:
-            fs = float(attrs['FreqRes'])
-        except KeyError:
-            try:
-                fs = (attrs['PulseRateFreq'][0] /
-                        attrs['SamplingRes'][0]) / 1000
-            except KeyError:
-                fs = attrs['SamplingRate'][0]
-        start_distance = attrs['Origin'][0]
+def _h5_file_format(h5_file):
+    keys = h5_file.keys()
+    group = list(keys)[0]
+    if set(keys) == {'Fiberlength', 'GaugeLength', 'RepetitionFrequency',
+                     'spatialsampling', 'strain'}:
+        file_format = 'AP Sensing'
+    elif (set(keys) == {'File_Header', 'HDAS_DATA'}) or \
+        (set(keys) == {'hdas_header', 'data'}):
+        file_format = 'Aragón Photonics HDAS'
+    elif all([key in keys for key in ['cableSpec', 'data',
+        'fileGenerator', 'fileVersion', 'header', 'instrumentOptions',
+        'monitoring', 'processingChain', 'timing', 'versions']]):
+        file_format = 'ASN OptoDAS'
+    elif (len(keys) == 1) and group.startswith('fa1-'):
         time = h5_file[f'{group}/Source1/time']
-        if len(time.shape) == 2: # Febus A1-R
-            start_time = DASDateTime.fromtimestamp(time[0, 0]).\
-                astimezone(utc)
-        elif len(time.shape) == 1: # Febus A1
-            start_time = DASDateTime.fromtimestamp(time[0]).astimezone(utc)
-        gauge_length = attrs['GaugeLength'][0]
-        metadata = {'dx': dx * dch, 'fs': fs, 'start_channel': ch1,
-                    'start_distance': start_distance +
-                                        (ch1 - start_channel) * dx,
-                    'start_time': start_time, 'gauge_length': gauge_length}
+        if len(time.shape) == 2:
+            file_format = 'Febus A1-R'
+        elif len(time.shape) == 1:
+            file_format = 'Febus A1'
+    elif set(keys) == {'data', 't_axis', 'x_axis'}:
+        file_format = 'OptaSense ODH3'
+    elif list(keys) == ['raw_data']:
+        file_format = 'OptaSense ODH4'
+    elif list(keys) == ['Acquisition']:
+        file_format = 'OptaSense QuantX'
+        nch = h5_file['Acquisition'].attrs['NumberOfLoci']
+        if h5_file['Acquisition/Raw[0]/RawData/'].shape[0] != nch:
+            file_format = 'Silixa iDAS-MG'
+        try:
+            if not isinstance(h5_file['Acquisition']
+                                .attrs['PartStartTime'], bytes):
+                file_format = 'Sintela Onyx v1.0'
+        except KeyError:
+            pass
+    elif set(keys) == {'Mapping', 'Acquisition'}:
+        file_format = 'Silixa iDAS'
+    elif list(keys) == ['data']:
+        file_format == 'AI4EPS'
+    elif set(keys) == {'ChannelMap', 'Fiber', 'cm', 't', 'x'}:
+        file_format = 'INGV'
+    elif set(keys) == {'DAS_record', 'Sampling_interval_in_space',
+                       'Sampling_interval_in_time', 'Sampling_points_in_space',
+                       'Sampling_points_in_time'}:
+        file_format = 'JAMSTEC'
+    elif set(keys) == {'raw', 'timestamp'}:
+        file_format = 'FORESEE'
+    elif list(keys) == ['ProcessedData']:
+        file_format = 'T8 Sensor'
+    else:
+        file_format = 'Unknown'
+    return file_format
 
+
+def _read_h5(fname, headonly=False, file_format='auto', chmin=None, chmax=None,
+             dch=1, xmin=None, xmax=None, tmin=None, tmax=None, spmin=None,
+             spmax=None):
+    with h5py.File(fname, 'r') as h5_file:
+        keys = h5_file.keys()
+        group = list(keys)[0]
+        if file_format == 'auto':
+            file_format = _h5_file_format(h5_file)
+        else:
+            file_format = _device_standardized_name(file_format)
+        transpose = False
+        if file_format == 'AP Sensing':
+            dataset = h5_file['strain']
+            transpose = True
+            metadata = {'dx': h5_file['spatialsampling'][()],
+                        'fs': h5_file['RepetitionFrequency'][()],
+                        'gauge_length': h5_file['GaugeLength'][()]}
+        elif group == 'data_product':
+            dataset = h5_file['data_product/data']
+            nch = h5_file.attrs['nx']
+            if h5_file['data_product/data'].shape[0] != nch:
+                transpose = True
+
+            fs = 1 / h5_file.attrs['dt_computer']
+            dx = h5_file.attrs['dx']
+            gauge_length = h5_file.attrs['gauge_length']
+            if h5_file.attrs['saving_start_gps_time'] > 0:
+                start_time = DASDateTime.fromtimestamp(
+                    h5_file.attrs['file_start_gps_time'])
+            else:
+                start_time = DASDateTime.fromtimestamp(
+                    h5_file.attrs['file_start_computer_time'])
+            data_type = h5_file.attrs['data_product']
+
+            metadata = {'dx': dx, 'fs': fs,
+                        'start_time': start_time.astimezone(utc),
+                        'gauge_length': gauge_length, 'data_type': data_type}
+        elif file_format == 'Aragón Photonics HDAS':
+            for key in keys:
+                if 'data' in key.lower():
+                    data_key = key
+                elif 'header' in key.lower():
+                    header_key = key
+            dataset = h5_file[data_key]
+            header = h5_file[header_key][()]
+            if header.ndim == 2:
+                header = header[0]
+            if 'start_time' in h5_file[data_key].attrs.keys():
+                start_time = DASDateTime.fromisoformat(h5_file[data_key].
+                                                       attrs['start_time'])
+            else:
+                start_time = DASDateTime.fromtimestamp(float(header[100])).utc()
+                transpose = True
+            metadata = {'dx': header[11],
+                        'fs': header[6] / header[15] / header[98],
+                        'start_distance': header[11],
+                        'start_time': start_time}
+        elif file_format == 'ASN OptoDAS': # https://github.com/ASN-Norway/simpleDAS
+            dataset = h5_file['data']
+            metadata = {'dx': h5_file['header/dx'][()],
+                        'fs': 1 / h5_file['header/dt'][()],
+                        'start_time': DASDateTime.fromtimestamp(
+                            h5_file['header/time'][()]).utc(),
+                        'scale': h5_file['header/dataScale'][()]}
+            if h5_file['header/gaugeLength'][()] != np.nan:
+                metadata['guage_length'] = h5_file['header/gaugeLength'][()]
+            if h5_file['header/dimensionNames'][0] == b'time':
+                transpose = True
+            # elif h5_file['header/dimensionNames'][0] == b'distance':
+            #     transpose = False
+        elif file_format in ['Febus A1-R', 'Febus A1']:
+            acquisition = list(h5_file[f'{group}/Source1/Zone1'].keys())[0]
+            dataset = h5_file[f'{group}/Source1/Zone1/{acquisition}']
+            transpose = True
+            attrs = h5_file[f'{group}/Source1/Zone1'].attrs
+            try:
+                fs = float(attrs['FreqRes'])
+            except KeyError:
+                try:
+                    fs = (attrs['PulseRateFreq'][0] /
+                            attrs['SamplingRes'][0]) / 1000
+                except KeyError:
+                    fs = attrs['SamplingRate'][0]
+            time = h5_file[f'{group}/Source1/time']
+            if len(time.shape) == 2: # Febus A1-R
+                start_time = DASDateTime.fromtimestamp(time[0, 0]).utc()
+            elif len(time.shape) == 1: # Febus A1
+                start_time = DASDateTime.fromtimestamp(time[0]).utc()
+            metadata = {'dx': attrs['Spacing'][0], 'fs': fs,
+                        'start_channel': int(h5_file[f'{group}/Source1/Zone1'].
+                                attrs['Extent'][0]),
+                        'start_distance': attrs['Origin'][0],
+                        'start_time': start_time,
+                        'gauge_length': attrs['GaugeLength'][0]}
+        elif file_format == 'OptaSense ODH3':
+            dataset = h5_file['data']
+            dx = (h5_file['x_axis'][-1] - h5_file['x_axis'][0]) / \
+                (len(h5_file['x_axis']) - 1)
+            fs = (len(h5_file['t_axis']) - 1) / (h5_file['t_axis'][-1] -
+                                                 h5_file['t_axis'][0])
+            metadata = {'dx': dx, 'fs': fs, 'start_time': h5_file['t_axis'][0]}
+        elif file_format in ['OptaSense ODH4', ]:
+            dataset = h5_file['raw_data']
+            attrs = h5_file.attrs
+            dx = attrs['channel spacing m']
+            start_channel = attrs['channel_start']
+            metadata = {'dx': dx, 'fs': attrs['sampling rate Hz'],
+                        'start_channel': start_channel,
+                        'start_distance': start_channel * dx,
+                        'start_time': DASDateTime.fromisoformat(
+                            attrs['starttime']) ,
+                        'data_type': attrs['raw_data_units'],
+                        'scale': attrs['scale factor to strain']}
+        elif file_format in ['OptaSense ODH4+', 'OptaSense QuantX',
+                             'Silixa iDAS-MG', 'Sintela Onyx v1.0',
+                             'Smart Earth ZD-DAS', 'Unknown']:
+            dataset = h5_file['Acquisition/Raw[0]/RawData/']
+            attrs = h5_file['Acquisition'].attrs
+            if dataset.shape[0] != attrs['NumberOfLoci']:
+                transpose = True
+
+            try:
+                fs = h5_file['Acquisition/Raw[0]'].attrs['OutputDataRate']
+            except KeyError:
+                time_arr = h5_file['Acquisition/Raw[0]/RawDataTime/']
+                fs = 1 / (np.diff(time_arr).mean() / 1e6)
+
+            try:
+                stime = dataset.attrs['PartStartTime']
+            except KeyError:
+                try:
+                    stime = attrs['MeasurementStartTime']
+                except KeyError:
+                    try:
+                        stime = h5_file['Acquisition/Raw[0]/RawDataTime/'][0]
+                    except KeyError:
+                        stime = 0
+                        
+            if isinstance(stime, bytes):
+                stime = stime.decode('ascii')
+
+            if isinstance(stime, str):
+                stime = DASDateTime.fromisoformat(stime)
+            else:
+                stime = DASDateTime.fromtimestamp(stime / 1e6).astimezone(utc)
+
+            metadata = {'dx': attrs['SpatialSamplingInterval'], 'fs': fs,
+                        'start_time': stime,
+                        'gauge_length': attrs['GaugeLength']}
+        elif file_format == 'Silixa iDAS':
+            dataset = h5_file['Acquisition/Raw[0]/RawData/']
+            attrs = h5_file['Acquisition/Raw[0]'].attrs
+            if dataset.shape[0] != attrs['NumberOfLoci']:
+                transpose = True
+
+            dx = np.mean(h5_file['Mapping/MeasuredSpatialResolution'])
+            start_distance = h5_file['Acquisition/Custom/UserSettings'].\
+                    attrs['StartDistance']
+            start_time = DASDateTime.fromisoformat(
+                h5_file['Acquisition/Raw[0]/RawData'].attrs['PartStartTime'].
+                decode('ascii'))
+
+            metadata = {'dx': dx, 'fs': attrs['OutputDataRate'],
+                        'start_distance': start_distance,
+                        'start_time':start_time,
+                        'gauge_length': h5_file['Acquisition'].
+                            attrs['GaugeLength'],
+                        'geometry':  np.vstack((h5_file['Mapping/Lon'],
+                                                h5_file['Mapping/Lat'])).T,
+                        'scale': attrs['AmpScaling']}
+        elif file_format == 'T8 Sensor':
+            ds_name = list(h5_file['/ProcessedData'].keys())[0]
+            dpath = f'/ProcessedData/{ds_name}'
+            dataset = h5_file[dpath]
+            transpose = True
+            attrs = h5_file[dpath].attrs
+            dx = float(attrs['record/channel_spacing_m']) * float(
+                attrs['downsampling/decimation_in_length'])
+            fs = float(attrs['record/pulse_repetition_rate_hz']) / float(
+                attrs['downsampling/decimation_in_time'])
+            metadata = {'dx': dx, 'fs':fs,
+                        'start_distance': float(attrs['record/line_offset_m']),
+                        'start_time': DASDateTime.strptime(
+                            attrs['record/start_time'], '%Y%m%dT%H%M%S%f'),
+                        'gauge_length': float(attrs['record/gauge_length_m'])}
+            if 'event/time' in attrs.keys():
+                metadata['origin_time'] = DASDateTime.strptime(
+                    attrs['event/time'], '%Y%m%dT%H%M%S%f')
+        elif file_format == 'INGV':
+            dataset = h5_file['Fiber']
+            transpose = True
+            # dx = h5_file.attrs['MeasureLength[m]'][0] / \
+            #     len(h5_file['ChannelMap'])
+            dx = (h5_file.attrs['Stop Distance (m)'][0] -
+                  h5_file.attrs['Start Distance (m)'][0]) / \
+                    len(h5_file['ChannelMap'])
+            start_channel = int(np.argmax(h5_file['ChannelMap'][()] >= 0))
+            gauge_length = h5_file.attrs['GaugeLength'][0]
+            scale = 116e-9 * h5_file.attrs['SamplingFrequency[Hz]'] / \
+                gauge_length / 8192 / h5_file.attrs['FilterGain']
+            metadata = {'dx': dx, 'fs': h5_file.attrs['Samplerate'][0],
+                        'start_channel': start_channel,
+                        'start_distance': h5_file.attrs['Start Distance (m)']
+                            [0] + start_channel * dx,
+                        'start_time': DASDateTime.fromtimestamp(h5_file.attrs
+                            ['StartTime'][0] / 1e6).utc(),
+                        'gauge_length': gauge_length, 'scale': scale}
+        elif file_format in 'JAMSTEC':
+            dataset = h5_file['DAS_record']
+            metadata = {'dx': h5_file['Sampling_interval_in_space'][0],
+                        'fs': 1 / h5_file['Sampling_interval_in_time'][0]}
+        elif file_format == 'FORESEE':
+            dataset = h5_file['raw']
+            fs = round(1 / np.diff(h5_file['timestamp']).mean())
+            start_time = DASDateTime.fromtimestamp(
+                h5_file['timestamp'][0]).astimezone(utc)
+            warnings.warn('This data format doesn\'t include channel interval. '
+                            'Please set manually')
+            metadata = {'dx': None, 'fs': fs, 'start_time': start_time}
+        elif file_format == 'AI4EPS': # https://ai4eps.github.io/homepage/ml4earth/seismic_event_format_das/
+            dataset = h5_file['data']
+            attr = h5_file['data'].attrs
+            dx = attr['dx_m']
+            metadata = {'dx': dx, 'fs': 1 / attr['dt_s'],
+                        'start_time': DASDateTime.fromisoformat(
+                            attr['begin_time']),
+                        'data_type': attr['unit']}
+            if 'event_time' in attr.keys():
+                metadata['origin_time'] = DASDateTime.fromisoformat(
+                    attr['event_time'])
+
+        metadata['file_format'] = file_format
         metadata['headers'] = _read_h5_headers(h5_file)
-        h5_file.close()
-
+        shape = dataset.shape
+        if len(shape) == 3:
+            shape = (shape[0] * shape[1], shape[2])
+        if transpose:
+            shape = shape[::-1]
+        si, sj, metadata = _trimming_slice_metadata(shape, metadata=metadata,
+            chmin=chmin, chmax=chmax, dch=dch, xmin=xmin, xmax=xmax, tmin=tmin,
+            tmax=tmax, spmin=spmin, spmax=spmax)
+        if headonly:
+            data = np.zeros(shape, dtype=dataset.dtype)[si, sj]
+        elif transpose:
+            if len(dataset.shape) == 3:
+                fs = int(metadata['fs'])
+                j0, k0 = divmod(sj.start, fs)
+                j1, k1 = divmod(sj.stop, fs)
+                k1 = (j1 - j0) * fs + k1
+                j1 += 1
+                data = dataset[j0:j1, :, si]
+                data = data.reshape((-1, data.shape[-1]))[k0:k1, :].T
+                print(data.shape)
+            else:
+                data = dataset[sj, si].T
+        else:
+            data = dataset[si, sj]
     return data, metadata
 
 
-def _read_tdms(fname, headonly=False, **kwargs):
+def _read_tdms(fname, headonly=False, file_format='auto', chmin=None,
+               chmax=None, dch=1, xmin=None, xmax=None, tmin=None, tmax=None,
+               spmin=None, spmax=None):
     # https://nptdms.readthedocs.io/en/stable/quickstart.html
     with TdmsFile.read(fname) as tdms_file:
-        group_name = [group.name for group in tdms_file.groups()]
-        if 'Measurement' in group_name:
-            key = 'Measurement'
-        elif 'DAS' in group_name:
-            key = 'DAS'
-        else:
-            key = group_name[0]
-
-        headers = {**tdms_file.properties, **tdms_file[key].properties}
-        nch = len(tdms_file[key])
-        dch = kwargs.pop('dch', 1)
-        # read data
-        if nch > 1:
-            start_channel = min(int(channel.name) for channel in
-                                tdms_file[key].channels())
-            ch1 = max(kwargs.pop('ch1', start_channel), start_channel)
-            ch2 = min(kwargs.pop('ch2', start_channel + nch),
-                      start_channel + nch)
-            if headonly:
-                nt = len(tdms_file[key][str(start_channel)])
-                data = np.zeros((nch, nt))
+        if file_format == 'auto':
+            group_name = [group.name for group in tdms_file.groups()]
+            if group_name == ['Measurement']:
+                key = 'Measurement'
+                properties = tdms_file.properties
+                print(properties['iDASVersion'])
+                version = float(properties['iDASVersion'][:3])
+                if version < 2.3:
+                    file_format = 'Silixa iDAS'
+                elif 2.3 <= version < 2.6:
+                    file_format = 'Silixa iDAS-v2'
+                elif version >= 2.6:
+                    file_format = 'Silixa iDAS-v3'
+            elif group_name == ['DAS']:
+                key = 'DAS'
+                properties = tdms_file[key].properties
+                file_format = 'Institute of Semiconductors, CAS'
             else:
-                data = np.asarray([tdms_file[key][str(ch)]
-                                   for ch in range(ch1, ch2, dch)])
-        elif nch == 1:
+                key = group_name[0]
+                file_format = 'Unknown'
+        else:
+            file_format = _device_standardized_name(file_format)
+
+        if file_format in ['Silixa iDAS', 'Silixa iDAS-v2', 'Silixa iDAS-v3',
+                           'Unknown']:
+            start_channel = min([int(channel.name) for channel in
+                                 tdms_file[key].channels()])
+            shape = (len(tdms_file[key]),
+                     len(tdms_file[key][str(start_channel)]))
+            metadata = {'dx': properties['SpatialResolution[m]'],
+                        'fs': properties['SamplingFrequency[Hz]'],
+                        'start_channel': start_channel,
+                        'headers': {**properties}}
             try:
-                start_channel = int(headers['Initial Channel'])
+                metadata['start_distance'] = properties['Start Distance (m)']
+                print('a1')
+            except KeyError:
+                metadata['start_distance'] = properties['StartPosition[m]']
+                print('a2')
+            
+            try:
+                metadata['start_time'] = DASDateTime.fromisoformat(
+                    properties['ISO8601 Timestamp'])
+                print('b1')
+            except KeyError:
+                start_time = 0
+                for time_key in ['GPSTimeStamp', 'CPUTimeStamp', 'Trigger Time']:
+                    if time_key in properties.keys():
+                        if isinstance(properties[time_key], str):
+                            print('b2' + time_key)
+                            start_time = DASDateTime.fromisoformat(
+                                properties[time_key])
+                        elif isinstance(properties[time_key], np.datetime64):
+                            print('b3' + time_key)
+                            start_time = DASDateTime.from_datetime(
+                                properties[time_key].item())
+                        else:
+                            continue
+                        break
+                metadata['start_time'] = start_time
+            if 'GaugeLength' in properties.keys():
+                metadata['gauge_length'] = properties['GaugeLength']
+                print('c1')
+
+            si, sj, metadata = _trimming_slice_metadata(shape,
+                metadata=metadata, chmin=chmin, chmax=chmax, dch=dch, xmin=xmin,
+                xmax=xmax, tmin=tmin, tmax=tmax, spmin=spmin, spmax=spmax)
+            if headonly:
+                data = np.zeros(shape,
+                    dtype=tdms_file[key][str(start_channel)].dtype)[si, sj]
+            else:
+                data = np.asarray([tdms_file[key][str(ch)][sj] for ch in
+                                   range(si.start, si.stop, si.step)])
+        elif file_format == 'Institute of Semiconductors, CAS':
+
+            try:
+                start_channel = int(properties['Initial Channel'])
             except KeyError:
                 start_channel = 0
+            nch = int(properties['Total Channels'])
+            nsp = len(tdms_file[key].channels()[0]) // nch
+            metadata = {'dx': properties['Spatial Resolution'],
+                        'fs': 1 / properties['Time Base'],
+                        'start_channel': start_channel,
+                        'start_time': DASDateTime.from_datetime(
+                            properties['Trigger Time'].item()),
+                        'headers': {**tdms_file.properties, **properties}}
 
-            ch1 = max(kwargs.pop('ch1', start_channel), start_channel)
-            nch = int(headers['Total Channels'])
-            ch2 = min(kwargs.pop('ch2', start_channel + nch),
-                      start_channel + nch)
+            si, sj, metadata = _trimming_slice_metadata((nch, nsp),
+                metadata=metadata, chmin=chmin, chmax=chmax, dch=dch, xmin=xmin,
+                xmax=xmax, tmin=tmin, tmax=tmax, spmin=spmin, spmax=spmax)
             if headonly:
-                data = np.zeros(len(tdms_file[key].channels()[0])).\
-                    reshape((nch, -1))
+                data = np.zeros((nch, nsp),
+                    dtype=tdms_file[key].channels()[0].dtype)[si, sj]
             else:
-                data = np.asarray(tdms_file[key].channels()[0]).\
-                    reshape((-1, nch)).T
-                data = data[ch1 - start_channel:ch2 - start_channel:dch]
+                data = np.asarray(tdms_file[key].channels()[0][sj.start * nch,
+                    sj.stop * nch]).reshape((-1, nch)).T[si]
 
-        # read metadata
-        try:
-            dx = headers['SpatialResolution[m]']
-        except KeyError:
-            try:
-                dx = headers['Spatial Resolution']
-            except KeyError:
-                dx = None
-
-        try:
-            fs = headers['SamplingFrequency[Hz]']
-        except KeyError:
-            try:
-                fs = 1 / headers['Time Base']
-            except KeyError:
-                fs = None
-
-        try:
-            start_distance = headers['Start Distance (m)'] + \
-                dx * (ch1 - start_channel)
-        except KeyError:
-            start_distance = dx * ch1
-
-        try:
-            start_time = DASDateTime.strptime(headers['ISO8601 Timestamp'],
-                                              '%Y-%m-%dT%H:%M:%S.%f%z')
-        except ValueError:
-            start_time = DASDateTime.strptime(headers['ISO8601 Timestamp'],
-                                              '%Y-%m-%dT%H:%M:%S.%f')
-        except KeyError:
-            start_time = 0
-            for key in ['GPSTimeStamp', 'CPUTimeStamp', 'Trigger Time']:
-                if key in headers.keys():
-                    if headers[key]:
-                        start_time = DASDateTime.from_datetime(headers[key].
-                                                               item())
-                        break
-
-        if dx is not None:
-            dx *= dch
-        metadata = {'dx': dx, 'fs': fs, 'start_channel': ch1,
-                    'start_distance': start_distance, 'start_time': start_time,
-                    'headers': headers}
-
-        if 'GaugeLength' in headers.keys():
-            metadata['gauge_length'] = headers['GaugeLength']
-
+        metadata['file_format'] = file_format
     return data, metadata
 
 
-def _read_segy(fname, headonly=False, **kwargs):
+def _read_segy(fname, headonly=False, file_format='auto', chmin=None,
+               chmax=None, dch=1, xmin=None, xmax=None, tmin=None, tmax=None,
+               spmin=None, spmax=None):
     # https://github.com/equinor/segyio-notebooks/blob/master/notebooks/basic/02_segy_quicklook.ipynb
     with segyio.open(fname, ignore_geometry=True) as segy_file:
-        nch = segy_file.tracecount
-        ch1 = kwargs.pop('ch1', 0)
-        ch2 = kwargs.pop('ch2', nch)
-        dch = kwargs.pop('dch', 1)
-
-        # read data
-        if headonly:
-            data = np.zeros_like(segy_file.trace.raw[:])
+        if file_format == 'auto':
+            file_format = 'Unknown'
         else:
-            data = segy_file.trace.raw[ch1:ch2:dch]
-
-        # read metadata:
-        fs = 1 / (segyio.tools.dt(segy_file) / 1e6)
-        metadata = {'dx': None, 'fs': fs, 'start_channel': ch1}
+            file_format = _device_standardized_name(file_format)
+        
+        metadata = {'fs': 1 / (segyio.tools.dt(segy_file) / 1e6),
+                    'file_format': file_format}
         warnings.warn('This data format doesn\'t include channel interval.'
-                      'Please set manually')
+                    'Please set manually')
+        
+        nch = segy_file.tracecount
+        nsp = segy_file.trace.raw.shape
+        si, sj, metadata = _trimming_slice_metadata((nch, nsp),
+            metadata=metadata, chmin=chmin, chmax=chmax, dch=dch, tmin=tmin,
+            tmax=tmax, spmin=spmin, spmax=spmax)
 
+        if headonly:
+            data = np.zeros((nch, nsp), dtype=segy_file.trace.raw.dtype)[si, sj]
+        else:
+            data = segy_file.trace.raw[si, sj]
         return data, metadata
 
 
-def _read_npy(fname, headonly=False, **kwargs):
+def _read_npy(fname, headonly=False, chmin=None, chmax=None, dch=1, xmin=None,
+              xmax=None, tmin=None, tmax=None, spmin=None, spmax=None):
     data = np.load(fname)
     if headonly:
         return np.zeros_like(data), {'dx': None, 'fs': None}
     else:
-        ch1 = kwargs.pop('ch1', 0)
-        ch2 = kwargs.pop('ch2', len(data))
-        dch = kwargs.pop('dch', 1)
+        si, sj, metadata = _trimming_slice_metadata(data.shape, chmin=chmin,
+            chmax=chmax, spmin=spmin, spmax=spmax)
         warnings.warn('This data format doesn\'t include channel interval and '
                     'sampling rate. Please set manually')
-        return data[ch1:ch2:dch], {'dx': None, 'fs': None}
+        return data[si, sj], metadata
 
 
 def read_json(fname, output_type='dict'):
