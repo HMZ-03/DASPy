@@ -499,7 +499,6 @@ def _read_h5(fname, headonly=False, file_format='auto', chmin=None, chmax=None,
                 j1 += 1
                 data = dataset[j0:j1, :, si]
                 data = data.reshape((-1, data.shape[-1]))[k0:k1, :].T
-                print(data.shape)
             else:
                 data = dataset[sj, si].T
         else:
@@ -517,7 +516,6 @@ def _read_tdms(fname, headonly=False, file_format='auto', chmin=None,
             if group_name == ['Measurement']:
                 key = 'Measurement'
                 properties = tdms_file.properties
-                print(properties['iDASVersion'])
                 version = float(properties['iDASVersion'][:3])
                 if version < 2.3:
                     file_format = 'Silixa iDAS'
@@ -547,25 +545,20 @@ def _read_tdms(fname, headonly=False, file_format='auto', chmin=None,
                         'headers': {**properties}}
             try:
                 metadata['start_distance'] = properties['Start Distance (m)']
-                print('a1')
             except KeyError:
                 metadata['start_distance'] = properties['StartPosition[m]']
-                print('a2')
             
             try:
                 metadata['start_time'] = DASDateTime.fromisoformat(
                     properties['ISO8601 Timestamp'])
-                print('b1')
             except KeyError:
                 start_time = 0
                 for time_key in ['GPSTimeStamp', 'CPUTimeStamp', 'Trigger Time']:
                     if time_key in properties.keys():
                         if isinstance(properties[time_key], str):
-                            print('b2' + time_key)
                             start_time = DASDateTime.fromisoformat(
                                 properties[time_key])
                         elif isinstance(properties[time_key], np.datetime64):
-                            print('b3' + time_key)
                             start_time = DASDateTime.from_datetime(
                                 properties[time_key].item())
                         else:
@@ -574,7 +567,6 @@ def _read_tdms(fname, headonly=False, file_format='auto', chmin=None,
                 metadata['start_time'] = start_time
             if 'GaugeLength' in properties.keys():
                 metadata['gauge_length'] = properties['GaugeLength']
-                print('c1')
 
             si, sj, metadata = _trimming_slice_metadata(shape,
                 metadata=metadata, chmin=chmin, chmax=chmax, dch=dch, xmin=xmin,
