@@ -65,7 +65,7 @@ def read(fname=None, output_type='section', ftype=None, file_format='auto',
     else:
         for rtp in [('pickle', 'pkl'), ('hdf5', 'h5'), ('segy', 'sgy')]:
             ftype = ftype.replace(*rtp)
-        data, metadata = fun_map[ftype](fname, headonly=headonly, dtype=dtype,
+        data, metadata = fun_map[ftype](fname, headonly=headonly,
                                         file_format=file_format, **kwargs)
 
     if dtype is not None:
