@@ -175,7 +175,7 @@ class Section(object):
 
     @property
     def nt(self):
-        warnings.warn("'nt' attribute will be renamed to 'nsp' in a future '"
+        warnings.warn("'nt' attribute will be renamed to 'nsp' in a future "
                       "release.", FutureWarning)
         return self.nsp
 
@@ -1036,8 +1036,8 @@ class Section(object):
         """
         Computes the spectrogram of the given data.
 
-        :param ch1, ch2, nch: int. Start channel, end channel and channel step
-            for calculating the average spectrogram.
+        :param chmin, chmax, dch: int. Start channel, end channel and channel
+            step for calculating the average spectrogram.
         :param nperseg: int. Length of each segment.
         :param noverlap: int. Number of points to overlap between segments. If
             None, noverlap = nperseg // 2.
@@ -1053,20 +1053,31 @@ class Section(object):
             ['even', 'odd', 'constant', 'zeros', None].
         :return: Spectrogram, frequency sequence and time sequence.
         """
-        if 'ch1' in kwargs.keys():
-            ch1 = int(kwargs.pop('ch1') - self.start_channel)
-        else:
-            ch1 = 0
-        if 'ch2' in kwargs.keys():
-            ch2 = int(kwargs.pop('ch2') - self.start_channel)
-        else:
-            ch2 = self.nch
-        if 'nch' in kwargs.keys():
-            nch = int(kwargs.pop('nch'))
-        else:
-            nch = 1
 
-        return spectrogram(self.data[ch1:ch2:nch], self.fs, **kwargs)
+        if ('ch1' in kwargs.keys()) or ('ch2' in kwargs.keys()):
+            kwargs['chmin'] = kwargs.pop('ch1', 0)
+            kwargs['chmax'] = kwargs.pop('ch2', self.nch)
+            warnings.warn("'ch1' and 'ch2' attribute will be renamed to 'chmin'"
+                          " and 'chmax' in a future release.", FutureWarning)
+        if 'nch' in kwargs.keys():
+            kwargs['dch'] = kwargs.pop('nch', 1)
+            warnings.warn("'nch' attribute will be renamed to 'dch' in a future"
+                          " release.", FutureWarning)
+
+        if 'chmin' in kwargs.keys():
+            chmin = int(kwargs.pop('chmin') - self.start_channel)
+        else:
+            chmin = 0
+        if 'chmax' in kwargs.keys():
+            chmax = int(kwargs.pop('chmax') - self.start_channel)
+        else:
+            chmax = self.nch
+        if 'dch' in kwargs.keys():
+            dch = int(kwargs.pop('dch'))
+        else:
+            dch = 1
+
+        return spectrogram(self.data[chmin:chmax:dch], self.fs, **kwargs)
 
     def fk_transform(self, **kwargs):
         """
