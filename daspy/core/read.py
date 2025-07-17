@@ -21,29 +21,41 @@ from daspy.basic_tools.preprocessing import _trimming_index
 def read(fname=None, output_type='section', ftype=None, file_format='auto',
          headonly=False, dtype=None, **kwargs) -> Union[Section, tuple]:
     """
-    Read a .pkl/.pickle, .h5/.hdf5, .tdms, .segy/.sgy file.
+    Read a .pkl/.pickle, .h5/.hdf5, .tdms, or .segy/.sgy file.
 
-    :param fname: str or pathlib.PosixPath. Path of DAS data file.
-    :param output_type: str. 'Section' means return an instance of
-        daspy.Section, 'array' means return numpy.array for data and a
-        dictionary for metadata.
-    :param ftype: None, str or function. None for automatic detection, or str to
-        specify a type of 'pkl', 'pickle', 'tdms', 'h5', 'hdf5', 'segy', 'sgy',
-        or 'npy', or a function for read data and metadata.
-    :param file_format: str. The format in which the file is saved. It could be
-        name of the device manufacturer (e.g. 'Silixa'), device model (e.g.
-        'OptaSense QuantX'), file format standard (s.g. 'AI4EPS'), organization
-        (e.g. 'INGV') or dataset (e.g. 'FORESEE').
-    :param headonly. bool. If True, only metadata will be read, the returned
-        data will be an array of all zeros of the same size as the original
-        data.
-    :param dtype: str. The data type of the returned data.
-    :param chmin, chmax, dch: int. Channel number range and step.
-    :param xmin, xmax: float. Range of distance.
-    :param tmin, tmax: float or DASDateTime. Range of time.
-    :param spmin, spmax: int. Sampling point range.
-    :return: An instance of daspy.Section, or numpy.array for data and a
-        dictionary for metadata.
+    :param fname: Path of DAS data file.
+    :type fname: str or pathlib.PosixPath
+    :param output_type: Output type, 'Section' for daspy.Section instance,
+        'array' for numpy array and metadata dict.
+    :type output_type: str
+    :param ftype: File type or function for reading data.
+    :type ftype: None, str or function
+    :param file_format: Format in which the file is saved.
+    :type file_format: str
+    :param headonly: If True, only metadata will be read.
+    :type headonly: bool
+    :param dtype: Data type of the returned data.
+    :type dtype: str
+    :param chmin: Minimum channel number.
+    :type chmin: int
+    :param chmax: Maximum channel number.
+    :type chmax: int
+    :param dch: Channel step.
+    :type dch: int
+    :param xmin: Minimum distance.
+    :type xmin: float
+    :param xmax: Maximum distance.
+    :type xmax: float
+    :param tmin: Minimum time.
+    :type tmin: float or DASDateTime
+    :param tmax: Maximum time.
+    :type tmax: float or DASDateTime
+    :param spmin: Minimum sampling point.
+    :type spmin: int
+    :param spmax: Maximum sampling point.
+    :type spmax: int
+    :return: daspy.Section instance or tuple of numpy array and metadata dict.
+    :rtype: Section or tuple
     """
     fun_map = {'pkl': _read_pkl, 'h5': _read_h5, 'tdms': _read_tdms,
                'sgy': _read_segy, 'npy': _read_npy}
@@ -84,6 +96,9 @@ def read(fname=None, output_type='section', ftype=None, file_format='auto',
 
 
 def _device_standardized_name(file_format: str) -> str:
+    """
+    Standardize device or file format name.
+    """
     file_format = file_format.lower()
     file_format = file_format.replace('-', '').replace(' ', '').\
         replace('(', '').replace(')', '').replace(',', '')
@@ -130,6 +145,9 @@ def _trimming_slice_metadata(shape, metadata={'dx': None, 'fs': None},
                              chmin=None, chmax=None, dch=1, xmin=None,
                              xmax=None, tmin=None, tmax=None, spmin=None,
                              spmax=None):
+    """
+    Calculate slicing indices and update metadata for trimming.
+    """
     nch, nsp = shape
     metadata.setdefault('dx', None)
     metadata.setdefault('fs', None)
@@ -153,6 +171,9 @@ def _trimming_slice_metadata(shape, metadata={'dx': None, 'fs': None},
 
 def _read_pkl(fname, headonly=False, chmin=None, chmax=None, dch=1, xmin=None,
               xmax=None, tmin=None, tmax=None, spmin=None, spmax=None):
+    """
+    Read data and metadata from a pickle file.
+    """
     with open(fname, 'rb') as f:
         pkl_data = pickle.load(f)
         if isinstance(pkl_data, np.ndarray):
@@ -182,6 +203,9 @@ def _read_pkl(fname, headonly=False, chmin=None, chmax=None, dch=1, xmin=None,
 
 
 def _read_h5_headers(group):
+    """
+    Recursively read HDF5 group attributes and headers.
+    """ 
     headers = {}
     if len(group.attrs) != 0:
         headers['attrs'] = dict(group.attrs)
@@ -199,6 +223,9 @@ def _read_h5_headers(group):
 
 
 def _h5_file_format(h5_file):
+    """
+    Detect HDF5 file format based on keys and structure.
+    """
     keys = h5_file.keys()
     group = list(keys)[0]
     if set(keys) == {'Fiberlength', 'GaugeLength', 'RepetitionFrequency',
@@ -254,6 +281,9 @@ def _h5_file_format(h5_file):
 def _read_h5(fname, headonly=False, file_format='auto', chmin=None, chmax=None,
              dch=1, xmin=None, xmax=None, tmin=None, tmax=None, spmin=None,
              spmax=None):
+    """
+    Read data and metadata from an HDF5 file.
+    """
     with h5py.File(fname, 'r') as h5_file:
         keys = h5_file.keys()
         group = list(keys)[0]
@@ -513,7 +543,10 @@ def _read_h5(fname, headonly=False, file_format='auto', chmin=None, chmax=None,
 def _read_tdms(fname, headonly=False, file_format='auto', chmin=None,
                chmax=None, dch=1, xmin=None, xmax=None, tmin=None, tmax=None,
                spmin=None, spmax=None):
-    # https://nptdms.readthedocs.io/en/stable/quickstart.html
+    """
+    Read data and metadata from a TDMS file. see
+    https://nptdms.readthedocs.io/en/stable/quickstart.html.
+    """
     with TdmsFile.read(fname) as tdms_file:
         if file_format == 'auto':
             group_name = [group.name for group in tdms_file.groups()]
@@ -613,7 +646,10 @@ def _read_tdms(fname, headonly=False, file_format='auto', chmin=None,
 def _read_segy(fname, headonly=False, file_format='auto', chmin=None,
                chmax=None, dch=1, xmin=None, xmax=None, tmin=None, tmax=None,
                spmin=None, spmax=None):
-    # https://github.com/equinor/segyio-notebooks/blob/master/notebooks/basic/02_segy_quicklook.ipynb
+    """
+    Read data and metadata from a SEG-Y file. See
+    https://github.com/equinor/segyio-notebooks/blob/master/notebooks/basic/02_segy_quicklook.ipynb.
+    """
     with segyio.open(fname, ignore_geometry=True) as segy_file:
         if file_format == 'auto':
             file_format = 'Unknown'
@@ -640,6 +676,9 @@ def _read_segy(fname, headonly=False, file_format='auto', chmin=None,
 
 def _read_npy(fname, headonly=False, chmin=None, chmax=None, dch=1, xmin=None,
               xmax=None, tmin=None, tmax=None, spmin=None, spmax=None):
+    """
+    Read data from a NumPy .npy file.
+    """
     data = np.load(fname)
     if headonly:
         return np.zeros_like(data), {'dx': None, 'fs': None}
@@ -653,13 +692,17 @@ def _read_npy(fname, headonly=False, chmin=None, chmax=None, dch=1, xmin=None,
 
 def read_json(fname, output_type='dict'):
     """
-    Read .json metadata file. See {Lai et al. , 2024, Seismol. Res. Lett.}
+    Read .json metadata file.
 
-    :param fname: str or pathlib.PosixPath. Path of json file.
-    :param output_type: str. 'dict' means return a dictionary, and 'Section'
-        means return a empty daspy.Section instance with metadata.
-    :return: A dictionary of metadata or an instance of daspy.Section without
-        data.
+    See :cite:`Lai2024` for format details.
+
+    :param fname: Path of json file.
+    :type fname: str or pathlib.PosixPath
+    :param output_type: Output type, 'dict' for dictionary, 'Section' for empty
+        daspy.Section instance.
+    :type output_type: str
+    :return: Metadata dictionary or daspy.Section instance without data.
+    :rtype: dict or Section
     """
     with open(fname, 'r') as fcc_file:
         headers = json.load(fcc_file)
@@ -671,11 +714,15 @@ def read_json(fname, output_type='dict'):
             sec_num = len(headers['Overview']['Interrogator'])
             sec = []
             for interrogator in headers['Overview']['Interrogator']:
-                nch = interrogator['Acquisition'][0]['Attributes']['number_of_channels']
+                nch = interrogator['Acquisition'][0]['Attributes']\
+                    ['number_of_channels']
                 data = np.zeros((nch, 0))
-                dx = interrogator['Acquisition'][0]['Attributes']['spatial_sampling_interval']
-                fs = interrogator['Acquisition'][0]['Attributes']['acquisition_sample_rate']
-                gauge_length = interrogator['Acquisition'][0]['Attributes']['gauge_length']
+                dx = interrogator['Acquisition'][0]['Attributes']\
+                    ['spatial_sampling_interval']
+                fs = interrogator['Acquisition'][0]['Attributes']\
+                    ['acquisition_sample_rate']
+                gauge_length = interrogator['Acquisition'][0]['Attributes']\
+                    ['gauge_length']
                 sec.append(Section(data, dx, fs, gauge_length=gauge_length,
                                    headers=headers))
         elif len(headers['Overview']['Interrogator'][0]['Acquisition']) > 1:
@@ -683,7 +730,8 @@ def read_json(fname, output_type='dict'):
             sec_num = len(
                 headers['Overview']['Interrogator'][0]['Acquisition'])
             sec = []
-            for acquisition in headers['Overview']['Interrogator'][0]['Acquisition']:
+            for acquisition in headers['Overview']['Interrogator'][0]\
+                ['Acquisition']:
                 nch = acquisition['Attributes']['number_of_channels']
                 data = np.zeros((nch, 0))
                 dx = acquisition['Attributes']['spatial_sampling_interval']
@@ -696,17 +744,22 @@ def read_json(fname, output_type='dict'):
             if len(headers['Overview']['Cable']) > 1:
                 case_type = 'Single interrogators, multiple cable'
             else:
-                env = headers['Overview']['Cable'][0]['Attributes']['cable_environment']
+                env = headers['Overview']['Cable'][0]['Attributes']\
+                    ['cable_environment']
                 if env == 'trench':
                     case_type = 'Direct buried'
                 elif env == 'conduit':
                     case_type = 'Dark fiber'
                 elif env in ['wireline', 'outside borehole casing']:
                     case_type = 'Borehole cable'
-            nch = headers['Overview']['Interrogator'][0]['Acquisition'][0]['Attributes']['number_of_channels']
-            dx = headers['Overview']['Interrogator'][0]['Acquisition'][0]['Attributes']['spatial_sampling_interval']
-            fs = headers['Overview']['Interrogator'][0]['Acquisition'][0]['Attributes']['acquisition_sample_rate']
-            gauge_length = headers['Overview']['Interrogator'][0]['Acquisition'][0]['Attributes']['gauge_length']
+            nch = headers['Overview']['Interrogator'][0]['Acquisition'][0]\
+                ['Attributes']['number_of_channels']
+            dx = headers['Overview']['Interrogator'][0]['Acquisition'][0]\
+                ['Attributes']['spatial_sampling_interval']
+            fs = headers['Overview']['Interrogator'][0]['Acquisition'][0]\
+                ['Attributes']['acquisition_sample_rate']
+            gauge_length = headers['Overview']['Interrogator'][0]\
+                ['Acquisition'][0]['Attributes']['gauge_length']
             data = np.zeros((nch, 0))
             sec = Section(data, dx, fs, gauge_length=gauge_length,
                           headers=headers)
