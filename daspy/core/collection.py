@@ -1,6 +1,6 @@
 # Purpose: Module for handling Collection objects.
 # Author: Minzhe Hu
-# Date: 2025.6.21
+# Date: 2025.7.17
 # Email: hmz2018@mail.ustc.edu.cn
 import os
 import warnings
@@ -243,11 +243,15 @@ class Collection(object):
             return None
 
         if readsec:
-            sec = read(flist[0], **kwargs)
-            for f in flist[1:]:
-                sec += read(f, **kwargs)
-            sec.trimming(tmin=start if isinstance(start, datetime) else None,
-                         tmax=end if isinstance(end, datetime) else None)
+            tmin = start if isinstance(start, datetime) else None
+            tmax = end if isinstance(end, datetime) else None
+            if len(flist) == 1:
+                sec = read(flist[0], tmin=tmin, tmax=tmax, **kwargs)
+            else:
+                sec = read(flist[0], tmin=tmin, **kwargs)
+                for f in flist[1:-1]:
+                    sec += read(f, **kwargs)
+                sec += read(flist[-1], tmax=tmax, **kwargs)
             return sec
         else:
             self.flist = flist
