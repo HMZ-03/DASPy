@@ -194,17 +194,31 @@ class Collection(object):
         """
         Select a period of data.
 
-        :param stime, etime: DASDateTime or int. Start and end time or index of
+        :param start, end: DASDateTime or int. Start and end time or index of
             required data.
         :param readsec: bool. If True, read as a instance of daspy.Section and
             return. If False, update self.flist.
-        :param ch1: int. The first channel required. Only works when
-            readsec=True.
-        :param ch2: int. The last channel required (not included). Only works
-            when readsec=True.
         :param tolerance: float. The maximum error allowed between ftime and the
             actual file start time
-        :param dch: int. Channel step. Only works when readsec=True.
+        :param ftype: None, str or function. None for automatic detection, or
+            str to specify a type of 'pkl', 'pickle', 'tdms', 'h5', 'hdf5',
+            'segy', 'sgy', or 'npy', or a function for read data and metadata.
+            Only used when readsec=True.
+        :param file_format: str. The format in which the file is saved. It could
+            be name of the device manufacturer (e.g. 'Silixa'), device model
+            (e.g. 'OptaSense QuantX'), file format standard (s.g. 'AI4EPS'),
+            organization (e.g. 'INGV') or dataset (e.g. 'FORESEE'). Only used
+            when readsec=True.
+        :param dtype: str. The data type of the returned data. Only used when
+            readsec=True.
+        :param chmin, chmax, dch: int. Channel number range and step. Only used
+            when readsec=True.
+        :param xmin, xmax: float. Range of distance. Only used when
+            readsec=True.
+        :param tmin, tmax: float or DASDateTime. Range of time. Only used when
+            readsec=True.
+        :param spmin, spmax: int. Sampling point range. Only used when
+            readsec=True.
         """
         if end is None:
             end = len(self.flist)

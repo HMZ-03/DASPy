@@ -1,6 +1,6 @@
 # Purpose: Module for reading DAS data.
 # Author: Minzhe Hu
-# Date: 2025.7.9
+# Date: 2025.7.17
 # Email: hmz2018@mail.ustc.edu.cn
 # Partially modified from
 # https://github.com/RobbinLuo/das-toolkit/blob/main/DasTools/DasPrep.py
@@ -30,6 +30,10 @@ def read(fname=None, output_type='section', ftype=None, file_format='auto',
     :param ftype: None, str or function. None for automatic detection, or str to
         specify a type of 'pkl', 'pickle', 'tdms', 'h5', 'hdf5', 'segy', 'sgy',
         or 'npy', or a function for read data and metadata.
+    :param file_format: str. The format in which the file is saved. It could be
+        name of the device manufacturer (e.g. 'Silixa'), device model (e.g.
+        'OptaSense QuantX'), file format standard (s.g. 'AI4EPS'), organization
+        (e.g. 'INGV') or dataset (e.g. 'FORESEE').
     :param headonly. bool. If True, only metadata will be read, the returned
         data will be an array of all zeros of the same size as the original
         data.
