@@ -1,6 +1,6 @@
 # Purpose: Module for handling Section objects.
 # Author: Minzhe Hu
-# Date: 2025.6.25
+# Date: 2025.7.17
 # Email: hmz2018@mail.ustc.edu.cn
 import warnings
 import os
@@ -111,6 +111,8 @@ class Section(object):
         """
         out = self.copy()
         if isinstance(other, Section):
+            if other.size == 0:
+                return out
             if other.dx != self.dx:
                 if self.dx is None:
                     out.dx = other.dx
@@ -141,6 +143,8 @@ class Section(object):
             data = other
         elif isinstance(other, list):
             data = np.array(other)
+        elif other is None:
+            return out
         else:
             raise TypeError('The input should be Section or np.ndarray.')
 
@@ -160,6 +164,10 @@ class Section(object):
     @property
     def shape(self):
         return self.data.shape
+
+    @property
+    def size(self):
+        return self.data.size
 
     @property
     def dt(self):

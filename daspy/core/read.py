@@ -154,20 +154,22 @@ def _trimming_slice_metadata(shape, metadata={'dx': None, 'fs': None},
     metadata.setdefault('start_channel', 0)
     metadata.setdefault('start_distance', 0)
     metadata.setdefault('start_time', 0)
-    i0, i1, j0, j1 = _trimming_index(nch, nsp, dx=metadata['dx'],
-        fs=metadata['fs'], start_channel=metadata['start_channel'],
-        start_distance=metadata['start_distance'],
-        start_time=metadata['start_time'],
-        xmin=xmin, xmax=xmax, chmin=chmin, chmax=chmax, tmin=tmin, tmax=tmax,
-        spmin=spmin, spmax=spmax)
-    metadata['start_channel'] += i0
-    if metadata['dx'] is not None:
-        metadata['start_distance'] += i0 * metadata['dx']
-        metadata['dx'] *= dch
-    if metadata['fs'] is not None:
-        metadata['start_time'] += j0 / metadata['fs']
-    return slice(i0, i1, dch), slice(j0, j1), metadata
-
+    try:
+        i0, i1, j0, j1 = _trimming_index(nch, nsp, dx=metadata['dx'],
+            fs=metadata['fs'], start_channel=metadata['start_channel'],
+            start_distance=metadata['start_distance'],
+            start_time=metadata['start_time'],
+            xmin=xmin, xmax=xmax, chmin=chmin, chmax=chmax, tmin=tmin, tmax=tmax,
+            spmin=spmin, spmax=spmax)
+        metadata['start_channel'] += i0
+        if metadata['dx'] is not None:
+            metadata['start_distance'] += i0 * metadata['dx']
+            metadata['dx'] *= dch
+        if metadata['fs'] is not None:
+            metadata['start_time'] += j0 / metadata['fs']
+        return slice(i0, i1, dch), slice(j0, j1), metadata
+    except ValueError:
+        return slice(0, 0, 1), slice(0, 0), metadata
 
 def _read_pkl(fname, headonly=False, chmin=None, chmax=None, dch=1, xmin=None,
               xmax=None, tmin=None, tmax=None, spmin=None, spmax=None):
@@ -250,9 +252,12 @@ def _h5_file_format(h5_file):
         file_format = 'OptaSense ODH4'
     elif list(keys) == ['Acquisition']:
         file_format = 'OptaSense QuantX'
-        nch = h5_file['Acquisition'].attrs['NumberOfLoci']
-        if h5_file['Acquisition/Raw[0]/RawData/'].shape[0] != nch:
-            file_format = 'Silixa iDAS-MG'
+        try:
+            nch = h5_file['Acquisition'].attrs['NumberOfLoci']
+            if h5_file['Acquisition/Raw[0]/RawData/'].shape[0] != nch:
+                file_format = 'Silixa iDAS-MG'
+        except KeyError:
+            pass    
         try:
             if not isinstance(h5_file['Acquisition']
                                 .attrs['PartStartTime'], bytes):
@@ -399,8 +404,11 @@ def _read_h5(fname, headonly=False, file_format='auto', chmin=None, chmax=None,
                              'Smart Earth ZD-DAS', 'Unknown']:
             dataset = h5_file['Acquisition/Raw[0]/RawData/']
             attrs = h5_file['Acquisition'].attrs
-            if dataset.shape[0] != attrs['NumberOfLoci']:
-                transpose = True
+            try:
+                if dataset.shape[0] != attrs['NumberOfLoci']:
+                    transpose = True
+            except KeyError:
+                pass
 
             try:
                 fs = h5_file['Acquisition/Raw[0]'].attrs['OutputDataRate']

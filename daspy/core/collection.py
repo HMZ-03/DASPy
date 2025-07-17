@@ -190,7 +190,8 @@ class Collection(object):
         time_diff = np.diff(self.ftime)
         return np.where(abs(time_diff - self.flength) > tolerance)[0]
 
-    def select(self, start=0, end=None, readsec=False, tolerance=1, **kwargs):
+    def select(self, start=None, end=None, readsec=False, tolerance=1,
+               **kwargs):
         """
         Select a period of data.
 
@@ -230,6 +231,11 @@ class Collection(object):
             end = kwargs.pop('etime')
             warnings.warn('In future versions, the parameter \'etime\' will be '
                           'replaced by \'end\'.')
+
+        if start is None and 'tmin' in kwargs.keys():
+            start = kwargs['tmin']
+        if end is None and 'tmax' in kwargs.keys():
+            end = kwargs['tmax']
 
         if isinstance(start, datetime):
             for i, ftime in enumerate(self.ftime):
