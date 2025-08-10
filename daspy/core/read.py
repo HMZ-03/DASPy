@@ -171,8 +171,9 @@ def _trimming_slice_metadata(shape, metadata={'dx': None, 'fs': None},
     except ValueError:
         return slice(0, 0, 1), slice(0, 0), metadata
 
-def _read_pkl(fname, headonly=False, chmin=None, chmax=None, dch=1, xmin=None,
-              xmax=None, tmin=None, tmax=None, spmin=None, spmax=None):
+def _read_pkl(fname, headonly=False, file_format='auto', chmin=None, chmax=None,
+              dch=1, xmin=None, xmax=None, tmin=None, tmax=None, spmin=None,
+              spmax=None):
     """
     Read data and metadata from a pickle file.
     """
