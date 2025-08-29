@@ -1,6 +1,6 @@
 # Purpose: Module for reading DAS data.
 # Author: Minzhe Hu
-# Date: 2025.7.17
+# Date: 2025.8.30
 # Email: hmz2018@mail.ustc.edu.cn
 # Partially modified from
 # https://github.com/RobbinLuo/das-toolkit/blob/main/DasTools/DasPrep.py
@@ -679,7 +679,7 @@ def _read_segy(fname, headonly=False, file_format='auto', chmin=None,
         if headonly:
             data = np.zeros((nch, nsp), dtype=segy_file.trace.raw.dtype)[si, sj]
         else:
-            data = segy_file.trace.raw[si, sj]
+            data = segy_file.trace.raw[si][:, sj]
         return data, metadata
 
 
