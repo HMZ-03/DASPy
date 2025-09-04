@@ -38,7 +38,7 @@ def write_pkl(sec, fname):
     return None
 
 
-def _write_tdms(sec, fname, raw_fname=None):
+def _write_tdms(sec, fname, raw_fname=None, file_format='auto'):
     if raw_fname is None:
         key = 'Measurement'
         file_prop = {}
@@ -280,7 +280,7 @@ def _write_h5(sec, fname, raw_fname=None, file_format='auto'):
     return None
 
 
-def _write_segy(sec, fname, raw_fname=None):
+def _write_segy(sec, fname, raw_fname=None, file_format='auto'):
     spec = segyio.spec()
     spec.samples = np.arange(sec.nsp) / sec.fs * 1e3
     spec.tracecount = sec.nch
