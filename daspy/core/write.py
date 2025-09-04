@@ -1,6 +1,6 @@
 # Purpose: Module for writing DAS data.
 # Author: Minzhe Hu
-# Date: 2025.7.10
+# Date: 2025.9.4
 # Email: hmz2018@mail.ustc.edu.cn
 import os
 import warnings
@@ -121,7 +121,7 @@ def _update_h5_dataset(h5_file, path, name, data):
     return None
 
 
-def _write_h5(sec, fname, raw_fname=None):
+def _write_h5(sec, fname, raw_fname=None, file_format='auto'):
     if raw_fname is None:
         with h5py.File(fname, 'w') as h5_file:
             h5_file.create_group('Acquisition/Raw[0]')
@@ -133,11 +133,11 @@ def _write_h5(sec, fname, raw_fname=None):
                     sec.start_time.strftime('%Y-%m-%dT%H:%M:%S.%f%z'))
                 stime = sec.start_time.timestamp() * 1e6
                 DataTime = np.arange(
-                    stime, stime + sec.nt / sec.fs, 1 / sec.fs)
+                    stime, stime + sec.nsp / sec.fs, 1 / sec.fs)
             else:
                 h5_file['Acquisition/Raw[0]/RawData'].attrs['PartStartTime'] = \
                     np.bytes_(str(sec.start_time))
-                DataTime = sec.start_time + np.arange(0, sec.nt / sec.fs,
+                DataTime = sec.start_time + np.arange(0, sec.nsp / sec.fs,
                                                       1 / sec.fs)
 
             h5_file.get('Acquisition/Raw[0]/').\
@@ -184,7 +184,7 @@ def _write_h5(sec, fname, raw_fname=None):
                 _update_h5_dataset(h5_file, '/', 'x_axis',
                     sec.start_distance + np.arange(sec.nch) * sec.dx)
                 _update_h5_dataset(h5_file, '/', 't_axis',
-                                   sec.start_time + np.arange(sec.nt) * sec.dt)
+                                   sec.start_time + np.arange(sec.nsp) * sec.dt)
             elif group == 'Acquisition':
                 h5_file['Acquisition'].attrs['NumberOfLoci'] = sec.nch
                 _update_h5_dataset(h5_file, 'Acquisition/Raw[0]/', 'RawData',
@@ -201,11 +201,11 @@ def _write_h5(sec, fname, raw_fname=None):
                                 '%Y-%m-%dT%H:%M:%S.%f%z')
                     stime = sec.start_time.timestamp() * 1e6
                     DataTime = np.arange(
-                        stime, stime + sec.nt / sec.fs, 1 / sec.fs)
+                        stime, stime + sec.nsp / sec.fs, 1 / sec.fs)
                 else:
                     h5_file['Acquisition/Raw[0]/RawData'].\
                         attrs['PartStartTime'] = np.bytes_(str(sec.start_time))
-                    DataTime = sec.start_time + np.arange(0, sec.nt / sec.fs,
+                    DataTime = sec.start_time + np.arange(0, sec.nsp / sec.fs,
                                                         1 / sec.fs)
                 _update_h5_dataset(h5_file, 'Acquisition/Raw[0]/',
                                    'RawDataTime', DataTime)
@@ -217,7 +217,7 @@ def _write_h5(sec, fname, raw_fname=None):
             elif group == 'raw':
                 _update_h5_dataset(h5_file, '/', 'raw', sec.data)
                 DataTime = sec.start_time.timestamp() + \
-                    np.arange(0, sec.nt / sec.fs, 1 / sec.fs)
+                    np.arange(0, sec.nsp / sec.fs, 1 / sec.fs)
                 _update_h5_dataset(h5_file, '/', 'timestamp', DataTime)
             elif group == 'data': # https://ai4eps.github.io/homepage/ml4earth/seismic_event_format_das/
                 _update_h5_dataset(h5_file, '/', 'data', sec.data)
@@ -232,7 +232,7 @@ def _write_h5(sec, fname, raw_fname=None):
                 h5_file.attrs['dx'] = sec.dx
                 h5_file.attrs['gauge_length'] = sec.gauge_length
                 DataTime = sec.start_time.timestamp() + \
-                    np.arange(0, sec.nt / sec.fs, 1 / sec.fs)
+                    np.arange(0, sec.nsp / sec.fs, 1 / sec.fs)
                 if h5_file.attrs['saving_start_gps_time'] > 0:
                     h5_file.attrs['file_start_gps_time'] = \
                         sec.start_time.timestamp()
@@ -252,10 +252,10 @@ def _write_h5(sec, fname, raw_fname=None):
                 fs = int(sec.fs)
                 d = len(h5_file[f'{group}/Source1/Zone1/{acquisition}'].shape)
                 if d == 3:
-                    mod = sec.nt % fs
+                    mod = sec.nsp % fs
                     if mod:
                         data = np.hstack((data, np.zeros((sec.nch, fs - mod))))
-                    data = data.reshape((sec.nch, fs, sec.nt//fs)).T
+                    data = data.reshape((sec.nch, fs, sec.nsp//fs)).T
                 elif d == 2:
                     data = data.T
                 _update_h5_dataset(h5_file, f'{group}/Source1/Zone1/',
@@ -273,7 +273,7 @@ def _write_h5(sec, fname, raw_fname=None):
                 h5_file[f'{group}/Source1/Zone1'].attrs['GaugeLength'][0] = \
                     sec.gauge_length
                 DataTime = sec.start_time.timestamp() + \
-                    np.arange(0, sec.nt / sec.fs, 1 / sec.fs)
+                    np.arange(0, sec.nsp / sec.fs, 1 / sec.fs)
                 _update_h5_dataset(h5_file, f'{group}/Source1/',
                                    'time', DataTime.reshape((1, -1)))
 
@@ -282,7 +282,7 @@ def _write_h5(sec, fname, raw_fname=None):
 
 def _write_segy(sec, fname, raw_fname=None):
     spec = segyio.spec()
-    spec.samples = np.arange(sec.nt) / sec.fs * 1e3
+    spec.samples = np.arange(sec.nsp) / sec.fs * 1e3
     spec.tracecount = sec.nch
     if raw_fname is None:
         spec.format = 1
