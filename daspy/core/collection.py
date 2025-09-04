@@ -36,7 +36,7 @@ class Collection(object):
         :param timeinfo_from_basename: bool. If True, timeinfo_format will use
             DASDateTime.strptime to basename of fpath.
         :param nch: int. Channel number.
-        :param nt: int. Sampling points of each file.
+        :param nsp: int. Sampling points of each file.
         :param dx: number. Channel interval in m.
         :param fs: number. Sampling rate in Hz.
         :param gauge_length: number. Gauge length in m.
@@ -51,7 +51,7 @@ class Collection(object):
             raise ValueError('No file input.')
         self.flist.sort()
         self.ftype = ftype
-        for key in ['nch', 'nt', 'dx', 'fs', 'gauge_length']:
+        for key in ['nch', 'nsp', 'dx', 'fs', 'gauge_length']:
             if key in kwargs.keys():
                 setattr(self, key, kwargs[key])
         if timeinfo_format is None and not meta_from_file:
@@ -65,13 +65,13 @@ class Collection(object):
                 if not hasattr(sec, 'gauge_length'):
                     sec.gauge_length = None
                 ftime.append(sec.start_time)
-                metadata_list.append((sec.nch, sec.nt, sec.dx, sec.fs,
+                metadata_list.append((sec.nch, sec.nsp, sec.dx, sec.fs,
                                       sec.gauge_length, sec.duration))
 
             if len(set(metadata_list)) > 1:
                 warnings.warn('More than one kind of setting detected.')
             metadata = max(metadata_list, key=metadata_list.count)
-            for i, key in enumerate(['nch', 'nt', 'dx', 'fs', 'gauge_length']):
+            for i, key in enumerate(['nch', 'nsp', 'dx', 'fs', 'gauge_length']):
                 if not hasattr(self, key):
                     setattr(self, key, metadata[i])
                 if flength is None:
@@ -87,8 +87,8 @@ class Collection(object):
                             range(len(self))]
             if not hasattr(sec, 'gauge_length'):
                 sec.gauge_length = None
-            metadata = (sec.nch, sec.nt, sec.dx, sec.fs, sec.gauge_length)
-            for i, key in enumerate(['nch', 'nt', 'dx', 'fs', 'gauge_length']):
+            metadata = (sec.nch, sec.nsp, sec.dx, sec.fs, sec.gauge_length)
+            for i, key in enumerate(['nch', 'nsp', 'dx', 'fs', 'gauge_length']):
                 if not hasattr(self, key):
                     setattr(self, key, metadata[i])
 
@@ -145,7 +145,7 @@ class Collection(object):
             
         describe += f'       ftime: {self.start_time} to {self.end_time}\n' + \
                     f'     flength: {self.flength}\n'
-        for key in ['nch', 'nt', 'dx', 'fs', 'gauge_length']:
+        for key in ['nch', 'nsp', 'dx', 'fs', 'gauge_length']:
             if hasattr(self, key):
                 long_key = key.rjust(12)
                 value = getattr(self, key)
@@ -244,7 +244,7 @@ class Collection(object):
                     break
                 elif ftime == start - tolerance:
                     break
-            s = i
+            s = max(i, 0)
         else:
             s = int(start)
 
