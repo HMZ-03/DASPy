@@ -1,6 +1,6 @@
 # Purpose: Module for handling Section objects.
 # Author: Minzhe Hu
-# Date: 2025.7.17
+# Date: 2025.9.4
 # Email: hmz2018@mail.ustc.edu.cn
 import warnings
 import os
@@ -89,6 +89,8 @@ class Section(object):
                 describe += '{}: {} m\n'.format(key.rjust(n), value)
             elif key == 'fs':
                 describe += '{}: {} Hz\n'.format(key.rjust(n), value)
+            elif key == 'duration':
+                describe += '{}: {} s\n'.format(key.rjust(n), value)
             elif key == 'start_time':
                 if isinstance(value, DASDateTime):
                     describe += '{}: {}\n'.format(key.rjust(n), value)
@@ -449,7 +451,8 @@ class Section(object):
                      start_channel=self.start_channel, channel_spacing=self.dx,
                      unit=unit)
 
-    def save(self, fname=None, ftype=None, keep_format=False, dtype=None):
+    def save(self, fname=None, ftype=None, keep_format=False, dtype=None,
+             file_format='auto'):
         """
         Save the instance as a pickle file or update the raw file and resave as
         new file.
@@ -462,6 +465,10 @@ class Section(object):
             self.source file and make changes to it. This will strictly preserve
             the original format, but will cost more IO resources.
         :param dtype: str. The data type of the saved data.
+        :param file_format: Format in which the file is saved. Only works when
+            keep_format == False. 'auto' for raw file format or the most common
+            format of the specified ftype.
+        :type file_format: str
         """
         if fname is None:
             if hasattr(self, 'source'):
@@ -479,15 +486,25 @@ class Section(object):
 
         if keep_format:
             if not hasattr(self, 'source'):
-                raise ValueError('self.source not exit.')
-            if not os.path.isfile(self.source):
-                raise ValueError('self.source is not a file.')
-            if ftype != self.source_type:
-                raise ValueError('self.source_type is different from ftype.')
-            write(self, fname, ftype=ftype, raw_fname=self.source, dtype=dtype)
-        else:
-            write(self, fname, ftype=ftype, dtype=dtype)
+                warnings.warn('Self.source does not exist. Set keep_format =='
+                              'False.')
+            elif not os.path.isfile(self.source):
+                warnings.warn('self.source is not a file. Set keep_format =='
+                               'False.')
+            elif ftype != self.source_type:
+                warnings.warn('self.source_type is different from ftype. Set '
+                              'keep_format == False.')
+            else:
+                if file_format != 'auto':
+                    warnings.warn('When keep_format==True, the file_format '
+                                  'will be set to the source file format.')
+                write(self, fname, ftype=ftype, raw_fname=self.source,
+                      dtype=dtype)
+                return self
 
+        if file_format == 'auto' and hasattr(self, 'file_format'):
+            file_format = self.file_format
+        write(self, fname, ftype=ftype, dtype=dtype, file_format=file_format)
         return self
 
     def concat(self, other, reverse=True):

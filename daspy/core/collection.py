@@ -15,13 +15,17 @@ from daspy.core.dasdatetime import DASDateTime
 
 
 class Collection(object):
-    def __init__(self, fpath, ftype=None, flength=None, meta_from_file=True,
-                 timeinfo_slice=slice(None), timeinfo_format=None, 
-                 timeinfo_tz=None, timeinfo_from_basename=True, **kwargs):
+    def __init__(self, fpath, ftype=None, file_format='auto', flength=None,
+                 meta_from_file=True, timeinfo_slice=slice(None),
+                 timeinfo_format=None, timeinfo_tz=None,
+                 timeinfo_from_basename=True, **kwargs):
         """
         :param fpath: str or Sequence of str. File path(s) containing data.
         :param ftype: None or str. None for automatic detection, or 'pkl',
             'pickle', 'tdms', 'h5', 'hdf5', 'segy', 'sgy', 'npy'.
+        :param file_format: Format in which the file is saved. Function is
+            allowed to extract dataset and metadata.
+        :type file_format: str or function
         :param flength: float. The duration of a single file in senconds.
         :param meta_from_file: bool or 'all'. False for manually set dt, dx, fs
             and gauge_length. True for extracting dt, dx, fs and gauge_length
@@ -61,7 +65,8 @@ class Collection(object):
             ftime = []
             metadata_list = []
             for f in self.flist:
-                sec = read(f, ftype=ftype, headonly=True)
+                sec = read(f, ftype=ftype, file_format=file_format,
+                           headonly=True)
                 if not hasattr(sec, 'gauge_length'):
                     sec.gauge_length = None
                 ftime.append(sec.start_time)
@@ -79,7 +84,8 @@ class Collection(object):
             self.ftime = ftime
         elif meta_from_file:
             i = int(len(self.flist) > 1)
-            sec = read(self.flist[i], ftype=ftype, headonly=True)
+            sec = read(self.flist[i], ftype=ftype, file_format=file_format,
+                       headonly=True)
             if timeinfo_format is None:
                 if flength is None:
                     flength = sec.duration

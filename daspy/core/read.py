@@ -1,6 +1,6 @@
 # Purpose: Module for reading DAS data.
 # Author: Minzhe Hu
-# Date: 2025.8.30
+# Date: 2025.9.15
 # Email: hmz2018@mail.ustc.edu.cn
 # Partially modified from
 # https://github.com/RobbinLuo/das-toolkit/blob/main/DasTools/DasPrep.py
@@ -13,9 +13,10 @@ import segyio
 from typing import Union
 from pathlib import Path
 from nptdms import TdmsFile
+from daspy.core.util import _device_standardized_name, _h5_file_format, \
+    _trimming_slice_metadata
 from daspy.core.section import Section
 from daspy.core.dasdatetime import DASDateTime, utc
-from daspy.basic_tools.preprocessing import _trimming_index
 
 
 def read(fname=None, output_type='section', ftype=None, file_format='auto',
@@ -30,8 +31,9 @@ def read(fname=None, output_type='section', ftype=None, file_format='auto',
     :type output_type: str
     :param ftype: File type or function for reading data.
     :type ftype: None, str or function
-    :param file_format: Format in which the file is saved.
-    :type file_format: str
+    :param file_format: Format in which the file is saved. Function is allowed
+        to extract dataset and metadata.
+    :type file_format: str or function
     :param headonly: If True, only metadata will be read.
     :type headonly: bool
     :param dtype: Data type of the returned data.
@@ -95,82 +97,6 @@ def read(fname=None, output_type='section', ftype=None, file_format='auto',
         return data, metadata
 
 
-def _device_standardized_name(file_format: str) -> str:
-    """
-    Standardize device or file format name.
-    """
-    file_format = file_format.lower()
-    file_format = file_format.replace('-', '').replace(' ', '').\
-        replace('(', '').replace(')', '').replace(',', '')
-    allowed_format = {
-        'AP Sensing': ['apsensing', 'aps'],
-        'Aragón Photonics HDAS': ['aragónphotonics', 'aragonphotonics',
-                                  'aragónphotonicshdas', 'aragonphotonicshdas',
-                                  'hdas'],
-        'ASN OptoDAS': ['asnoptodas', 'asn', 'optodas'],
-        'Febus A1-R': ['febusa1r', 'febus', 'a1r'],
-        'Febus A1': ['febusa1', 'a1'],
-        'OptaSense ODH3': ['optasenseodh3', 'odh3'],
-        'OptaSense ODH4': ['optasenseodh4', 'odh4'],
-        'OptaSense ODH4+': ['optasenseodh4+', 'odh4+', 'optasenseodh4plus',
-                            'odh4plus'],
-        'OptaSense QuantX': ['optasensequantx', 'quantx'],
-        'Silixa iDAS': ['silixaidas', 'silixaidasv1', 'idasv1', 'idas'],
-        'Silixa iDAS-v2': ['silixaidasv2', 'idasv2'],
-        'Silixa iDAS-v3': ['silixaidasv3', 'idasv3'],
-        'Silixa iDAS-MG': ['silixaidasmg', 'idasmg'],
-        'Silixa Carina': ['silixacarina', 'carina'],
-        'Sintela Onyx v1.0': ['sintelaonyxv1.0', 'sintelaonyxv1', 'sintalaonyx',
-                              'sintela', 'onyxv1.0', 'onyxv1', 'onyx'],
-        'T8 Sensor': ['t8sensor', 't8'],
-        'Smart Earth ZD-DAS': ['smartearthzddas', 'smartearth', 'zddas',
-                               'smartearthsensingzddas', 'smartearthsensing',
-                               'zhidisensing', 'zhidi', 'zhididas'],
-        'Institute of Semiconductors, CAS': ['iscas', 'cas',
-                                             'instituteofsemiconductors'
-                                             'instituteofsemiconductorscas'],
-        'AI4EPS': ['ai4eps', 'daseventdata'],
-        'INGV': ['ingv', 'istitutonazionaledigeofisicaevulcanologia'],
-        'JAMSTEC': ['jamstec', 'japanagencyformarineearthscienceandtechnology'],
-        'FORESEE': ['forsee', 'fiberopticforenvironmentsenseing'],
-        'Unknown': ['unknown', 'other']
-        }
-    for standardized_format_name, allowed_name in allowed_format.items():
-        if file_format in allowed_name:
-            return standardized_format_name
-    return 'Unknown'
-
-
-def _trimming_slice_metadata(shape, metadata={'dx': None, 'fs': None},
-                             chmin=None, chmax=None, dch=1, xmin=None,
-                             xmax=None, tmin=None, tmax=None, spmin=None,
-                             spmax=None):
-    """
-    Calculate slicing indices and update metadata for trimming.
-    """
-    nch, nsp = shape
-    metadata.setdefault('dx', None)
-    metadata.setdefault('fs', None)
-    metadata.setdefault('start_channel', 0)
-    metadata.setdefault('start_distance', 0)
-    metadata.setdefault('start_time', 0)
-    try:
-        i0, i1, j0, j1 = _trimming_index(nch, nsp, dx=metadata['dx'],
-            fs=metadata['fs'], start_channel=metadata['start_channel'],
-            start_distance=metadata['start_distance'],
-            start_time=metadata['start_time'],
-            xmin=xmin, xmax=xmax, chmin=chmin, chmax=chmax, tmin=tmin, tmax=tmax,
-            spmin=spmin, spmax=spmax)
-        metadata['start_channel'] += i0
-        if metadata['dx'] is not None:
-            metadata['start_distance'] += i0 * metadata['dx']
-            metadata['dx'] *= dch
-        if metadata['fs'] is not None:
-            metadata['start_time'] += j0 / metadata['fs']
-        return slice(i0, i1, dch), slice(j0, j1), metadata
-    except ValueError:
-        return slice(0, 0, 1), slice(0, 0), metadata
-
 def _read_pkl(fname, headonly=False, file_format='auto', chmin=None, chmax=None,
               dch=1, xmin=None, xmax=None, tmin=None, tmax=None, spmin=None,
               spmax=None):
@@ -225,65 +151,6 @@ def _read_h5_headers(group):
     return headers
 
 
-def _h5_file_format(h5_file):
-    """
-    Detect HDF5 file format based on keys and structure.
-    """
-    keys = h5_file.keys()
-    group = list(keys)[0]
-    if set(keys) == {'Fiberlength', 'GaugeLength', 'RepetitionFrequency',
-                     'spatialsampling', 'strain'}:
-        file_format = 'AP Sensing'
-    elif (set(keys) == {'File_Header', 'HDAS_DATA'}) or \
-        (set(keys) == {'hdas_header', 'data'}):
-        file_format = 'Aragón Photonics HDAS'
-    elif all([key in keys for key in ['cableSpec', 'data',
-        'fileGenerator', 'fileVersion', 'header', 'instrumentOptions',
-        'monitoring', 'processingChain', 'timing', 'versions']]):
-        file_format = 'ASN OptoDAS'
-    elif (len(keys) == 1) and group.startswith('fa1-'):
-        time = h5_file[f'{group}/Source1/time']
-        if len(time.shape) == 2:
-            file_format = 'Febus A1-R'
-        elif len(time.shape) == 1:
-            file_format = 'Febus A1'
-    elif set(keys) == {'data', 't_axis', 'x_axis'}:
-        file_format = 'OptaSense ODH3'
-    elif list(keys) == ['raw_data']:
-        file_format = 'OptaSense ODH4'
-    elif list(keys) == ['Acquisition']:
-        file_format = 'OptaSense QuantX'
-        try:
-            nch = h5_file['Acquisition'].attrs['NumberOfLoci']
-            if h5_file['Acquisition/Raw[0]/RawData/'].shape[0] != nch:
-                file_format = 'Silixa iDAS-MG'
-        except KeyError:
-            pass    
-        try:
-            if not isinstance(h5_file['Acquisition']
-                                .attrs['PartStartTime'], bytes):
-                file_format = 'Sintela Onyx v1.0'
-        except KeyError:
-            pass
-    elif set(keys) == {'Mapping', 'Acquisition'}:
-        file_format = 'Silixa iDAS'
-    elif list(keys) == ['data']:
-        file_format == 'AI4EPS'
-    elif set(keys) == {'ChannelMap', 'Fiber', 'cm', 't', 'x'}:
-        file_format = 'INGV'
-    elif set(keys) == {'DAS_record', 'Sampling_interval_in_space',
-                       'Sampling_interval_in_time', 'Sampling_points_in_space',
-                       'Sampling_points_in_time'}:
-        file_format = 'JAMSTEC'
-    elif set(keys) == {'raw', 'timestamp'}:
-        file_format = 'FORESEE'
-    elif list(keys) == ['ProcessedData']:
-        file_format = 'T8 Sensor'
-    else:
-        file_format = 'Unknown'
-    return file_format
-
-
 def _read_h5(fname, headonly=False, file_format='auto', chmin=None, chmax=None,
              dch=1, xmin=None, xmax=None, tmin=None, tmax=None, spmin=None,
              spmax=None):
@@ -295,35 +162,18 @@ def _read_h5(fname, headonly=False, file_format='auto', chmin=None, chmax=None,
         group = list(keys)[0]
         if file_format == 'auto':
             file_format = _h5_file_format(h5_file)
-        else:
+        elif isinstance(file_format, str):
             file_format = _device_standardized_name(file_format)
         transpose = False
-        if file_format == 'AP Sensing':
+        if callable(file_format):
+            dataset, transpose, metadata = file_format(h5_file)
+        elif file_format == 'AP Sensing':
             dataset = h5_file['strain']
             transpose = True
             metadata = {'dx': h5_file['spatialsampling'][()],
                         'fs': h5_file['RepetitionFrequency'][()],
                         'gauge_length': h5_file['GaugeLength'][()]}
-        elif group == 'data_product':
-            dataset = h5_file['data_product/data']
-            nch = h5_file.attrs['nx']
-            if h5_file['data_product/data'].shape[0] != nch:
-                transpose = True
 
-            fs = 1 / h5_file.attrs['dt_computer']
-            dx = h5_file.attrs['dx']
-            gauge_length = h5_file.attrs['gauge_length']
-            if h5_file.attrs['saving_start_gps_time'] > 0:
-                start_time = DASDateTime.fromtimestamp(
-                    h5_file.attrs['file_start_gps_time'])
-            else:
-                start_time = DASDateTime.fromtimestamp(
-                    h5_file.attrs['file_start_computer_time'])
-            data_type = h5_file.attrs['data_product']
-
-            metadata = {'dx': dx, 'fs': fs,
-                        'start_time': start_time.astimezone(utc),
-                        'gauge_length': gauge_length, 'data_type': data_type}
         elif file_format == 'Aragón Photonics HDAS':
             for key in keys:
                 if 'data' in key.lower():
@@ -340,10 +190,11 @@ def _read_h5(fname, headonly=False, file_format='auto', chmin=None, chmax=None,
             else:
                 start_time = DASDateTime.fromtimestamp(float(header[100])).utc()
                 transpose = True
-            metadata = {'dx': header[11],
+            metadata = {'dx': header[1],
                         'fs': header[6] / header[15] / header[98],
                         'start_distance': header[11],
                         'start_time': start_time}
+
         elif file_format == 'ASN OptoDAS': # https://github.com/ASN-Norway/simpleDAS
             dataset = h5_file['data']
             metadata = {'dx': h5_file['header/dx'][()],
@@ -352,11 +203,10 @@ def _read_h5(fname, headonly=False, file_format='auto', chmin=None, chmax=None,
                             h5_file['header/time'][()]).utc(),
                         'scale': h5_file['header/dataScale'][()]}
             if h5_file['header/gaugeLength'][()] != np.nan:
-                metadata['guage_length'] = h5_file['header/gaugeLength'][()]
+                metadata['gauge_length'] = h5_file['header/gaugeLength'][()]
             if h5_file['header/dimensionNames'][0] == b'time':
                 transpose = True
-            # elif h5_file['header/dimensionNames'][0] == b'distance':
-            #     transpose = False
+
         elif file_format in ['Febus A1-R', 'Febus A1']:
             acquisition = list(h5_file[f'{group}/Source1/Zone1'].keys())[0]
             dataset = h5_file[f'{group}/Source1/Zone1/{acquisition}']
@@ -369,18 +219,21 @@ def _read_h5(fname, headonly=False, file_format='auto', chmin=None, chmax=None,
                     fs = (attrs['PulseRateFreq'][0] /
                             attrs['SamplingRes'][0]) / 1000
                 except KeyError:
-                    fs = attrs['SamplingRate'][0]
+                    try:
+                        fs = 1000 / attrs['Spacing'][1]
+                    except KeyError:
+                        fs = attrs['SamplingRate'][0]
             time = h5_file[f'{group}/Source1/time']
             if len(time.shape) == 2: # Febus A1-R
                 start_time = DASDateTime.fromtimestamp(time[0, 0]).utc()
             elif len(time.shape) == 1: # Febus A1
                 start_time = DASDateTime.fromtimestamp(time[0]).utc()
             metadata = {'dx': attrs['Spacing'][0], 'fs': fs,
-                        'start_channel': int(h5_file[f'{group}/Source1/Zone1'].
-                                attrs['Extent'][0]),
+                        'start_channel': int(attrs['Extent'][0]),
                         'start_distance': attrs['Origin'][0],
                         'start_time': start_time,
                         'gauge_length': attrs['GaugeLength'][0]}
+
         elif file_format == 'OptaSense ODH3':
             dataset = h5_file['data']
             dx = (h5_file['x_axis'][-1] - h5_file['x_axis'][0]) / \
@@ -388,7 +241,8 @@ def _read_h5(fname, headonly=False, file_format='auto', chmin=None, chmax=None,
             fs = (len(h5_file['t_axis']) - 1) / (h5_file['t_axis'][-1] -
                                                  h5_file['t_axis'][0])
             metadata = {'dx': dx, 'fs': fs, 'start_time': h5_file['t_axis'][0]}
-        elif file_format in ['OptaSense ODH4', ]:
+
+        elif file_format == 'OptaSense ODH4':
             dataset = h5_file['raw_data']
             attrs = h5_file.attrs
             dx = attrs['channel spacing m']
@@ -400,6 +254,7 @@ def _read_h5(fname, headonly=False, file_format='auto', chmin=None, chmax=None,
                             attrs['starttime']) ,
                         'data_type': attrs['raw_data_units'],
                         'scale': attrs['scale factor to strain']}
+
         elif file_format in ['OptaSense ODH4+', 'OptaSense QuantX',
                              'Silixa iDAS-MG', 'Sintela Onyx v1.0',
                              'Smart Earth ZD-DAS', 'Unknown']:
@@ -439,6 +294,7 @@ def _read_h5(fname, headonly=False, file_format='auto', chmin=None, chmax=None,
             metadata = {'dx': attrs['SpatialSamplingInterval'], 'fs': fs,
                         'start_time': stime,
                         'gauge_length': attrs['GaugeLength']}
+
         elif file_format == 'Silixa iDAS':
             dataset = h5_file['Acquisition/Raw[0]/RawData/']
             attrs = h5_file['Acquisition/Raw[0]'].attrs
@@ -460,6 +316,7 @@ def _read_h5(fname, headonly=False, file_format='auto', chmin=None, chmax=None,
                         'geometry':  np.vstack((h5_file['Mapping/Lon'],
                                                 h5_file['Mapping/Lat'])).T,
                         'scale': attrs['AmpScaling']}
+
         elif file_format == 'T8 Sensor':
             ds_name = list(h5_file['/ProcessedData'].keys())[0]
             dpath = f'/ProcessedData/{ds_name}'
@@ -478,6 +335,7 @@ def _read_h5(fname, headonly=False, file_format='auto', chmin=None, chmax=None,
             if 'event/time' in attrs.keys():
                 metadata['origin_time'] = DASDateTime.strptime(
                     attrs['event/time'], '%Y%m%dT%H%M%S%f')
+
         elif file_format == 'INGV':
             dataset = h5_file['Fiber']
             transpose = True
@@ -497,10 +355,12 @@ def _read_h5(fname, headonly=False, file_format='auto', chmin=None, chmax=None,
                         'start_time': DASDateTime.fromtimestamp(h5_file.attrs
                             ['StartTime'][0] / 1e6).utc(),
                         'gauge_length': gauge_length, 'scale': scale}
+
         elif file_format in 'JAMSTEC':
             dataset = h5_file['DAS_record']
             metadata = {'dx': h5_file['Sampling_interval_in_space'][0],
                         'fs': 1 / h5_file['Sampling_interval_in_time'][0]}
+
         elif file_format == 'FORESEE':
             dataset = h5_file['raw']
             fs = round(1 / np.diff(h5_file['timestamp']).mean())
@@ -509,6 +369,7 @@ def _read_h5(fname, headonly=False, file_format='auto', chmin=None, chmax=None,
             warnings.warn('This data format doesn\'t include channel interval. '
                             'Please set manually')
             metadata = {'dx': None, 'fs': fs, 'start_time': start_time}
+
         elif file_format == 'AI4EPS': # https://ai4eps.github.io/homepage/ml4earth/seismic_event_format_das/
             dataset = h5_file['data']
             attr = h5_file['data'].attrs
@@ -520,6 +381,24 @@ def _read_h5(fname, headonly=False, file_format='auto', chmin=None, chmax=None,
             if 'event_time' in attr.keys():
                 metadata['origin_time'] = DASDateTime.fromisoformat(
                     attr['event_time'])
+
+        elif file_format == 'Unknown0':
+            dataset = h5_file['data_product/data']
+            nch = h5_file.attrs['nx']
+            if h5_file['data_product/data'].shape[0] != nch:
+                transpose = True
+
+            if h5_file.attrs['saving_start_gps_time'] > 0:
+                start_time = DASDateTime.fromtimestamp(
+                    h5_file.attrs['file_start_gps_time'])
+            else:
+                start_time = DASDateTime.fromtimestamp(
+                    h5_file.attrs['file_start_computer_time'])
+            metadata = {'dx': h5_file.attrs['dx'],
+                        'fs': 1 / h5_file.attrs['dt_computer'],
+                        'start_time': start_time.astimezone(utc),
+                        'gauge_length': h5_file.attrs['gauge_length'],
+                        'data_type': h5_file.attrs['data_product']}
 
         metadata['file_format'] = file_format
         metadata['headers'] = _read_h5_headers(h5_file)
