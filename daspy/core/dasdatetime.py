@@ -80,10 +80,6 @@ class DASDateTime(datetime):
 
     @classmethod
     def strptime(cls, date_string, format):
-        """
-        string, format -> new datetime parsed from a string
-        (like time.strptime()).
-        """
         if '%Z' in format:
             match = re.match(r'(.*)(UTC|GMT)([+-]?\d{1,2})(.*)', date_string,
                              re.IGNORECASE)
