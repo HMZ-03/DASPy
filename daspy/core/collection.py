@@ -1,6 +1,6 @@
 # Purpose: Module for handling Collection objects.
 # Author: Minzhe Hu
-# Date: 2025.7.17
+# Date: 2025.9.15
 # Email: hmz2018@mail.ustc.edu.cn
 import os
 import warnings
