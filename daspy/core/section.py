@@ -502,7 +502,8 @@ class Section(object):
                       dtype=dtype)
                 return self
 
-        if file_format == 'auto' and hasattr(self, 'file_format'):
+        if file_format == 'auto' and hasattr(self, 'file_format') and \
+            isinstance(self.file_format, str):
             file_format = self.file_format
         write(self, fname, ftype=ftype, dtype=dtype, file_format=file_format)
         return self

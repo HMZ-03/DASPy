@@ -55,6 +55,7 @@ class Collection(object):
             raise ValueError('No file input.')
         self.flist.sort()
         self.ftype = ftype
+        self.file_format = file_format
         for key in ['nch', 'nsp', 'dx', 'fs', 'gauge_length']:
             if key in kwargs.keys():
                 setattr(self, key, kwargs[key])
@@ -269,6 +270,8 @@ class Collection(object):
             return None
 
         if readsec:
+            kwargs.setdefault('ftype', self.ftype)
+            kwargs.setdefault('file_format', self.file_format)
             tmin = start if isinstance(start, datetime) else None
             tmax = end if isinstance(end, datetime) else None
             if len(flist) == 1:
