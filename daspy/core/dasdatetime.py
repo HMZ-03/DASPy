@@ -1,7 +1,8 @@
 # Purpose: Module for handling DASDateTime objects.
 # Author: Minzhe Hu
-# Date: 2025.3.29
+# Date: 2025.9.15
 # Email: hmz2018@mail.ustc.edu.cn
+import re
 import time
 from typing import Iterable
 from datetime import datetime, timedelta, timezone
@@ -83,6 +84,15 @@ class DASDateTime(datetime):
         string, format -> new datetime parsed from a string
         (like time.strptime()).
         """
+        if '%Z' in format:
+            match = re.match(r'(.*)(UTC|GMT)([+-]?\d{1,2})(.*)', date_string,
+                             re.IGNORECASE)
+            if match:
+                dt1, tz_prefix, offset, dt2 = match.groups()
+                offset_hours = int(offset)
+                tz = timezone(timedelta(hours=offset_hours))
+                return cls.strptime(dt1 + dt2, format.replace('%Z', '')).\
+                    replace(tzinfo=tz)
         from _strptime import _strptime
         tt, fraction, gmtoff_fraction = _strptime(date_string, format)
         tzname, gmtoff = tt[-2:]
