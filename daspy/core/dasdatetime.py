@@ -84,7 +84,7 @@ class DASDateTime(datetime):
             match = re.match(r'(.*)(UTC|GMT)([+-]?\d{1,2})(.*)', date_string,
                              re.IGNORECASE)
             if match:
-                dt1, tz_prefix, offset, dt2 = match.groups()
+                dt1, _, offset, dt2 = match.groups()
                 offset_hours = int(offset)
                 tz = timezone(timedelta(hours=offset_hours))
                 return cls.strptime(dt1 + dt2, format.replace('%Z', '')).\
