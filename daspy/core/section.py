@@ -1,6 +1,6 @@
 # Purpose: Module for handling Section objects.
 # Author: Minzhe Hu
-# Date: 2025.9.17
+# Date: 2025.9.18
 # Email: hmz2018@mail.ustc.edu.cn
 import warnings
 import os
@@ -150,7 +150,7 @@ class Section(object):
         else:
             raise TypeError('The input should be Section or np.ndarray.')
 
-        if out.nch * out.nsp == 0 or out.data is None:
+        if (out.data is None) or (out.nch * out.nsp == 0):
             out.data = data
         else:
             if len(data) != self.nch:
