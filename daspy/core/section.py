@@ -150,15 +150,15 @@ class Section(object):
         else:
             raise TypeError('The input should be Section or np.ndarray.')
 
-        if len(data) != self.nch:
-            if len(data[0]) == self.nch:
-                data = data.T
-            else:
-                raise ValueError('These two Sections have different number of '
-                                 'channels, please check.')
-        if out.data is None:
+        if out.nch * out.nsp == 0 or out.data is None:
             out.data = data
         else:
+            if len(data) != self.nch:
+                if len(data[0]) == self.nch:
+                    data = data.T
+                else:
+                    raise ValueError('These two Sections have different number '
+                                     'of channels, please check.')
             out.data = np.hstack((out.data, data))
 
         return out
