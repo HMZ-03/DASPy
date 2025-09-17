@@ -277,11 +277,11 @@ class Collection(object):
             if len(flist) == 1:
                 sec = read(flist[0], tmin=tmin, tmax=tmax, **kwargs)
             else:
-                sec = read(flist[0], tmin=tmin, **kwargs)
+                sec = read(flist[0], tmin=tmin-tolerance, **kwargs)
                 for f in flist[1:-1]:
                     sec += read(f, **kwargs)
                 sec += read(flist[-1], tmax=tmax+tolerance, **kwargs)
-                sec.trimming(tmax=tmax)
+                sec.trimming(tmin=tmin, tmax=tmax)
             return sec
         else:
             self.flist = flist
