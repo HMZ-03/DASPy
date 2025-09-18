@@ -1,6 +1,6 @@
 # Purpose: Remove noise from data
 # Author: Minzhe Hu, Zefeng Li
-# Date: 2024.5.13
+# Date: 2025.9.18
 # Email: hmz2018@mail.ustc.edu.cn
 import numpy as np
 from copy import deepcopy
@@ -57,7 +57,7 @@ def common_mode_noise_removal(data, method='median'):
         common = np.mean(data, 0)
 
     xx = np.sum(common ** 2)
-    data_dn = np.zeros((nch, nt))
+    data_dn = np.zeros((nch, nt), dtype=data.dtype)
     for i in range(nch):
         xc = np.sum(common * data[i])
         data_dn[i] = data[i] - xc / xx * common
