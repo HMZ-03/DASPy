@@ -1,6 +1,6 @@
 # Purpose: Module for handling Collection objects.
 # Author: Minzhe Hu
-# Date: 2025.9.17
+# Date: 2025.9.18
 # Email: hmz2018@mail.ustc.edu.cn
 import os
 import warnings
@@ -327,8 +327,8 @@ class Collection(object):
                 kwargs_list[j]['zi'] = 0
 
     def process(self, operations, savepath='./processed', merge=1,
-                suffix='_pro', ftype=None, dtype=None, save_operations=False,
-                tolerance=0.5, **read_kwargs):
+                suffix='_pro', ftype=None, dtype=None, file_format='auto',
+                save_operations=False, tolerance=0.5, **read_kwargs):
         """
         :param operations: list or None. Each element of operations list
             should be [str of method name, dict of kwargs]. None for read
@@ -340,6 +340,8 @@ class Collection(object):
         :param ftype: None or str. File format for saving. None for automatic
             detection, or 'pkl', 'pickle', 'tdms', 'h5', 'hdf5', 'segy', 'sgy',
             'npy'.
+        :param file_format: Format in which the file is saved.
+        :type file_format: str or function
         :param dtype: str. The data type of the saved data.
         :parma save_operations: bool. If True, save the operations to
             method_list.pkl and kwargs_list.pkl in savepath.
@@ -370,7 +372,8 @@ class Collection(object):
                     warnings.warn(f'{f} is an empty file. Continuous data is '
                                   'interrupted here.')
                     if m > 0:
-                        sec_merge.save(filepath, dtype=dtype)
+                        sec_merge.save(filepath, file_format=file_format,
+                                       dtype=dtype)
                         m = 0
                     self._kwargs_initialization(method_list, kwargs_list)
                     continue
@@ -378,7 +381,8 @@ class Collection(object):
                     sec = read(f, ftype=self.ftype, **read_kwargs)
                     if sec.data.size == 0:
                         if m > 0:
-                            sec_merge.save(filepath, dtype=dtype)
+                            sec_merge.save(filepath, ftype=ftype,
+                                           file_format=file_format, dtype=dtype)
                             m = 0
                         self._kwargs_initialization(method_list, kwargs_list)
                         continue
@@ -386,23 +390,24 @@ class Collection(object):
                     warnings.warn(f'Error reading {f}: {e}. Continuous data is '
                                   'interrupted here.')
                     if m > 0:
-                        sec_merge.save(filepath, dtype=dtype)
+                        sec_merge.save(filepath, ftype=ftype,
+                                       file_format=file_format, dtype=dtype)
                         m = 0
                     self._kwargs_initialization(method_list, kwargs_list)
                     continue
                 for j, method in enumerate(method_list):
                     if method in ['taper', 'cosine_taper']:
                         if not ((i==0 and kwargs_list[j]['side'] != 'right') or
-                                (i == len(self) - 1 and kwargs_list[j]['side'] !=
-                                'left')):
+                                (i == len(self) - 1 and kwargs_list[j]['side']
+                                 != 'left')):
                             continue
                     out = getattr(sec, method)(**kwargs_list[j])
                     if method == 'time_integration':
                         kwargs_list[j]['c'] = sec.data[:, -1].copy()
                     elif method == 'time_differential':
                         kwargs_list[j]['prepend'] = sec.data[:, -1].copy()
-                    elif method in ['bandpass', 'bandstop', 'lowpass', 'highpass',
-                                    'lowpass_cheby_2']:
+                    elif method in ['bandpass', 'bandstop', 'lowpass',
+                                    'highpass', 'lowpass_cheby_2']:
                         kwargs_list[j]['zi'] = out
                 
                 if m == 0:
@@ -416,7 +421,8 @@ class Collection(object):
                     warnings.warn(f'The start time of {f} does not correspond '
                                   'to the end time of the previous file. '
                                   'Continuous data is interrupted here.')
-                    sec_merge.save(filepath, dtype=dtype)
+                    sec_merge.save(filepath, ftype=ftype,
+                                   file_format=file_format, dtype=dtype)
                     sec_merge = sec
                     f0, f1 = os.path.splitext(os.path.basename(f))
                     f1 = f1 if ftype is None else ftype
@@ -424,10 +430,12 @@ class Collection(object):
                     m = 0
                 m += 1
                 if m == merge:
-                    sec_merge.save(filepath, dtype=dtype)
+                    sec_merge.save(filepath, ftype=ftype,
+                                   file_format=file_format, dtype=dtype)
                     m = 0
             if m > 0:
-                sec_merge.save(filepath, dtype=dtype)
+                sec_merge.save(filepath, ftype=ftype, file_format=file_format,
+                               dtype=dtype)
         except KeyboardInterrupt as e:
             with open(method_file, 'wb') as f:
                 pickle.dump(method_list, f)
@@ -453,25 +461,16 @@ class Collection(object):
 def _create_cascade_method(method_name):
     def cascade_method(self, savepath='./processed', merge=1,
                        suffix=f'_{method_name}', ftype=None, dtype=None,
-                       save_operations=False, **kwargs):
+                       file_format='auto', save_operations=False, tolerance=0.5,
+                       **kwargs):
         """
         Automatically generated method for {method_name}.
         Applies the {method_name} operation to the data and saves the result.
-
-        :param savepath: str. Path to save processed files.
-        :param merge: int or str. int for merge several processed files into 1.
-            'all' for merge all files.
-        :param suffix: str. Suffix for processed files.
-        :param ftype: None or str. None for automatic detection, or 'pkl',
-            'pickle', 'tdms', 'h5', 'hdf5', 'segy', 'sgy', 'npy'.
-        :param dtype: str. The data type of the saved data.
-        :parma save_operations: bool. If True, save the operations to
-            method_list.pkl and kwargs_list.pkl in savepath.
-        :param kwargs: dict. Parameters for the {method_name} operation.
         """
         operations = [[method_name, kwargs]]
         self.process(operations, savepath=savepath, merge=merge, suffix=suffix,
-                     ftype=ftype, dtype=dtype, save_operations=save_operations)
+                     ftype=ftype, dtype=dtype, file_format=file_format,
+                     save_operations=save_operations, tolerance=tolerance)
     return cascade_method
 
 
