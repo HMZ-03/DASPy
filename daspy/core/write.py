@@ -168,7 +168,6 @@ def _write_h5(sec, fname, raw_fname=None, file_format='auto'):
                 start_time = sec.start_time.utc() if \
                     isinstance(sec.start_time, datetime) else \
                     DASDateTime.fromtimestamp(sec.start_time)
-
                 if file_format in ['OptaSense ODH4+', 'OptaSense QuantX',
                                    'Unknown']:
                     h5_file.get('Acquisition/Raw[0]/').create_dataset('RawData',
@@ -186,6 +185,7 @@ def _write_h5(sec, fname, raw_fname=None, file_format='auto'):
                         attrs['PartStartTime'] = stime_str
                     h5_file['Acquisition'].attrs['MeasurementStartTime'] = \
                         stime_str
+                h5_file['Acquisition'].attrs['NumberOfLoci'] = sec.nch
                 stimestamp = start_time.timestamp()
                 datatime = (np.arange(stimestamp, stimestamp + sec.nsp /
                     sec.fs, 1 / sec.fs) * 1e6).astype(int)
