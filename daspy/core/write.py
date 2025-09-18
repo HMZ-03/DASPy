@@ -434,9 +434,14 @@ def _write_h5(sec, fname, raw_fname=None, file_format='auto'):
             elif file_format in ['OptaSense ODH4+', 'OptaSense QuantX',
                                 'Silixa iDAS-MG', 'Sintela Onyx v1.0',
                                 'Smart Earth ZD-DAS', 'Unknown']:
+                if file_format in ['Silixa iDAS-MG', 'Sintela Onyx v1.0',
+                                   'Smart Earth ZD-DAS']:
+                    _update_h5_dataset(h5_file, 'Acquisition/Raw[0]/',
+                                       'RawData', sec.data.T)
+                else:
+                    _update_h5_dataset(h5_file, 'Acquisition/Raw[0]/',
+                                       'RawData', sec.data)
                 h5_file['Acquisition'].attrs['NumberOfLoci'] = sec.nch
-                _update_h5_dataset(h5_file, 'Acquisition/Raw[0]/', 'RawData',
-                                    sec.data)
                 if isinstance(sec.start_time, datetime):
                     if isinstance(h5_file['Acquisition/Raw[0]/RawData'].
                                     attrs['PartStartTime'], bytes):
