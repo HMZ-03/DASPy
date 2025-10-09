@@ -9,7 +9,7 @@ setup(
         'comprises classic seismic data processing techniques and Specialized '
         'algorithms for DAS applications.'
         ),
-    long_description=open('README.md').read(),
+    long_description=open('README.md', encoding="utf-8").read(),
     author='Minzhe Hu, Zefeng Li',
     author_email='hmz2018@mail.ustc.edu.cn',
     maintainer='Minzhe Hu',
