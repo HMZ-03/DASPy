@@ -14,8 +14,13 @@ from daspy.basic_tools.visualization import plot
 from daspy.basic_tools.preprocessing import (phase2strain, normalization,
                                              demeaning, detrending, stacking,
                                              cosine_taper, downsampling,
+<<<<<<< HEAD
                                              padding, _trimming_index,
                                              time_integration,
+=======
+                                             resampling, padding,
+                                             _trimming_index, time_integration,
+>>>>>>> c471e50 (update)
                                              time_differential,
                                              distance_integration)
 from daspy.basic_tools.filter import (bandpass, bandstop, lowpass,
@@ -765,18 +770,36 @@ class Section(object):
         self.data = cosine_taper(self.data, p=p, side=side)
         return self
 
+<<<<<<< HEAD
     def downsampling(self, xint=None, tint=None, stack=True,
+=======
+    def downsampling(self, xint=None, tint=None, fs=None, dx=None, stack=True,
+>>>>>>> c471e50 (update)
                      lowpass_filter=True):
         """
         Downsample DAS data.
 
         :param xint: int. Spatial downsampling factor.
         :param tint: int. Time downsampling factor.
+<<<<<<< HEAD
+=======
+        :param fs: float. Target sampling rate after downsampling. It is used
+            if tint is None.
+        :param dx: float. Target channel interval after downsampling. It is
+            used if xint is None.
+>>>>>>> c471e50 (update)
         :param stack: bool. If True, stacking will replace decimation.
         :param lowpass_filter: bool. Lowpass cheby2 filter before time
             downsampling or not.
         :return: Downsampled data.
         """
+<<<<<<< HEAD
+=======
+        if xint is None and dx is not None:
+            xint = round(dx / self.dx)
+        if tint is None and fs is not None:
+            tint = round(self.fs / fs)
+>>>>>>> c471e50 (update)
         self.data = downsampling(self.data, xint=xint, tint=tint, stack=stack,
                                  lowpass_filter=lowpass_filter)
         if xint and xint > 1:
@@ -787,6 +810,25 @@ class Section(object):
             self.fs /= tint
         return self
 
+<<<<<<< HEAD
+=======
+    def resampling(self, xint=None, tint=None, dx=None, fs=None, stack=True,
+                   lowpass_filter=True):
+        if xint is None and dx is not None:
+            xint = round(dx / self.dx)
+        if tint is None and fs is not None:
+            tint = round(self.fs / fs)
+        self.data = resampling(self.data, xint=xint, tint=tint, stack=stack,
+                                 lowpass_filter=lowpass_filter)
+        if xint and xint > 1:
+            self.dx *= xint
+            if hasattr(self, 'gauge_length'):
+                self.gauge_length += self.dx * (xint - 1)
+        if tint:
+            self.fs /= tint
+        return self
+
+>>>>>>> c471e50 (update)
     def trimming(self, xmin=None, xmax=None, chmin=None, chmax=None, tmin=None,
                  tmax=None, spmin=None, spmax=None, **kwargs):
         """
