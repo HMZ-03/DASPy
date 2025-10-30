@@ -1,6 +1,6 @@
 # Purpose: Module for reading DAS data.
 # Author: Minzhe Hu
-# Date: 2025.9.15
+# Date: 2025.10.30
 # Email: hmz2018@mail.ustc.edu.cn
 # Partially modified from
 # https://github.com/RobbinLuo/das-toolkit/blob/main/DasTools/DasPrep.py
@@ -411,11 +411,14 @@ def _read_h5(fname, headonly=False, file_format='auto', chmin=None, chmax=None,
         elif transpose:
             if len(dataset.shape) == 3:
                 fs = int(metadata['fs'])
-                j0, k0 = divmod(sj.start, fs)
-                j1, k1 = divmod(sj.stop, fs)
-                k1 = (j1 - j0) * fs + k1
+                fs_b = attrs.get('BlockRate', [1000])[0] / 1e3
+                nsp_b = round(fs/fs_b)
+                half_ol = round((dataset.shape[1] - nsp_b) / 2)
+                j0, k0 = divmod(sj.start, nsp_b)
+                j1, k1 = divmod(sj.stop, nsp_b)
+                k1 = (j1 - j0) * nsp_b + k1
                 j1 += 1
-                data = dataset[j0:j1, :, si]
+                data = dataset[j0:j1, half_ol:half_ol+nsp_b, si]
                 data = data.reshape((-1, data.shape[-1]))[k0:k1, :].T
             else:
                 data = dataset[sj, si].T
