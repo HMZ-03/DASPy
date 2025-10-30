@@ -4,12 +4,7 @@
 # Email: hmz2018@mail.ustc.edu.cn
 import warnings
 import numpy as np
-<<<<<<< HEAD
 from scipy.signal import detrend
-=======
-from scipy.fft import rfft, irfft
-from scipy.signal import detrend, get_window
->>>>>>> c471e50 (update)
 from scipy.signal.windows import tukey
 from daspy.basic_tools.filter import lowpass_cheby_2
 
@@ -162,102 +157,6 @@ def downsampling(data, xint=None, tint=None, stack=True, lowpass_filter=True):
     return data_ds
 
 
-<<<<<<< HEAD
-=======
-def resampling(data, xint=None, tint=None, stack=True, window='hann',
-               lowpass_filter=True):
-    """
-    Resample DAS data.
-
-    :param data: numpy.ndarray. Data to resample can be 1-D or 2-D.
-    :param xint: int. Spatial resampling factor.
-    :param tint: int. Time resampling factor.
-    :param lowpass_filter: bool. Lowpass cheby2 filter before time resampling
-        or not.
-    :return: Resampled data.
-    """
-    data_rs = data.copy()
-    if xint and xint > 1:
-        if stack:
-            data_rs = stacking(data, xint)
-        else:
-            data_rs = data_rs[::xint].copy()
-    if tint and tint > 1:
-        if lowpass_filter:
-            # if tint > 16:
-            #     msg = ("Automatic filter design is unstable for resampling factors "
-            #         "above 16. Manual resampling is necessary.")
-            #     raise ArithmeticError(msg)
-            data = lowpass_cheby_2(data, 2, freq= 1 / 2 / tint, maxorder=12)
-
-        nch, nsp = data.shape
-        x = rfft(data.view(data.dtype.newbyteorder("=")), axis=1)
-
-        if nsp % 2 == 0:
-            pad = np.zeros((nch, 1), dtype=x.dtype)
-            x = np.concatenate([x, pad], axis=1)
-
-        # separate real and imag parts interleaved in the same way as original
-        x_r = x[:, ::2]
-        x_i = x[:, 1::2]
-
-        # -------------------------------------------------------------------------
-        # Window function
-        # -------------------------------------------------------------------------
-        if window is not None:
-            if callable(window):
-                large_w = window(np.fft.fftfreq(nsp))
-            elif isinstance(window, np.ndarray):
-                if window.shape != (nsp,):
-                    msg = "Window has the wrong shape. Window length must equal number of points."
-                    raise ValueError(msg)
-                large_w = window
-            else:
-                large_w = np.fft.ifftshift(get_window(window, nsp))
-            win = large_w[:nsp // 2 + 1]
-            x_r *= win
-            x_i *= win
-
-        # -------------------------------------------------------------------------
-        # Frequency interpolation
-        # -------------------------------------------------------------------------
-        num = int(nsp / tint)
-        if num == 0:
-            msg = ("Resampled trace would have less than one sample. "
-                "Retaining exactly one sample.")
-            warnings.warn(msg)
-            num = 1
-
-        df = 1.0 / nsp
-        d_large_f = 1.0 / num / tint
-        f = df * np.arange(0, nsp // 2 + 1, dtype=np.int32)
-        n_large_f = num // 2 + 1
-        large_f = d_large_f * np.arange(0, n_large_f, dtype=np.int32)
-
-        # Vectorized interpolation for all channels
-        large_y_r = np.empty((nch, n_large_f), dtype=float)
-        large_y_i = np.empty((nch, n_large_f), dtype=float)
-        for j in range(nch):
-            large_y_r[j, :] = np.interp(large_f, f, x_r[j, :])
-            large_y_i[j, :] = np.interp(large_f, f, x_i[j, :])
-
-        # Combine interleaved (real, imag)
-        large_y = np.empty((nch, 2 * n_large_f), dtype=float)
-        large_y[:, ::2] = large_y_r
-        large_y[:, 1::2] = large_y_i
-
-        large_y = np.delete(large_y, 1, axis=1)
-        if num % 2 == 0:
-            large_y = np.delete(large_y, -1, axis=1)
-
-        # -------------------------------------------------------------------------
-        # Inverse FFT and normalization
-        # -------------------------------------------------------------------------
-        data_new = irfft(large_y, axis=1) * (float(num) / float(nsp))
-    return data_rs
-
-
->>>>>>> c471e50 (update)
 def _trimming_index(nch, nsp, dx=None, fs=None, start_channel=0,
                     start_distance=0, start_time=0, xmin=None, xmax=None,
                     chmin=None, chmax=None, tmin=None, tmax=None, spmin=None,

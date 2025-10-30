@@ -213,25 +213,12 @@ def _read_h5(fname, headonly=False, file_format='auto', chmin=None, chmax=None,
             transpose = True
             attrs = h5_file[f'{group}/Source1/Zone1'].attrs
             try:
-<<<<<<< HEAD
                 fs = float(attrs['FreqRes'])
             except KeyError:
                 try:
-                    fs = (attrs['PulseRateFreq'][0] /
-                            attrs['SamplingRes'][0]) / 1000
-                except KeyError:
-                    try:
-                        fs = 1000 / attrs['Spacing'][1]
-                    except KeyError:
-                        fs = attrs['SamplingRate'][0]
-=======
-                fs = float(1000 / attrs['Spacing'][1])
-            except KeyError:
-                try:
-                    fs = float(attrs['FreqRes'])
+                    fs = float(1000 / attrs['Spacing'][1])
                 except KeyError:
                     fs = attrs['PulseRateFreq'][0]
->>>>>>> c471e50 (update)
             time = h5_file[f'{group}/Source1/time']
             if len(time.shape) == 2: # Febus A1-R
                 start_time = DASDateTime.fromtimestamp(time[0, 0]).utc()
@@ -453,15 +440,9 @@ def _read_tdms(fname, headonly=False, file_format='auto', chmin=None,
                 version = float(properties['iDASVersion'][:3])
                 if version < 2.3:
                     file_format = 'Silixa iDAS'
-<<<<<<< HEAD
-                elif 2.3 <= version < 2.6:
-                    file_format = 'Silixa iDAS-v2'
-                elif version >= 2.6:
-=======
                 elif 2.3 <= version < 2.7:
                     file_format = 'Silixa iDAS-v2'
                 elif version >= 2.7:
->>>>>>> c471e50 (update)
                     file_format = 'Silixa iDAS-v3'
             elif group_name == ['DAS']:
                 key = 'DAS'
