@@ -188,7 +188,8 @@ def _read_h5(fname, headonly=False, file_format='auto', chmin=None, chmax=None,
                 start_time = DASDateTime.fromisoformat(h5_file[data_key].
                                                        attrs['start_time'])
             else:
-                start_time = DASDateTime.fromtimestamp(float(header[100])).utc()
+                start_time = DASDateTime.fromtimestamp(float(header[100])).\
+                    utc()
                 transpose = True
             metadata = {'dx': header[1],
                         'fs': header[6] / header[15] / header[98],
@@ -256,11 +257,9 @@ def _read_h5(fname, headonly=False, file_format='auto', chmin=None, chmax=None,
                              'Smart Earth ZD-DAS', 'Unknown']:
             dataset = h5_file['Acquisition/Raw[0]/RawData/']
             attrs = h5_file['Acquisition'].attrs
-            try:
+            if 'NumberOfLoci' in attrs.keys():
                 if dataset.shape[0] != attrs['NumberOfLoci']:
                     transpose = True
-            except KeyError:
-                pass
 
             try:
                 fs = h5_file['Acquisition/Raw[0]'].attrs['OutputDataRate']
@@ -278,7 +277,7 @@ def _read_h5(fname, headonly=False, file_format='auto', chmin=None, chmax=None,
                         stime = h5_file['Acquisition/Raw[0]/RawDataTime/'][0]
                     except KeyError:
                         stime = 0
-                        
+
             if isinstance(stime, bytes):
                 stime = stime.decode('ascii')
 
@@ -482,12 +481,11 @@ def _read_tdms(fname, headonly=False, file_format='auto', chmin=None,
                         if isinstance(properties[time_key], str):
                             start_time = DASDateTime.fromisoformat(
                                 properties[time_key])
+                            break
                         elif isinstance(properties[time_key], np.datetime64):
                             start_time = DASDateTime.from_datetime(
                                 properties[time_key].item())
-                        else:
-                            continue
-                        break
+                            break
                 metadata['start_time'] = start_time
             if 'GaugeLength' in properties.keys():
                 metadata['gauge_length'] = properties['GaugeLength']
