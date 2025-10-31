@@ -1,6 +1,6 @@
 # Purpose: Module for handling Section objects.
 # Author: Minzhe Hu
-# Date: 2025.9.18
+# Date: 2025.10.31
 # Email: hmz2018@mail.ustc.edu.cn
 import warnings
 import os
@@ -14,13 +14,8 @@ from daspy.basic_tools.visualization import plot
 from daspy.basic_tools.preprocessing import (phase2strain, normalization,
                                              demeaning, detrending, stacking,
                                              cosine_taper, downsampling,
-<<<<<<< HEAD
                                              padding, _trimming_index,
                                              time_integration,
-=======
-                                             resampling, padding,
-                                             _trimming_index, time_integration,
->>>>>>> c471e50 (update)
                                              time_differential,
                                              distance_integration)
 from daspy.basic_tools.filter import (bandpass, bandstop, lowpass,
@@ -553,7 +548,7 @@ class Section(object):
             self.start_distance += channel[0] * self.dx
             return self
         else:
-            return data
+            return data * self.scale
 
     def plot(self, xmode='distance', tmode='origin', obj='waveform',
              kwargs_pro={}, **kwargs):
@@ -770,36 +765,26 @@ class Section(object):
         self.data = cosine_taper(self.data, p=p, side=side)
         return self
 
-<<<<<<< HEAD
-    def downsampling(self, xint=None, tint=None, stack=True,
-=======
     def downsampling(self, xint=None, tint=None, fs=None, dx=None, stack=True,
->>>>>>> c471e50 (update)
                      lowpass_filter=True):
         """
         Downsample DAS data.
 
         :param xint: int. Spatial downsampling factor.
         :param tint: int. Time downsampling factor.
-<<<<<<< HEAD
-=======
         :param fs: float. Target sampling rate after downsampling. It is used
             if tint is None.
         :param dx: float. Target channel interval after downsampling. It is
             used if xint is None.
->>>>>>> c471e50 (update)
         :param stack: bool. If True, stacking will replace decimation.
         :param lowpass_filter: bool. Lowpass cheby2 filter before time
             downsampling or not.
         :return: Downsampled data.
         """
-<<<<<<< HEAD
-=======
         if xint is None and dx is not None:
             xint = round(dx / self.dx)
         if tint is None and fs is not None:
             tint = round(self.fs / fs)
->>>>>>> c471e50 (update)
         self.data = downsampling(self.data, xint=xint, tint=tint, stack=stack,
                                  lowpass_filter=lowpass_filter)
         if xint and xint > 1:
@@ -810,25 +795,6 @@ class Section(object):
             self.fs /= tint
         return self
 
-<<<<<<< HEAD
-=======
-    def resampling(self, xint=None, tint=None, dx=None, fs=None, stack=True,
-                   lowpass_filter=True):
-        if xint is None and dx is not None:
-            xint = round(dx / self.dx)
-        if tint is None and fs is not None:
-            tint = round(self.fs / fs)
-        self.data = resampling(self.data, xint=xint, tint=tint, stack=stack,
-                                 lowpass_filter=lowpass_filter)
-        if xint and xint > 1:
-            self.dx *= xint
-            if hasattr(self, 'gauge_length'):
-                self.gauge_length += self.dx * (xint - 1)
-        if tint:
-            self.fs /= tint
-        return self
-
->>>>>>> c471e50 (update)
     def trimming(self, xmin=None, xmax=None, chmin=None, chmax=None, tmin=None,
                  tmax=None, spmin=None, spmax=None, **kwargs):
         """
@@ -893,25 +859,26 @@ class Section(object):
                     return self
         warnings.warn('Unable to convert data type.')
 
-    def time_integration(self, c=0):
+    def time_integration(self, domain='time', c=0):
         """
         Integrate DAS data in time.
 
         :param c: float. A constant added to the result.
         """
-        self.data = time_integration(self.data, self.fs, c=c)
+        self.data = time_integration(self.data, self.fs, domain=domain, c=c)
         if hasattr(self, 'data_type'):
             self._time_int_dif_attr(mode=1)
         return self
 
-    def time_differential(self, prepend=0):
+    def time_differential(self, domain='time', prepend=0):
         """
         Differentiate DAS data in time.
 
-        :param prepend: 'mean' or values to prepend to `data` along axis prior to
-            performing the difference. 
+        :param prepend: 'mean' or values to prepend to `data` along axis prior
+            to performing the difference. 
         """
-        self.data = time_differential(self.data, self.fs, prepend=prepend)
+        self.data = time_differential(self.data, self.fs, domain=domain,
+                                      prepend=prepend)
         if hasattr(self, 'data_type'):
             self._time_int_dif_attr(mode=-1)
         return self
@@ -943,7 +910,8 @@ class Section(object):
             None.
         """
         if zi is None:
-            self.data = bandpass(self.data, self.fs, freqmin, freqmax, **kwargs)
+            self.data = bandpass(self.data, self.fs, freqmin, freqmax,
+                                 **kwargs)
             return self
         else:
             self.data, zf = bandpass(self.data, self.fs, freqmin, freqmax,

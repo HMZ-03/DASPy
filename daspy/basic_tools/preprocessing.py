@@ -1,9 +1,10 @@
 # Purpose: Some preprocess methods
 # Author: Minzhe Hu
-# Date: 2025.6.25
+# Date: 2025.10.30
 # Email: hmz2018@mail.ustc.edu.cn
 import warnings
 import numpy as np
+from numpy.fft import rfft, irfft, rfftfreq
 from scipy.signal import detrend
 from scipy.signal.windows import tukey
 from daspy.basic_tools.filter import lowpass_cheby_2
@@ -320,7 +321,7 @@ def padding(data, dn, reverse=False):
         return data_pd
 
 
-def time_integration(data, fs, c=0):
+def time_integration(data, fs, domain='time', c=0):
     """
     Integrate DAS data in time.
 
@@ -329,10 +330,19 @@ def time_integration(data, fs, c=0):
     :param c: float. A constant added to the result.
     :return: Integrated data.
     """
-    return np.cumsum(data, axis=1) / fs + c
+    if domain == 'time':
+        return np.cumsum(data, axis=1) / fs + c
+    elif domain in ['frequency', 'freq']:
+        nsp = data.shape[1]
+        freqs = rfftfreq(nsp, d=1/fs)
+        spectrum = rfft(data, axis=1)
+        H = np.zeros_like(freqs, dtype=complex)
+        nonzero = freqs != 0
+        H[nonzero] = 1 / (1j * 2 * np.pi * freqs[nonzero])
+        return np.real(irfft(spectrum * H))
 
 
-def time_differential(data, fs, prepend=0):
+def time_differential(data, fs, domain='time', prepend=0):
     """
     Differentiate DAS data in time.
 
@@ -342,9 +352,16 @@ def time_differential(data, fs, prepend=0):
         performing the difference. 
     :return: Differentiated data.
     """
-    if prepend == 'mean':
-        prepend = np.mean(data, axis=1).reshape((-1, 1))
-    return np.diff(data, axis=1, prepend=prepend) * fs
+    if domain == 'time':
+        if prepend == 'mean':
+            prepend = np.mean(data, axis=1).reshape((-1, 1))
+        return np.diff(data, axis=1, prepend=prepend) * fs
+    elif domain in ['frequency', 'freq']:
+        nsp = data.shape[1]
+        freqs = rfftfreq(nsp, d=1./fs)
+        spectrum = rfft(data, axis=1)
+        H = 1j * 2 * np.pi * freqs
+        return np.real(irfft(spectrum * H))
 
 
 def distance_integration(data, dx, c=0):
