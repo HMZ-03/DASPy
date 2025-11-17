@@ -10,7 +10,7 @@ from scipy.signal.windows import tukey
 from daspy.basic_tools.filter import lowpass_cheby_2
 
 
-def phase2strain(data, lam, e, n, gl):
+def phase2strain(data, lam, e, n, gl, eta=1):
     """
     Convert the optical phase shift in radians to strain.
 
@@ -19,10 +19,11 @@ def phase2strain(data, lam, e, n, gl):
     :param e: float. photo-slastic scaling factor for logitudinal strain in
         isotropic material.
     :param n: float. Refractive index of the sensing fiber.
-    :paran gl: float. Gauge length.
+    :paran guage_length: float. Gauge length.
+    :param eta: proportional parameter.
     :return: Strain data.
     """
-    return data * (lam * 1e-9) / (e * 4 * np.pi * n * gl)
+    return data * lam / (e * 4 * np.pi * n * gl * eta)
 
 
 def normalization(data, method='z-score'):
