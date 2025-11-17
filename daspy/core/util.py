@@ -26,8 +26,9 @@ def _device_standardized_name(file_format: str) -> str:
         'Silixa iDAS-v3': ['silixaidasv3', 'idasv3'],
         'Silixa iDAS-MG': ['silixaidasmg', 'idasmg'],
         'Silixa Carina': ['silixacarina', 'carina'],
-        'Sintela Onyx v1.0': ['sintelaonyxv1.0', 'sintelaonyxv1', 'sintalaonyx',
-                              'sintela', 'onyxv1.0', 'onyxv1', 'onyx'],
+        'Sintela Onyx v1.0': ['sintelaonyxv1.0', 'sintelaonyxv1',
+                              'sintalaonyx', 'sintela', 'onyxv1.0', 'onyxv1',
+                              'onyx'],
         'T8 Sensor': ['t8sensor', 't8'],
         'Smart Earth ZD-DAS': ['smartearthzddas', 'smartearth', 'zddas',
                                'smartearthsensingzddas', 'smartearthsensing',
@@ -37,7 +38,9 @@ def _device_standardized_name(file_format: str) -> str:
                                              'instituteofsemiconductorscas'],
         'AI4EPS': ['ai4eps', 'daseventdata'],
         'INGV': ['ingv', 'istitutonazionaledigeofisicaevulcanologia'],
-        'JAMSTEC': ['jamstec', 'japanagencyformarineearthscienceandtechnology'],
+        'JAMSTEC': ['jamstec',
+                    'japanagencyformarineearthscienceandtechnology'],
+        'NEC': ['nec'],
         'FORESEE': ['forsee', 'fiberopticforenvironmentsenseing'],
         'Unknown0': ['unknown0'],
         'Unknown': ['unknown', 'other']
@@ -98,7 +101,7 @@ def _h5_file_format(h5_file):
         file_format = 'JAMSTEC'
     elif list(keys) == ['data']:
         if 'Interval of monitor point' in \
-            h5_file['data'].attrs['Interval of monitor point']:
+            list(h5_file['data'].attrs['Interval of monitor point'].keys()):
             file_format = 'NEC'
         else:
             file_format = 'AI4EPS'

@@ -360,7 +360,7 @@ def _read_h5(fname, headonly=False, file_format='auto', chmin=None, chmax=None,
             dataset = h5_file['data']
             dx = dataset.attrs['Interval of monitor point']
             fs = 1.0 / (dataset.attrs['Interval time of data'] / 1000.0) # Hz
-            if data.shape[0] != \
+            if dataset.shape[0] != \
                 dataset.attrs['Number of requested location points']:
                 transpose = True
             try:
