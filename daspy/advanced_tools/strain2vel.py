@@ -23,14 +23,14 @@ def fk_rescaling(data, dx, fs, taper=(0.02, 0.05), pad='default', fmax=None,
     :param dx: Channel interval in m.
     :param fs: Sampling rate in Hz.
     :param taper: float or sequence of floats. Each float means decimal
-        percentage of Tukey taper for corresponding dimension (ranging from 0 to
-        1). Default is 0.1 which tapers 5% from the beginning and 5% from the
-        end.
-    :param pad: Pad the data or not. It can be float or sequence of floats. Each
-        float means padding percentage before FFT for corresponding dimension.
-        If set to 0.1 will pad 5% before the beginning and after the end.
-        'default' means pad both dimensions to next power of 2. None or False
-        means don't pad data before or during Fast Fourier Transform.
+        percentage of Tukey taper for corresponding dimension (ranging from 0
+        to 1). Default is 0.1 which tapers 5% from the beginning and 5% from
+        the end.
+    :param pad: Pad the data or not. It can be float or sequence of floats.
+        Each float means padding percentage before FFT for corresponding
+        dimension. If set to 0.1 will pad 5% before the beginning and after the
+        end. 'default' means pad both dimensions to next power of 2. None or
+        False means don't pad data before or during Fast Fourier Transform.
     :param fmax, kmin, vmax: float or or sequence of 2 floats. Sequence of 2
         floats represents the start and end of taper. Setting these parameters
         can reduce artifacts.
@@ -71,7 +71,8 @@ def fk_rescaling(data, dx, fs, taper=(0.02, 0.05), pad='default', fmax=None,
         kk = np.tile(k, (len(f), 1)).T
         vv = - np.divide(ff, kk, out=np.ones_like(ff) * 1e10, where=kk != 0)
 
-        mask = fk_fan_mask(f, k, fmax=fmax, kmin=kmin, vmax=vmax, edge=edge) * vv
+        mask = fk_fan_mask(f, k, fmax=fmax, kmin=kmin, vmax=vmax, edge=edge) \
+            * vv
         mask[kk == 0] = 0
 
         data_vel = irfft2(ifftshift(fk * mask, axes=0)).real[:nch, :nt]
@@ -91,12 +92,12 @@ def curvelet_conversion(data, dx, fs, pad=0.3, scale_begin=2, nbscales=None,
     :param data: numpy.ndarray. Data to convert.
     :param dx: Channel interval in m.
     :param fs: Sampling rate in Hz.
-    :param pad: float or sequence of floats. Each float means padding percentage
-        before FFT for corresponding dimension. If set to 0.1 will pad 5% before
-        the beginning and after the end.
+    :param pad: float or sequence of floats. Each float means padding
+        percentage before FFT for corresponding dimension. If set to 0.1 will
+        pad 5% before the beginning and after the end.
     :param scale_begin: int. The beginning scale to do conversion.
-    :param nbscales: int. Number of scales including the coarsest wavelet level.
-        Default set to ceil(log2(min(M,N)) - 3).
+    :param nbscales: int. Number of scales including the coarsest wavelet
+        level. Default set to ceil(log2(min(M,N)) - 3).
     :param nbangles: int. Number of angles at the 2nd coarsest level,
         minimum 8, must be a multiple of 4.
     :param turning: Sequence of int. Channel number of turning points.
@@ -110,7 +111,8 @@ def curvelet_conversion(data, dx, fs, pad=0.3, scale_begin=2, nbscales=None,
             data_vel[s:e] = curvelet_conversion(data[s:e], dx, fs, pad=pad,
                                                 scale_begin=scale_begin,
                                                 nbscales=nbscales,
-                                                nbangles=nbangles, turning=None)
+                                                nbangles=nbangles,
+                                                turning=None)
     else:
         if pad is None or pad is False:
             pad = 0
@@ -227,8 +229,8 @@ def slant_stacking(data, dx, fs, L=None, slm=0.01,
         for (s, e) in zip(start_ch, end_ch):
             channel_seg = [ch-s for ch in range(s,e) if ch in channel]
             if len(channel_seg):
-                d_vel = slant_stacking(data[s:e], dx, fs, L=L, slm=slm, sls=sls,
-                                       frqlow=frqlow, frqhigh=frqhigh,
+                d_vel = slant_stacking(data[s:e], dx, fs, L=L, slm=slm,
+                                       sls=sls, frqlow=frqlow, frqhigh=frqhigh,
                                        turning=None, channel=channel_seg)
                 data_vel = np.vstack((data_vel, d_vel))
     else:
