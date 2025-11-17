@@ -90,14 +90,18 @@ def _h5_file_format(h5_file):
             pass
     elif set(keys) == {'Mapping', 'Acquisition'}:
         file_format = 'Silixa iDAS'
-    elif list(keys) == ['data']:
-        file_format == 'AI4EPS'
     elif set(keys) == {'ChannelMap', 'Fiber', 'cm', 't', 'x'}:
         file_format = 'INGV'
     elif set(keys) == {'DAS_record', 'Sampling_interval_in_space',
                        'Sampling_interval_in_time', 'Sampling_points_in_space',
                        'Sampling_points_in_time'}:
         file_format = 'JAMSTEC'
+    elif list(keys) == ['data']:
+        if 'Interval of monitor point' in \
+            h5_file['data'].attrs['Interval of monitor point']:
+            file_format = 'NEC'
+        else:
+            file_format = 'AI4EPS'
     elif set(keys) == {'raw', 'timestamp'}:
         file_format = 'FORESEE'
     elif list(keys) == ['ProcessedData']:

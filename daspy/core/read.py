@@ -1,6 +1,6 @@
 # Purpose: Module for reading DAS data.
-# Author: Minzhe Hu
-# Date: 2025.10.30
+# Author: Minzhe Hu, Ji Zhang
+# Date: 2025.11.17
 # Email: hmz2018@mail.ustc.edu.cn
 # Partially modified from
 # https://github.com/RobbinLuo/das-toolkit/blob/main/DasTools/DasPrep.py
@@ -356,13 +356,36 @@ def _read_h5(fname, headonly=False, file_format='auto', chmin=None, chmax=None,
             metadata = {'dx': h5_file['Sampling_interval_in_space'][0],
                         'fs': 1 / h5_file['Sampling_interval_in_time'][0]}
 
+        elif file_format == 'NEC': # NEC dataset
+            dataset = h5_file['data']
+            dx = dataset.attrs['Interval of monitor point']
+            fs = 1.0 / (dataset.attrs['Interval time of data'] / 1000.0) # Hz
+            if data.shape[0] != \
+                dataset.attrs['Number of requested location points']:
+                transpose = True
+            try:
+                scale = dataset.attrs['Radians peer digital value']
+            except KeyError:
+                try:
+                    scale = dataset.attrs['Radians per digital value']
+                except KeyError:
+                    scale = 1
+            # start_time = datetime(1970, 1, 1) + \
+            # timedelta(milliseconds=start_unix_epoch_in_ms)
+            start_time = DASDateTime.fromtimestamp(
+                np.float64(dataset.attrs["Time of sending request"]) / 1e3
+                ).utc()
+            metadata = {'fs': fs, 'dx': dx, 'start_time': start_time,
+                        'gauge_length': dataset.attrs['Gauge length'],
+                        'scale': scale, 'data_type':'strain rate'}
+
         elif file_format == 'FORESEE':
             dataset = h5_file['raw']
             fs = round(1 / np.diff(h5_file['timestamp']).mean())
             start_time = DASDateTime.fromtimestamp(
                 h5_file['timestamp'][0]).astimezone(utc)
-            warnings.warn('This data format doesn\'t include channel interval. '
-                            'Please set manually')
+            warnings.warn('This data format doesn\'t include channel interval.'
+                          ' Please set manually')
             metadata = {'dx': None, 'fs': fs, 'start_time': start_time}
 
         elif file_format == 'AI4EPS': # https://ai4eps.github.io/homepage/ml4earth/seismic_event_format_das/
@@ -376,54 +399,7 @@ def _read_h5(fname, headonly=False, file_format='auto', chmin=None, chmax=None,
             if 'event_time' in attr.keys():
                 metadata['origin_time'] = DASDateTime.fromisoformat(
                     attr['event_time'])
-        elif file_format == 'NEC': # NEC dataset
-            dataset = h5_file["data"]
-            
-            dtm = dataset.attrs["Interval time of data"] # dt
-            fs = 1.0/(dtm/1000.0) # in (Hz)
-            fs_deci=fs # subsampling
-            dxm = dataset.attrs["Interval of monitor point"]
-            location_points = dataset.attrs["Number of requested location points"]
-            
-            # ch1 = kwargs.pop('ch1', 0)
-            # ch2 = kwargs.pop('ch2', location_points)
-            # dch = kwargs.pop('dch', 1)
-            try:
-                radians_per_value = dataset.attrs["Radians peer digital value"]
-            except:
-                radians_per_value = dataset.attrs["Radians per digital value"]
-            
-            start_unix_epoch_in_ms = np.float64(dataset.attrs["Time of sending request"])
-            # start_time = datetime(1970, 1, 1) + timedelta(milliseconds=start_unix_epoch_in_ms)
-            start_time = DASDateTime.fromtimestamp(start_unix_epoch_in_ms / 1e3).astimezone(utc)
-            # subsampling
-            sub_dataset = dataset[::int(fs/fs_deci)]
-            # derivation
-            if fs==1000: # for raw 1k Hz data 
-                data = np.concatenate(( np.zeros((1, location_points)), sub_dataset[1:, 1:]-sub_dataset[:-1, 1:] ), axis=0) / (1.0/fs_deci)
-                data = data * float(radians_per_value[0])
-            elif fs==100: # for decimated 100 Hz data 
-                data = sub_dataset
-            else:
-                data = sub_dataset
-            gauge_length = dataset.attrs['Gauge length']
-            # lamda=1.55um n=1.47 eta=0.78 Gauge
-            lamda=1.55*10**(-6) #m
-            nri=1.47
-            eta=0.78
-            data=data*lamda/(4*np.pi*nri*gauge_length*eta)
-            #
-            if data.shape[0] == location_points:
-                # data = data[ch1:ch2, :]
-                dataset = data
-            else:
-                # data = data[:, ch1:ch2].T
-                dataset = data.T
-            metadata = {'fs': fs, 'dx': dxm, 'start_channel': ch1,
-                        'start_distance': ch1 * dxm,
-                        'gauge_length': gauge_length,
-                        'data_type':'strain rate'}
-            metadata['start_time'] = start_time
+
         elif file_format == 'Unknown0':
             dataset = h5_file['data_product/data']
             nch = h5_file.attrs['nx']
