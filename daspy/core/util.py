@@ -40,7 +40,7 @@ def _device_standardized_name(file_format: str) -> str:
         'INGV': ['ingv', 'istitutonazionaledigeofisicaevulcanologia'],
         'JAMSTEC': ['jamstec',
                     'japanagencyformarineearthscienceandtechnology'],
-        'NEC': ['nec'],
+        'NEC': ['nec', 'nipponelectriccompany'],
         'FORESEE': ['forsee', 'fiberopticforenvironmentsenseing'],
         'Unknown0': ['unknown0'],
         'Unknown': ['unknown', 'other']

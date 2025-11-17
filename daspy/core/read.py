@@ -5,11 +5,13 @@
 # Partially modified from
 # https://github.com/RobbinLuo/das-toolkit/blob/main/DasTools/DasPrep.py
 import warnings
+import inspect
 import json
 import pickle
 import numpy as np
 import h5py
 import segyio
+from functools import wraps
 from typing import Union
 from pathlib import Path
 from nptdms import TdmsFile
@@ -73,13 +75,8 @@ def read(fname=None, output_type='section', ftype=None, file_format='auto',
         kwargs['chmin'] = kwargs.pop('ch1', None)
         kwargs['chmax'] = kwargs.pop('ch2', None)
     if callable(ftype):
-        try:
-            data, metadata = ftype(fname, headonly=headonly, **kwargs)
-        except TypeError:
-            data, metadata = ftype(fname)
-            si, sj, metadata = _trimming_slice_metadata(data.shape,
-                metadata=metadata, **kwargs)
-            data = data[si, sj]
+        ftype = with_trimming(ftype)
+        data, metadata = ftype(fname, headonly=headonly, **kwargs)
     else:
         for rtp in [('pickle', 'pkl'), ('hdf5', 'h5'), ('segy', 'sgy')]:
             ftype = ftype.replace(*rtp)
@@ -95,6 +92,43 @@ def read(fname=None, output_type='section', ftype=None, file_format='auto',
         return Section(data, **metadata)
     elif output_type.lower() == 'array':
         return data, metadata
+
+
+def with_trimming(func):
+    """
+    Decorator that wraps a custom reader so it automatically supports
+    trimming parameters (chmin, chmax, dch, xmin, xmax, tmin, tmax, spmin, spmax).
+    """
+
+    @wraps(func)
+    def wrapper(fname, headonly=False, **kwargs):
+        # trimming-related parameters
+        trim_keys = ['chmin', 'chmax', 'dch', 'xmin', 'xmax', 'tmin', 'tmax',
+                     'spmin', 'spmax']
+        sig = inspect.signature(func)
+        reader_params = set(sig.parameters.keys())
+        trim_for_reader = {k: kwargs.pop(k) for k in trim_keys if k in kwargs \
+                           and k in reader_params}
+        trim_for_trimming = {k: kwargs.pop(k) for k in trim_keys if k in \
+                             kwargs and k not in reader_params}
+        try:
+            data, metadata = func(fname, headonly=headonly, **trim_for_reader,
+                                  **kwargs)
+        except TypeError:
+            headonly = False
+            data, metadata = func(fname, **trim_for_reader)
+
+        shape = data.shape
+        si, sj, metadata = _trimming_slice_metadata(shape, metadata=metadata,
+                                                    **trim_for_trimming)
+        if headonly:
+            data = np.zeros(shape)[si, sj]
+        else:
+            data = data[si, sj]
+
+        return data, metadata
+
+    return wrapper
 
 
 def _read_pkl(fname, headonly=False, file_format='auto', chmin=None, chmax=None,
@@ -523,7 +557,6 @@ def _read_tdms(fname, headonly=False, file_format='auto', chmin=None,
                 data = np.asarray([tdms_file[key][str(ch)][sj] for ch in
                                    range(si.start, si.stop, si.step)])
         elif file_format == 'Institute of Semiconductors, CAS':
-
             try:
                 start_channel = int(properties['Initial Channel'])
             except KeyError:
