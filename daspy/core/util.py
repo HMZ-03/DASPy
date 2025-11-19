@@ -21,6 +21,8 @@ def _device_standardized_name(file_format: str) -> str:
         'OptaSense ODH4+': ['optasenseodh4+', 'odh4+', 'optasenseodh4plus',
                             'odh4plus'],
         'OptaSense QuantX': ['optasensequantx', 'quantx'],
+        'Puniu Tech HiFi-DAS': ['puniutechhifidas, puniu, puniutech, hifidas',
+                                'puniuhifidas', 'puniudas'],
         'Silixa iDAS': ['silixaidas', 'silixaidasv1', 'idasv1', 'idas'],
         'Silixa iDAS-v2': ['silixaidasv2', 'idasv2'],
         'Silixa iDAS-v3': ['silixaidasv3', 'idasv3'],
@@ -91,6 +93,8 @@ def _h5_file_format(h5_file):
                 file_format = 'Sintela Onyx v1.0'
         except KeyError:
             pass
+    elif 'default' in keys:
+        file_format = 'Puniu Tech HiFi-DAS'
     elif set(keys) == {'Mapping', 'Acquisition'}:
         file_format = 'Silixa iDAS'
     elif set(keys) == {'ChannelMap', 'Fiber', 'cm', 't', 'x'}:

@@ -1,6 +1,6 @@
 # Purpose: Module for reading DAS data.
 # Author: Minzhe Hu, Ji Zhang
-# Date: 2025.11.17
+# Date: 2025.11.19
 # Email: hmz2018@mail.ustc.edu.cn
 # Partially modified from
 # https://github.com/RobbinLuo/das-toolkit/blob/main/DasTools/DasPrep.py
@@ -324,6 +324,34 @@ def _read_h5(fname, headonly=False, file_format='auto', chmin=None, chmax=None,
                         'start_time': stime,
                         'gauge_length': attrs['GaugeLength']}
 
+        elif file_format == 'Puniu Tech HiFi-DAS':
+            dataset = h5_file['default']
+            if 'time,channel' in attrs.get('row_major_order', 'time, channel')\
+                .replace(' ', '').lower():
+                transpose = True
+
+            attrs = {k: (v.decode() if isinstance(v, bytes) else v) for k, v
+                     in dataset.attrs.items()}
+            step = int(attrs['step'])
+            dx = step * attrs.get('spatial_sampling_rate', 1.0)
+            start_channel = int(attrs['start_channel'])
+            if step != 1:
+                if chmin:
+                    chmin = (chmin - start_channel) / step + start_channel
+                if chmax:
+                    chmax = (chmin - start_channel) / step + start_channel
+            t0 = int(attrs.get('epoch', 0)) + int(attrs.get('ns', 0)) * 1e-9
+            data_type = 'strain rate' if attrs.get('format', '') == \
+                'differential' else 'strain',
+            metadata = {'dx': dx, 'fs': float(attrs['sampling_rate']),
+                        'start_channel': start_channel,
+                        'start_distance': start_channel * dx,
+                        'start_time': DASDateTime.fromtimestamp(t0, tz=utc),
+                        'scale': 110.37, 'data_type': data_type,
+                        'cid': attrs.get('cid', '')}
+            if 'spatial_resolution' in attrs.keys():
+                metadata['gauge_length'] = float(attrs['spatial_resolution'])
+
         elif file_format == 'Silixa iDAS':
             dataset = h5_file['Acquisition/Raw[0]/RawData/']
             attrs = h5_file['Acquisition/Raw[0]'].attrs
@@ -390,7 +418,7 @@ def _read_h5(fname, headonly=False, file_format='auto', chmin=None, chmax=None,
             metadata = {'dx': h5_file['Sampling_interval_in_space'][0],
                         'fs': 1 / h5_file['Sampling_interval_in_time'][0]}
 
-        elif file_format == 'NEC': # NEC dataset
+        elif file_format == 'NEC':
             dataset = h5_file['data']
             dx = dataset.attrs['Interval of monitor point']
             fs = 1.0 / (dataset.attrs['Interval time of data'] / 1000.0) # Hz
@@ -407,7 +435,7 @@ def _read_h5(fname, headonly=False, file_format='auto', chmin=None, chmax=None,
             # start_time = datetime(1970, 1, 1) + \
             # timedelta(milliseconds=start_unix_epoch_in_ms)
             start_time = DASDateTime.fromtimestamp(
-                np.float64(dataset.attrs["Time of sending request"]) / 1e3
+                np.float64(dataset.attrs['Time of sending request']) / 1e3
                 ).utc()
             metadata = {'fs': fs, 'dx': dx, 'start_time': start_time,
                         'gauge_length': dataset.attrs['Gauge length'],
