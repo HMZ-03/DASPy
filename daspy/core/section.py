@@ -1,6 +1,6 @@
 # Purpose: Module for handling Section objects.
 # Author: Minzhe Hu
-# Date: 2025.11.12
+# Date: 2025.11.19
 # Email: hmz2018@mail.ustc.edu.cn
 import warnings
 import os
