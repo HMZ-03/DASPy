@@ -69,7 +69,7 @@ class DASDateTime(datetime):
 
     @classmethod
     def from_obspy_UTCDateTime(cls, dt):
-        return cls.from_datetime(dt.datetime)
+        return cls.from_datetime(dt.datetime).replace(tzinfo=utc)
 
     def to_datetime(self):
         return datetime.fromtimestamp(self.timestamp(), tz=self.tzinfo)

@@ -196,7 +196,7 @@ class Section(object):
 
     @property
     def end_channel(self):
-        return self.start_channel + self.nch - 1
+        return self.start_channel + self.nch
 
     @property
     def distance(self):
@@ -463,8 +463,8 @@ class Section(object):
         :param ftype: None or str. None for automatic detection), or 'pkl',
             'pickle', 'tdms', 'h5', 'hdf5', 'segy', 'sgy', 'npy'.
         :param keep_format: bool. If True, we will make a copy of the
-            self.source file and make changes to it. This will strictly preserve
-            the original format, but will cost more IO resources.
+            self.source file and make changes to it. This will strictly
+            preserve the original format, but will cost more IO resources.
         :param dtype: str. The data type of the saved data.
         :param file_format: Format in which the file is saved. Only works when
             keep_format == False. 'auto' for raw file format or the most common
@@ -1097,12 +1097,13 @@ class Section(object):
         if ('ch1' in kwargs.keys()) or ('ch2' in kwargs.keys()):
             kwargs['chmin'] = kwargs.pop('ch1', 0)
             kwargs['chmax'] = kwargs.pop('ch2', self.nch)
-            warnings.warn("'ch1' and 'ch2' attribute will be renamed to 'chmin'"
-                          " and 'chmax' in a future release.", FutureWarning)
+            warnings.warn("'ch1' and 'ch2' attribute will be renamed to "
+                          "'chmin' and 'chmax' in a future release.",
+                          FutureWarning)
         if 'nch' in kwargs.keys():
             kwargs['dch'] = kwargs.pop('nch', 1)
-            warnings.warn("'nch' attribute will be renamed to 'dch' in a future"
-                          " release.", FutureWarning)
+            warnings.warn("'nch' attribute will be renamed to 'dch' in a "
+                          "future release.", FutureWarning)
 
         if 'chmin' in kwargs.keys():
             chmin = int(kwargs.pop('chmin') - self.start_channel)

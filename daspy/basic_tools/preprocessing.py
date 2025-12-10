@@ -121,9 +121,9 @@ def cosine_taper(data, p=0.1, side='both'):
     if not isinstance(p, (tuple, list, np.ndarray)):
         win = tukey(nsp, p)
         if side == 'left':
-            win[round(nch/2):] = 1
+            win[round(nsp/2):] = 1
         elif side == 'right':
-            win[:round(len(win)/2)] = 1
+            win[:round(nsp/2)] = 1
         return data * np.tile(win, (nch, 1))
     else:
         if p[0] > 0:

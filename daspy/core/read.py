@@ -484,7 +484,13 @@ def _read_h5(fname, headonly=False, file_format='auto', chmin=None, chmax=None,
         metadata['headers'] = _read_h5_headers(h5_file)
         shape = dataset.shape
         if len(shape) == 3:
-            shape = (shape[0] * shape[1], shape[2])
+            if headonly:
+                fs = int(metadata['fs'])
+                fs_b = attrs.get('BlockRate', [1000])[0] / 1e3
+                nsp_b = round(fs/fs_b)
+                shape = (shape[0] * nsp_b, shape[2])
+            else:
+                shape = (shape[0] * shape[1], shape[2])
         if transpose:
             shape = shape[::-1]
         si, sj, metadata = _trimming_slice_metadata(shape, metadata=metadata,

@@ -1,6 +1,6 @@
 # Purpose: Module for handling Collection objects.
 # Author: Minzhe Hu
-# Date: 2025.9.18
+# Date: 2025.11.26
 # Email: hmz2018@mail.ustc.edu.cn
 import os
 import warnings
@@ -239,10 +239,16 @@ class Collection(object):
             warnings.warn('In future versions, the parameter \'etime\' will be '
                           'replaced by \'end\'.')
 
-        if start is None and 'tmin' in kwargs.keys():
-            start = kwargs['tmin']
-        if end is None and 'tmax' in kwargs.keys():
-            end = kwargs['tmax']
+        if start is None:
+            if 'tmin' in kwargs.keys():
+                start = kwargs['tmin']
+            else:
+                start = 0
+        if end is None:
+            if 'tmax' in kwargs.keys():
+                end = kwargs['tmax']
+            else:
+                end = len(self)
 
         if isinstance(start, datetime):
             for i, ftime in enumerate(self.ftime):
