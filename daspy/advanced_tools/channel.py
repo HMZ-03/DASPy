@@ -209,7 +209,8 @@ def location_interpolation(known_pt, track_pt=None, dx=2, data_type='lonlat',
             .astype(int) + 31
         DASProj = Proj(proj='utm', zone=zone, ellps='WGS84',
                        preserve_units=False)
-        known_pt[:, 0], known_pt[:, 1] = DASProj(known_pt[:, 0], known_pt[:, 1])
+        known_pt[:, 0], known_pt[:, 1] = DASProj(known_pt[:, 0],
+                                                 known_pt[:, 1])
     else:
         assert 'xy' in data_type, ('data_type should be \'lonlat\',\''
                                    'lonlatheight\', \'xy\' or \'xyz\'')

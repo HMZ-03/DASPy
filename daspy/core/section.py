@@ -647,9 +647,11 @@ class Section(object):
                 if hasattr(self, 'origin_time'):
                     kwargs['t0'] -= self.origin_time
                     if ('transpose' in kwargs.keys()) and kwargs['transpose']:
-                        kwargs.setdefault('xlabel', 'Times(s) after occurance')
+                        kwargs.setdefault('xlabel',
+                                          'Times after occurance (s)')
                     else:
-                        kwargs.setdefault('ylabel', 'Times(s) after occurance')
+                        kwargs.setdefault('ylabel',
+                                          'Times after occurance (s)')
                 else:
                     tmode == 'start'
             if tmode == 'start':
