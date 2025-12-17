@@ -294,6 +294,18 @@ class Collection(object):
             self.ftime = self.ftime[s:e]
             return self
 
+    def read(self, **kwargs):
+        return self.select(readsec=True, **kwargs)
+
+    def continuous_acquisition(self):
+        index = self.file_interruption()
+        index = [-1] + index.tolist() + [len(self)-1]
+        coll_list = []
+        for i in range(len(index) - 1):
+            coll = self.copy().select(start=index[i]+1, end=index[i+1]+1)
+            coll_list.append(coll)
+        return coll_list
+
     def _optimize_for_continuity(self, operations):
         method_list = []
         kwargs_list = []
