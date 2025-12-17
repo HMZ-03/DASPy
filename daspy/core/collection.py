@@ -374,9 +374,9 @@ class Collection(object):
                 (not os.path.exists(kwargs_file)):
                 raise ValueError('No operations input and no method_list.pkl '
                                  'and kwargs_list.pkl found in savepath.')
-            with open(os.path.join(savepath, 'method_list.pkl'), 'wb') as f:
+            with open(os.path.join(savepath, 'method_list.pkl'), 'rb') as f:
                 method_list = pickle.load(f)
-            with open(os.path.join(savepath, 'kwargs_list.pkl'), 'wb') as f:
+            with open(os.path.join(savepath, 'kwargs_list.pkl'), 'rb') as f:
                 kwargs_list = pickle.load(f)
         else:
             method_list, kwargs_list = self._optimize_for_continuity(operations)
