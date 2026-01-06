@@ -1,0 +1,2 @@
+[console_scripts]
+daspy = daspy.main:main

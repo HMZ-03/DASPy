@@ -9,7 +9,7 @@ from datetime import datetime, timedelta, timezone
 
 
 utc = timezone.utc
-local_tz = timezone(timedelta(seconds=-time.altzone))
+local_tz = timezone(timedelta(seconds=-time.timezone))
 
 
 class DASDateTime(datetime):

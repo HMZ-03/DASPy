@@ -1,0 +1,9 @@
+numpy
+scipy>=1.13
+matplotlib
+geographiclib
+pyproj
+h5py
+segyio
+nptdms
+tqdm
