@@ -228,6 +228,8 @@ class Collection(object):
         :param spmin, spmax: int. Sampling point range. Only used when
             readsec=True.
         """
+        if start is None:
+            start = 0
         if end is None:
             end = len(self.flist)
         if 'stime' in kwargs.keys():
