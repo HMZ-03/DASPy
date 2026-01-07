@@ -314,8 +314,10 @@ class Collection(object):
         for opera in operations:
             method, kwargs = opera
             if method == 'downsampling':
-                if ('lowpass_filter' in kwargs.keys() and not\
-                    kwargs['lowpass_filter']) or 'tint' not in kwargs.keys():
+                if_filter = ('tint' not in kwargs.keys() and 'fs' not in
+                    kwargs.keys()) or ('lowpass_filter' in kwargs.keys() and
+                    not kwargs['lowpass_filter'])
+                if if_filter:
                     method_list.append('downsampling')
                     kwargs_list.append(kwargs)
                 else:

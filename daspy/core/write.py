@@ -35,8 +35,13 @@ def write(sec, fname, ftype=None, raw_fname=None, dtype=None,
 
 
 def write_pkl(sec, fname):
+    if hasattr(sec, 'source'):
+        sec0 = sec.copy()
+        sec.source = str(sec.source)
+    else:
+        sec0 = sec
     with open(fname, 'wb') as f:
-        pickle.dump(sec.__dict__, f)
+        pickle.dump(sec0.__dict__, f)
     return None
 
 
