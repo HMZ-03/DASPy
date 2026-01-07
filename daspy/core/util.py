@@ -21,13 +21,16 @@ def _device_standardized_name(file_format: str) -> str:
         'OptaSense ODH4+': ['optasenseodh4+', 'odh4+', 'optasenseodh4plus',
                             'odh4plus'],
         'OptaSense QuantX': ['optasensequantx', 'quantx'],
+        'Puniu Tech HiFi-DAS': ['puniutechhifidas, puniu, puniutech, hifidas',
+                                'puniuhifidas', 'puniudas'],
         'Silixa iDAS': ['silixaidas', 'silixaidasv1', 'idasv1', 'idas'],
         'Silixa iDAS-v2': ['silixaidasv2', 'idasv2'],
         'Silixa iDAS-v3': ['silixaidasv3', 'idasv3'],
         'Silixa iDAS-MG': ['silixaidasmg', 'idasmg'],
         'Silixa Carina': ['silixacarina', 'carina'],
-        'Sintela Onyx v1.0': ['sintelaonyxv1.0', 'sintelaonyxv1', 'sintalaonyx',
-                              'sintela', 'onyxv1.0', 'onyxv1', 'onyx'],
+        'Sintela Onyx v1.0': ['sintelaonyxv1.0', 'sintelaonyxv1',
+                              'sintalaonyx', 'sintela', 'onyxv1.0', 'onyxv1',
+                              'onyx'],
         'T8 Sensor': ['t8sensor', 't8'],
         'Smart Earth ZD-DAS': ['smartearthzddas', 'smartearth', 'zddas',
                                'smartearthsensingzddas', 'smartearthsensing',
@@ -37,7 +40,9 @@ def _device_standardized_name(file_format: str) -> str:
                                              'instituteofsemiconductorscas'],
         'AI4EPS': ['ai4eps', 'daseventdata'],
         'INGV': ['ingv', 'istitutonazionaledigeofisicaevulcanologia'],
-        'JAMSTEC': ['jamstec', 'japanagencyformarineearthscienceandtechnology'],
+        'JAMSTEC': ['jamstec',
+                    'japanagencyformarineearthscienceandtechnology'],
+        'NEC': ['nec', 'nipponelectriccompany'],
         'FORESEE': ['forsee', 'fiberopticforenvironmentsenseing'],
         'Unknown0': ['unknown0'],
         'Unknown': ['unknown', 'other']
@@ -88,16 +93,22 @@ def _h5_file_format(h5_file):
                 file_format = 'Sintela Onyx v1.0'
         except KeyError:
             pass
+    elif 'default' in keys:
+        file_format = 'Puniu Tech HiFi-DAS'
     elif set(keys) == {'Mapping', 'Acquisition'}:
         file_format = 'Silixa iDAS'
-    elif list(keys) == ['data']:
-        file_format == 'AI4EPS'
     elif set(keys) == {'ChannelMap', 'Fiber', 'cm', 't', 'x'}:
         file_format = 'INGV'
     elif set(keys) == {'DAS_record', 'Sampling_interval_in_space',
                        'Sampling_interval_in_time', 'Sampling_points_in_space',
                        'Sampling_points_in_time'}:
         file_format = 'JAMSTEC'
+    elif list(keys) == ['data']:
+        if 'Interval of monitor point' in \
+            list(h5_file['data'].attrs['Interval of monitor point'].keys()):
+            file_format = 'NEC'
+        else:
+            file_format = 'AI4EPS'
     elif set(keys) == {'raw', 'timestamp'}:
         file_format = 'FORESEE'
     elif list(keys) == ['ProcessedData']:

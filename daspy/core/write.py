@@ -1,6 +1,6 @@
 # Purpose: Module for writing DAS data.
 # Author: Minzhe Hu
-# Date: 2025.9.18
+# Date: 2025.11.19
 # Email: hmz2018@mail.ustc.edu.cn
 import os
 import warnings
@@ -35,8 +35,13 @@ def write(sec, fname, ftype=None, raw_fname=None, dtype=None,
 
 
 def write_pkl(sec, fname):
+    if hasattr(sec, 'source'):
+        sec0 = sec.copy()
+        sec.source = str(sec.source)
+    else:
+        sec0 = sec
     with open(fname, 'wb') as f:
-        pickle.dump(sec.__dict__, f)
+        pickle.dump(sec0.__dict__, f)
     return None
 
 
@@ -192,9 +197,39 @@ def _write_h5(sec, fname, raw_fname=None, file_format='auto'):
                 h5_file.get('Acquisition/Raw[0]/').\
                     create_dataset('RawDataTime', data=datatime)
                 h5_file['Acquisition/Raw[0]'].attrs['OutputDataRate'] = sec.fs
-                h5_file['Acquisition'].attrs['SpatialSamplingInterval'] = sec.dx
-                h5_file['Acquisition'].attrs['GaugeLength'] = sec.gauge_length \
-                    if hasattr(sec, 'gauge_length') else -1
+                h5_file['Acquisition'].attrs['SpatialSamplingInterval'] = \
+                    sec.dx
+                h5_file['Acquisition'].attrs['GaugeLength'] = \
+                    sec.gauge_length if hasattr(sec, 'gauge_length') else -1
+
+            elif file_format == 'Puniu Tech HiFi-DAS':
+                h5_file.create_dataset('default', data=sec.data)
+                h5_file['default'].attrs['row_major_order'] = 'channel, time'
+                h5_file['default'].attrs['spatial_sampling_rate'] = sec.dx
+                h5_file['default'].attrs['step'] = 1
+                h5_file['default'].attrs['sampling_rate'] = sec.fs
+                h5_file['default'].attrs['start_channel'] = sec.start_channel
+                if isinstance(sec.start_time, datetime):
+                    t0 = sec.start_time.timestamp()
+                else:
+                    t0 = sec.start_time
+                epoch = int(t0)
+                h5_file['default'].attrs['epoch'] = epoch
+                h5_file['default'].attrs['ns'] = int(round((t0 - epoch) * 1e9))
+                if hasattr(sec, 'data_type'):
+                    h5_file['default'].attrs['format'] = 'differential' if \
+                        sec.data_type == 'strain rate' else sec.data_type
+                else:
+                    h5_file['default'].attrs['format'] = 'unknown'
+                
+                if hasattr(sec, 'gauge_length'):
+                    h5_file['default'].attrs['spatial_resolution'] = \
+                        sec.gauge_length
+                try:
+                    h5_file['default'].attrs['cid'] = \
+                        sec.headers['default']['attrs']['cid']
+                except KeyError:
+                    h5_file['default'].attrs['cid'] = 'unknown'
 
             elif file_format == 'Silixa iDAS':
                 h5_file.create_group('Acquisition/Raw[0]')
@@ -273,13 +308,29 @@ def _write_h5(sec, fname, raw_fname=None, file_format='auto'):
                 h5_file.attrs['FilterGain'] = 116e-9 * sec.fs / gauge_length / \
                     8192 / scale
 
-
             elif file_format in 'JAMSTEC':
                 h5_file.create_dataset('DAS_record', data=sec.data)
                 h5_file.create_dataset('Sampling_interval_in_space',
                                        data=[sec.dx])
                 h5_file.create_dataset('Sampling_interval_in_time',
                                        data=[1/sec.fs])
+
+            elif file_format == 'NEC':
+                h5_file.create_dataset('data', data=sec.data)
+                h5_file['data'].attrs['Interval of monitor point'] = sec.dx
+                h5_file['data'].attrs['Number of requested location points'] \
+                    = sec.nch
+                h5_file['data'].attrs['Interval time of data'] = \
+                    1 / sec.fs * 1e3
+                h5_file['data'].attrs['Radians per digital value'] = \
+                    sec.scale if hasattr(sec, 'scale') else 1
+                if isinstance(sec.start_time, datatime):
+                    t0 = sec.start_time.timestamp()
+                else:
+                    t0 = sec.start_time
+                h5_file['data'].attrs['Time of sending request'] = t0 * 1e3
+                h5_file['data'].attrs['Gauge length'] = sec.gauge_length if \
+                    hasattr(sec, 'gauge_length') else -1
 
             elif file_format == 'FORESEE':
                 h5_file.create_dataset('raw', data=sec.data)
@@ -463,9 +514,42 @@ def _write_h5(sec, fname, raw_fname=None, file_format='auto'):
                 _update_h5_dataset(h5_file, 'Acquisition/Raw[0]/',
                                     'RawDataTime', DataTime)
                 h5_file['Acquisition/Raw[0]'].attrs['OutputDataRate'] = sec.fs
-                h5_file['Acquisition'].attrs['SpatialSamplingInterval'] = sec.dx
-                h5_file['Acquisition'].attrs['GaugeLength'] = sec.gauge_length \
-                    if hasattr(sec, 'gauge_length') else -1
+                h5_file['Acquisition'].attrs['SpatialSamplingInterval'] = \
+                    sec.dx
+                h5_file['Acquisition'].attrs['GaugeLength'] = \
+                    sec.gauge_length if hasattr(sec, 'gauge_length') else -1
+
+            elif file_format == 'Puniu Tech HiFi-DAS':
+                attrs = {k: (v.decode() if isinstance(v, bytes) else v) for k,
+                         v in h5_file['default'].attrs.items()}
+                if 'time,channel' in attrs.get('row_major_order',
+                    'time, channel').replace(' ', '').lower():
+                    _update_h5_dataset(h5_file, '/', 'default', sec.data.T)
+                else:
+                    _update_h5_dataset(h5_file, '/', 'default', sec.data)
+
+                h5_file['default'].attrs['spatial_sampling_rate'] = sec.dx / \
+                    attrs['step']
+                h5_file['default'].attrs['sampling_rate'] = sec.fs
+                h5_file['default'].attrs['start_channel'] = sec.start_channel
+                if isinstance(sec.start_time, datetime):
+                    t0 = sec.start_time.timestamp()
+                else:
+                    t0 = sec.start_time
+                epoch = int(t0)
+                h5_file['default'].attrs['epoch'] = epoch
+                h5_file['default'].attrs['ns'] = int(round((t0 - epoch) * 1e9))
+                if hasattr(sec, 'data_type'):
+                    h5_file['default'].attrs['format'] = 'differential' if \
+                        sec.data_type == 'strain rate' else sec.data_type
+                if hasattr(sec, 'gauge_length'):
+                    h5_file['default'].attrs['spatial_resolution'] = \
+                        sec.gauge_length
+                try:
+                    h5_file['default'].attrs['cid'] = \
+                        sec.headers['default']['attrs']['cid']
+                except KeyError:
+                    pass
 
             elif file_format == 'Silixa iDAS':
                 if h5_file['Acquisition/Raw[0]/RawData/'].shape[0] != \
@@ -537,6 +621,24 @@ def _write_h5(sec, fname, raw_fname=None, file_format='auto'):
                                    [sec.dx])
                 _update_h5_dataset(h5_file, '/', 'Sampling_interval_in_time',
                                    [1/sec.fs])
+
+            elif file_format == 'NEC':
+                _update_h5_dataset(h5_file, '/', 'data', sec.data)
+                h5_file['data'].attrs['Interval of monitor point'] = sec.dx
+                h5_file['data'].attrs['Number of requested location points'] \
+                    = sec.nch
+                h5_file['data'].attrs['Interval time of data'] = \
+                    1 / sec.fs * 1e3
+                if hasattr(sec, scale):
+                    h5_file['data'].attrs['Radians per digital value'] = \
+                        sec.scale
+                if isinstance(sec.start_time, datatime):
+                    t0 = sec.start_time.timestamp()
+                else:
+                    t0 = sec.start_time
+                h5_file['data'].attrs['Time of sending request'] = t0 * 1e3
+                if hasattr(sec, 'gauge_length'):
+                    h5_file['data'].attrs['Gauge length'] = sec.gauge_length
 
             elif file_format == 'FORESEE':
                 _update_h5_dataset(h5_file, '/', 'raw', sec.data)

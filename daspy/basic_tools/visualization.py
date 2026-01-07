@@ -11,9 +11,9 @@ def plot(data: np.ndarray, dx=None, fs=None, ax=None, obj='waveform', dpi=300,
          title=None, transpose=False, t0=0, x0=0, pick=None, f=None, k=None,
          t=None, c=None, cmap=None, vmin=None, vmin_per=None, vmax=None,
          vmax_per=None, dB=False, xmode='distance', tmode='time', xlim=None,
-         ylim=None, xlog=False, ylog=False, xinv=False, yinv=False, xlabel=True,
-         ylabel=True, xticklabels=True, yticklabels=True, colorbar=True,
-         colorbar_label=None, savefig=None):
+         ylim=None, xlog=False, ylog=False, xinv=False, yinv=False,
+         xlabel=True, ylabel=True, xticklabels=True, yticklabels=True,
+         colorbar=True, colorbar_label=None, savefig=None):
     """
     Plot several types of 2-D seismological data.
 
@@ -42,19 +42,20 @@ def plot(data: np.ndarray, dx=None, fs=None, ax=None, obj='waveform', dpi=300,
     :param vmin, vmax: Define the data range that the colormap covers.
     :param vmin_per, vmax_per: float. Define the data range that the colormap
         covers by percentile.
-    :param dB: bool. Transfer data unit to dB and take 1 as the reference value.
+    :param dB: bool. Transfer data unit to dB and take 1 as the reference
+        value.
     :param xmode: str. 'distance' or 'channel'.
     :param tmode: str. 'time' or 'sampling'.
     :param xlim, ylim: Set the x-axis and y-axis view limits.
     :param xlog, ylog: bool. If True, set the x-axis' or y-axis' scale as log.
     :param xlabel, yinv: bool. If True, invert x-axis or y-axis.
-    :param xlabel, ylabel: bool or str. Whether to plot a label or what label to
-        plot for x-axis or y-axis.
+    :param xlabel, ylabel: bool or str. Whether to plot a label or what label
+        to plot for x-axis or y-axis.
     :param xticklabels, yticklabels: bool or sequence of str. Whether to plot
         ticklabels or what ticklabels to plot for x-axis or y-axis.
-    :param colorbar: bool, str or Matplotlib.axes.Axes. Bool means plot colorbar
-        or not. Str means the location of colorbar. Axes means the Axes into
-        which the colorbar will be drawn.
+    :param colorbar: bool, str or Matplotlib.axes.Axes. Bool means plot
+        colorbar or not. Str means the location of colorbar. Axes means the
+        Axes into which the colorbar will be drawn.
     :param savefig: str or bool. Figure name to save if needed. If True,
         it will be set to parameter obj.
     """

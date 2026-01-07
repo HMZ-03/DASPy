@@ -9,7 +9,7 @@ from datetime import datetime, timedelta, timezone
 
 
 utc = timezone.utc
-local_tz = timezone(timedelta(seconds=-time.altzone))
+local_tz = timezone(timedelta(seconds=-time.timezone))
 
 
 class DASDateTime(datetime):
@@ -69,7 +69,7 @@ class DASDateTime(datetime):
 
     @classmethod
     def from_obspy_UTCDateTime(cls, dt):
-        return cls.from_datetime(dt.datetime)
+        return cls.from_datetime(dt.datetime).replace(tzinfo=utc)
 
     def to_datetime(self):
         return datetime.fromtimestamp(self.timestamp(), tz=self.tzinfo)

@@ -1,6 +1,6 @@
 # Purpose: Analyze frequency attribute and transform in frequency domain
 # Author: Minzhe Hu
-# Date: 2024.6.17
+# Date: 2025.11.12
 # Email: hmz2018@mail.ustc.edu.cn
 import numpy as np
 from numpy.fft import rfft, rfft2, fftshift, fftfreq, rfftfreq
@@ -147,3 +147,13 @@ def fk_transform(data, dx, fs, taper=(0, 0.05), nfft='default'):
     f = rfftfreq(nfft[1], d=1. / fs)
     k = fftshift(fftfreq(nfft[0], d=dx))
     return fk, f, k
+
+
+def power(data):
+    """
+    Calculate the power of each channel.
+
+    :param data: numpy.ndarray. Data to calculate the power.
+    :return: numpy.ndarray. Power of each channel.
+    """
+    return np.sqrt(np.mean(data ** 2, axis=-1))

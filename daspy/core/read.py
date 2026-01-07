@@ -1,15 +1,17 @@
 # Purpose: Module for reading DAS data.
-# Author: Minzhe Hu
-# Date: 2025.10.30
+# Author: Minzhe Hu, Ji Zhang
+# Date: 2025.11.19
 # Email: hmz2018@mail.ustc.edu.cn
 # Partially modified from
 # https://github.com/RobbinLuo/das-toolkit/blob/main/DasTools/DasPrep.py
 import warnings
+import inspect
 import json
 import pickle
 import numpy as np
 import h5py
 import segyio
+from functools import wraps
 from typing import Union
 from pathlib import Path
 from nptdms import TdmsFile
@@ -73,13 +75,8 @@ def read(fname=None, output_type='section', ftype=None, file_format='auto',
         kwargs['chmin'] = kwargs.pop('ch1', None)
         kwargs['chmax'] = kwargs.pop('ch2', None)
     if callable(ftype):
-        try:
-            data, metadata = ftype(fname, headonly=headonly, **kwargs)
-        except TypeError:
-            data, metadata = ftype(fname)
-            si, sj, metadata = _trimming_slice_metadata(data.shape,
-                metadata=metadata, **kwargs)
-            data = data[si, sj]
+        ftype = with_trimming(ftype)
+        data, metadata = ftype(fname, headonly=headonly, **kwargs)
     else:
         for rtp in [('pickle', 'pkl'), ('hdf5', 'h5'), ('segy', 'sgy')]:
             ftype = ftype.replace(*rtp)
@@ -95,6 +92,43 @@ def read(fname=None, output_type='section', ftype=None, file_format='auto',
         return Section(data, **metadata)
     elif output_type.lower() == 'array':
         return data, metadata
+
+
+def with_trimming(func):
+    """
+    Decorator that wraps a custom reader so it automatically supports
+    trimming parameters (chmin, chmax, dch, xmin, xmax, tmin, tmax, spmin, spmax).
+    """
+
+    @wraps(func)
+    def wrapper(fname, headonly=False, **kwargs):
+        # trimming-related parameters
+        trim_keys = ['chmin', 'chmax', 'dch', 'xmin', 'xmax', 'tmin', 'tmax',
+                     'spmin', 'spmax']
+        sig = inspect.signature(func)
+        reader_params = set(sig.parameters.keys())
+        trim_for_reader = {k: kwargs.pop(k) for k in trim_keys if k in kwargs \
+                           and k in reader_params}
+        trim_for_trimming = {k: kwargs.pop(k) for k in trim_keys if k in \
+                             kwargs and k not in reader_params}
+        try:
+            data, metadata = func(fname, headonly=headonly, **trim_for_reader,
+                                  **kwargs)
+        except TypeError:
+            headonly = False
+            data, metadata = func(fname, **trim_for_reader)
+
+        shape = data.shape
+        si, sj, metadata = _trimming_slice_metadata(shape, metadata=metadata,
+                                                    **trim_for_trimming)
+        if headonly:
+            data = np.zeros(shape)[si, sj]
+        else:
+            data = data[si, sj]
+
+        return data, metadata
+
+    return wrapper
 
 
 def _read_pkl(fname, headonly=False, file_format='auto', chmin=None, chmax=None,
@@ -290,6 +324,34 @@ def _read_h5(fname, headonly=False, file_format='auto', chmin=None, chmax=None,
                         'start_time': stime,
                         'gauge_length': attrs['GaugeLength']}
 
+        elif file_format == 'Puniu Tech HiFi-DAS':
+            dataset = h5_file['default']
+            if 'time,channel' in attrs.get('row_major_order', 'time, channel')\
+                .replace(' ', '').lower():
+                transpose = True
+
+            attrs = {k: (v.decode() if isinstance(v, bytes) else v) for k, v
+                     in dataset.attrs.items()}
+            step = int(attrs['step'])
+            dx = step * attrs.get('spatial_sampling_rate', 1.0)
+            start_channel = int(attrs['start_channel'])
+            if step != 1:
+                if chmin:
+                    chmin = (chmin - start_channel) / step + start_channel
+                if chmax:
+                    chmax = (chmin - start_channel) / step + start_channel
+            t0 = int(attrs.get('epoch', 0)) + int(attrs.get('ns', 0)) * 1e-9
+            data_type = 'strain rate' if attrs.get('format', '') == \
+                'differential' else 'strain',
+            metadata = {'dx': dx, 'fs': float(attrs['sampling_rate']),
+                        'start_channel': start_channel,
+                        'start_distance': start_channel * dx,
+                        'start_time': DASDateTime.fromtimestamp(t0, tz=utc),
+                        'scale': 110.37, 'data_type': data_type,
+                        'cid': attrs.get('cid', '')}
+            if 'spatial_resolution' in attrs.keys():
+                metadata['gauge_length'] = float(attrs['spatial_resolution'])
+
         elif file_format == 'Silixa iDAS':
             dataset = h5_file['Acquisition/Raw[0]/RawData/']
             attrs = h5_file['Acquisition/Raw[0]'].attrs
@@ -356,13 +418,36 @@ def _read_h5(fname, headonly=False, file_format='auto', chmin=None, chmax=None,
             metadata = {'dx': h5_file['Sampling_interval_in_space'][0],
                         'fs': 1 / h5_file['Sampling_interval_in_time'][0]}
 
+        elif file_format == 'NEC':
+            dataset = h5_file['data']
+            dx = dataset.attrs['Interval of monitor point']
+            fs = 1.0 / (dataset.attrs['Interval time of data'] / 1000.0) # Hz
+            if dataset.shape[0] != \
+                dataset.attrs['Number of requested location points']:
+                transpose = True
+            try:
+                scale = dataset.attrs['Radians peer digital value']
+            except KeyError:
+                try:
+                    scale = dataset.attrs['Radians per digital value']
+                except KeyError:
+                    scale = 1
+            # start_time = datetime(1970, 1, 1) + \
+            # timedelta(milliseconds=start_unix_epoch_in_ms)
+            start_time = DASDateTime.fromtimestamp(
+                np.float64(dataset.attrs['Time of sending request']) / 1e3
+                ).utc()
+            metadata = {'fs': fs, 'dx': dx, 'start_time': start_time,
+                        'gauge_length': dataset.attrs['Gauge length'],
+                        'scale': scale, 'data_type':'strain rate'}
+
         elif file_format == 'FORESEE':
             dataset = h5_file['raw']
             fs = round(1 / np.diff(h5_file['timestamp']).mean())
             start_time = DASDateTime.fromtimestamp(
                 h5_file['timestamp'][0]).astimezone(utc)
-            warnings.warn('This data format doesn\'t include channel interval. '
-                            'Please set manually')
+            warnings.warn('This data format doesn\'t include channel interval.'
+                          ' Please set manually')
             metadata = {'dx': None, 'fs': fs, 'start_time': start_time}
 
         elif file_format == 'AI4EPS': # https://ai4eps.github.io/homepage/ml4earth/seismic_event_format_das/
@@ -399,7 +484,13 @@ def _read_h5(fname, headonly=False, file_format='auto', chmin=None, chmax=None,
         metadata['headers'] = _read_h5_headers(h5_file)
         shape = dataset.shape
         if len(shape) == 3:
-            shape = (shape[0] * shape[1], shape[2])
+            if headonly:
+                fs = int(metadata['fs'])
+                fs_b = attrs.get('BlockRate', [1000])[0] / 1e3
+                nsp_b = round(fs/fs_b)
+                shape = (shape[0] * nsp_b, shape[2])
+            else:
+                shape = (shape[0] * shape[1], shape[2])
         if transpose:
             shape = shape[::-1]
         si, sj, metadata = _trimming_slice_metadata(shape, metadata=metadata,
@@ -500,7 +591,6 @@ def _read_tdms(fname, headonly=False, file_format='auto', chmin=None,
                 data = np.asarray([tdms_file[key][str(ch)][sj] for ch in
                                    range(si.start, si.stop, si.step)])
         elif file_format == 'Institute of Semiconductors, CAS':
-
             try:
                 start_channel = int(properties['Initial Channel'])
             except KeyError:

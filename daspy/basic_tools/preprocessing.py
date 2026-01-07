@@ -19,10 +19,10 @@ def phase2strain(data, lam, e, n, gl):
     :param e: float. photo-slastic scaling factor for logitudinal strain in
         isotropic material.
     :param n: float. Refractive index of the sensing fiber.
-    :paran gl: float. Gauge length.
+    :paran guage_length: float. Gauge length.
     :return: Strain data.
     """
-    return data * (lam * 1e-9) / (e * 4 * np.pi * n * gl)
+    return data * lam / (e * 4 * np.pi * n * gl)
 
 
 def normalization(data, method='z-score'):
@@ -121,9 +121,9 @@ def cosine_taper(data, p=0.1, side='both'):
     if not isinstance(p, (tuple, list, np.ndarray)):
         win = tukey(nsp, p)
         if side == 'left':
-            win[round(nch/2):] = 1
+            win[round(nsp/2):] = 1
         elif side == 'right':
-            win[:round(len(win)/2)] = 1
+            win[:round(nsp/2)] = 1
         return data * np.tile(win, (nch, 1))
     else:
         if p[0] > 0:

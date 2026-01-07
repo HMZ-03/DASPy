@@ -1,6 +1,6 @@
 # Purpose: Module for handling Collection objects.
 # Author: Minzhe Hu
-# Date: 2025.9.18
+# Date: 2025.11.26
 # Email: hmz2018@mail.ustc.edu.cn
 import os
 import warnings
@@ -241,10 +241,16 @@ class Collection(object):
             warnings.warn('In future versions, the parameter \'etime\' will be '
                           'replaced by \'end\'.')
 
-        if start is None and 'tmin' in kwargs.keys():
-            start = kwargs['tmin']
-        if end is None and 'tmax' in kwargs.keys():
-            end = kwargs['tmax']
+        if start is None:
+            if 'tmin' in kwargs.keys():
+                start = kwargs['tmin']
+            else:
+                start = 0
+        if end is None:
+            if 'tmax' in kwargs.keys():
+                end = kwargs['tmax']
+            else:
+                end = len(self)
 
         if isinstance(start, datetime):
             for i, ftime in enumerate(self.ftime):
@@ -290,6 +296,18 @@ class Collection(object):
             self.ftime = self.ftime[s:e]
             return self
 
+    def read(self, **kwargs):
+        return self.select(readsec=True, **kwargs)
+
+    def continuous_acquisition(self):
+        index = self.file_interruption()
+        index = [-1] + index.tolist() + [len(self)-1]
+        coll_list = []
+        for i in range(len(index) - 1):
+            coll = self.copy().select(start=index[i]+1, end=index[i+1]+1)
+            coll_list.append(coll)
+        return coll_list
+
     def _optimize_for_continuity(self, operations):
         method_list = []
         kwargs_list = []
@@ -298,8 +316,10 @@ class Collection(object):
         for opera in operations:
             method, kwargs = opera
             if method == 'downsampling':
-                if ('lowpass_filter' in kwargs.keys() and not\
-                    kwargs['lowpass_filter']) or 'tint' not in kwargs.keys():
+                if_filter = ('tint' not in kwargs.keys() and 'fs' not in
+                    kwargs.keys()) or ('lowpass_filter' in kwargs.keys() and
+                    not kwargs['lowpass_filter'])
+                if if_filter:
                     method_list.append('downsampling')
                     kwargs_list.append(kwargs)
                 else:
@@ -358,9 +378,9 @@ class Collection(object):
                 (not os.path.exists(kwargs_file)):
                 raise ValueError('No operations input and no method_list.pkl '
                                  'and kwargs_list.pkl found in savepath.')
-            with open(os.path.join(savepath, 'method_list.pkl'), 'wb') as f:
+            with open(os.path.join(savepath, 'method_list.pkl'), 'rb') as f:
                 method_list = pickle.load(f)
-            with open(os.path.join(savepath, 'kwargs_list.pkl'), 'wb') as f:
+            with open(os.path.join(savepath, 'kwargs_list.pkl'), 'rb') as f:
                 kwargs_list = pickle.load(f)
         else:
             method_list, kwargs_list = self._optimize_for_continuity(operations)
