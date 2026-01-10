@@ -181,7 +181,7 @@ def _channel_location(track_pt):
     return np.array(seg_interval), np.array(interp_ch)
 
 
-def location_interpolation(known_pt, track_pt=None, dx=2, data_type='lonlat',
+def location_interpolation(known_pt, track_pt=None, dx=1, data_type='lonlat',
                            verbose=False):
     """
     Interpolate to obtain the positions of all channels.
