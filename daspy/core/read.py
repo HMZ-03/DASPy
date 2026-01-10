@@ -131,6 +131,23 @@ def with_trimming(func):
     return wrapper
 
 
+class DummyObject:
+    def __init__(self, *args, **kwargs):
+        pass
+
+
+class SafeUnpickler(pickle.Unpickler):
+    def find_class(self, module, name):
+        try:
+            return super().find_class(module, name)
+        except ModuleNotFoundError:
+            print(f"Skip missing module: {module}.{name}")
+            return DummyObject
+        except AttributeError:
+            print(f"Skip missing class: {module}.{name}")
+            return DummyObject
+
+
 def _read_pkl(fname, headonly=False, file_format='auto', chmin=None, chmax=None,
               dch=1, xmin=None, xmax=None, tmin=None, tmax=None, spmin=None,
               spmax=None):
@@ -138,7 +155,8 @@ def _read_pkl(fname, headonly=False, file_format='auto', chmin=None, chmax=None,
     Read data and metadata from a pickle file.
     """
     with open(fname, 'rb') as f:
-        pkl_data = pickle.load(f)
+        # pkl_data = pickle.load(f)
+        pkl_data = SafeUnpickler(f).load()
         if isinstance(pkl_data, np.ndarray):
             warnings.warn('This data format doesn\'t include channel interval'
                           'and sampling rate. Please set manually')
