@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 
 setup(
-    name='DASPy-toolbox', version='1.2.2',
+    name='DASPy-toolbox', version='1.2.3',
     description=(
         'DASPy is an open-source project dedicated to provide a python package '
         'for DAS (Distributed Acoustic Sensing) data processing, which '
