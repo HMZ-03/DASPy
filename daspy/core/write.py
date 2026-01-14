@@ -7,7 +7,6 @@ import warnings
 import pickle
 import numpy as np
 import h5py
-import segyio
 from shutil import copyfile
 from nptdms import TdmsFile, TdmsWriter, RootObject, GroupObject, ChannelObject
 from datetime import datetime
@@ -750,6 +749,11 @@ def _write_tdms(sec, fname, raw_fname=None, file_format='auto'):
 
 
 def _write_segy(sec, fname, raw_fname=None, file_format='auto'):
+    try:
+        import segyio
+    except ImportError:
+        raise RuntimeError("SEGY support requires 'segyio', which is not "
+                           "available on Python >=3.13.")
     spec = segyio.spec()
     spec.samples = np.arange(sec.nsp) / sec.fs * 1e3
     spec.tracecount = sec.nch

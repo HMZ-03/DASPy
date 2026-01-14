@@ -39,7 +39,7 @@ setup(
         'geographiclib',
         'pyproj',
         'h5py',
-        'segyio',
+        "segyio>=1.9; python_version<'3.13'",
         'nptdms',
         'tqdm'
     ]

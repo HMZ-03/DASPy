@@ -10,7 +10,6 @@ import json
 import pickle
 import numpy as np
 import h5py
-import segyio
 from functools import wraps
 from typing import Union
 from pathlib import Path
@@ -643,6 +642,11 @@ def _read_segy(fname, headonly=False, file_format='auto', chmin=None,
     Read data and metadata from a SEG-Y file. See
     https://github.com/equinor/segyio-notebooks/blob/master/notebooks/basic/02_segy_quicklook.ipynb.
     """
+    try:
+        import segyio
+    except ImportError:
+        raise RuntimeError("SEGY support requires 'segyio', which is not "
+                           "available on Python >=3.13.")
     with segyio.open(fname, ignore_geometry=True) as segy_file:
         if file_format == 'auto':
             file_format = 'Unknown'
