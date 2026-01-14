@@ -181,38 +181,37 @@ def _trimming_index(nch, nsp, dx=None, fs=None, start_channel=0,
         else:
             i0 = int(chmin - start_channel)
             if i0 < 0:
-                warnings.warn('chmin < start_channel . Set chmin to '
-                                'start_channel.')
+                warnings.warn("chmin < start_channel . Set chmin to "
+                              "start_channel.")
                 i0 = 0
-            elif i0 >= nch:
-                raise ValueError('chmin >= end_channel.')
+            elif i0 > nch:
+                raise ValueError("chmin >= end_channel.")
     else:
         i0 = round((xmin - start_distance) / dx)
         if i0 < 0:
-            warnings.warn('xmin is smaller than start_distance. Set xmin '
-                            'to 0.')
+            warnings.warn("xmin is smaller than start_distance. Set xmin to 0."
+                          )
             i0 = 0
-        elif i0 >= nch:
-            raise ValueError('xmin is later than end_distance.')
+        elif i0 > nch:
+            raise ValueError("xmin is later than end_distance.")
 
     if xmax is None:
         if chmax is None:
             i1 = nch
         else:
             i1 = int(chmax - start_channel)
-            if i1 <= 0:
-                raise ValueError('chmax <= start_channel.')
+            if i1 < 0:
+                raise ValueError("chmax < start_channel.")
             elif i1 > nch:
-                warnings.warn('chmax > end_channel. Set chmax to '
-                                'end_channel.')
+                warnings.warn("chmax > end_channel. Set chmax to end_channel.")
                 i1 = nch
     else:
         i1 = round((xmax - start_distance) / dx)
-        if i1 <= 0:
-            raise ValueError('xmax is smaller than start_distance.')
+        if i1 < 0:
+            raise ValueError("xmax is smaller than start_distance.")
         if i1 > nch:
-            warnings.warn('xmax is later than end_distance. Set xmax '
-                            'to the array length.')
+            warnings.warn("xmax is later than end_distance. Set xmax to the "
+                          "array length.")
             i1 = nch
 
     if tmin is None:
@@ -221,42 +220,42 @@ def _trimming_index(nch, nsp, dx=None, fs=None, start_channel=0,
         else:
             j0 = int(spmin)
             if j0 < 0:
-                warnings.warn('spmin < 0. Set spmin to 0.')
+                warnings.warn("spmin < 0. Set spmin to 0.")
                 j0 = 0
-            elif j0 >= nsp:
-                raise ValueError('spmin > nsp.')
+            elif j0 > nsp:
+                raise ValueError("spmin > nsp.")
     else:
         try:
             j0 = round((tmin - start_time) * fs)
         except TypeError:
             j0 = round(tmin * fs)
         if j0 < 0:
-            warnings.warn('tmin is earlier than start_time. Set tmin '
-                            'to start_time.')
+            warnings.warn("tmin is earlier than start_time. Set tmin to "
+                          "start_time.")
             j0 = 0
-        elif j0 >= nsp:
-            raise ValueError('tmin is later than end_time.')
+        elif j0 > nsp:
+            raise ValueError("tmin is later than end_time.")
 
     if tmax is None:
         if spmax is None:
             j1 = nsp
         else:
             j1 = int(spmax)
-            if j1 <= 0:
-                raise ValueError('spmax < 0.')
+            if j1 < 0:
+                raise ValueError("spmax < 0.")
             elif j1 > nsp:
-                warnings.warn('spmax > nsp. Set spmax to nsp.')
+                warnings.warn("spmax > nsp. Set spmax to nsp.")
                 j1 = nsp
     else:
         try:
             j1 = round((tmax - start_time) * fs)
         except TypeError:
             j1 = round(tmax * fs)
-        if j1 <= 0:
-            raise ValueError('tmax is earlier than start_time.')
+        if j1 < 0:
+            raise ValueError("tmax is earlier than start_time.")
         if j1 > nsp:
-            warnings.warn('tmax is later than end_time. Set tmax to the'
-                            ' end_time.')
+            warnings.warn("tmax is later than end_time. Set tmax to the"
+                          " end_time.")
             j1 = nsp
     return i0, i1, j0, j1
 
