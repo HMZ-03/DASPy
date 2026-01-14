@@ -42,6 +42,8 @@ or
 conda install conda-forge::daspy-toolbox
 ```
 
+If you are using Python 3.13 or later, the installation process using conda may fail because the segyio package is not already built in conda-forge. If this happens, please use other methods to install it (such as pip) or use Python 3.12 or earlier.
+
 ### Manual installation
 1. Install dependent packages: numpy, scipy >=1.13, matplotlib, geographiclib, pyproj, h5py, segyio, nptdms, tqdm
 

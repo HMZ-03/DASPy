@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 
 setup(
-    name='DASPy-toolbox', version='1.2.4',
+    name='DASPy-toolbox', version='1.2.3',
     description=(
         'DASPy is an open-source project dedicated to provide a python package '
         'for DAS (Distributed Acoustic Sensing) data processing, which '
@@ -39,7 +39,7 @@ setup(
         'geographiclib',
         'pyproj',
         'h5py',
-        "segyio>=1.9; python_version<'3.13'",
+        'segyio',
         'nptdms',
         'tqdm'
     ]
