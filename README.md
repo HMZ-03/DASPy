@@ -1,6 +1,6 @@
 <img src="https://raw.github.com/hmz-03/daspy/main/website/logo.png" height="200" />
 
-[![Supported Python versions](https://img.shields.io/badge/python-3.9%20|%203.10%20|%203.11%20|%203.12-blue)](https://pypi.org/project/DASPy-toolbox/)
+[![Supported Python versions](https://img.shields.io/badge/python-3.9%20and%20up-blue)](https://pypi.org/project/DASPy-toolbox/)
 [![License](https://img.shields.io/pypi/l/daspy-toolbox.svg)](https://opensource.org/license/mit)
 [![PyPI Version](https://img.shields.io/pypi/v/daspy-toolbox.svg)](https://pypi.org/project/DASPy-toolbox/)
 
