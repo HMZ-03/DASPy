@@ -71,7 +71,7 @@ def plot(data: np.ndarray, dx=None, fs=None, ax=None, obj='waveform', dpi=300,
     if obj in ['waveform', 'phasepick']:
         cmap = 'RdBu' if cmap is None else cmap
         if vmax is None:
-            vmax_per = 80 if vmax_per is None else vmax_per
+            vmax_per = 90 if vmax_per is None else vmax_per
             vmax = np.percentile(data, vmax_per)
         vmin = -vmax if vmin is None else vmin
         origin = 'upper'
@@ -113,10 +113,10 @@ def plot(data: np.ndarray, dx=None, fs=None, ax=None, obj='waveform', dpi=300,
             cmap = 'jet' if cmap is None else cmap
 
         if vmax is None:
-            vmax_per = 80 if vmax_per is None else vmax_per
+            vmax_per = 90 if vmax_per is None else vmax_per
             vmax = np.percentile(data, vmax_per)
         if vmin is None:
-            vmin_per = 20 if vmin_per is None else vmin_per
+            vmin_per = 10 if vmin_per is None else vmin_per
             vmin = np.percentile(data, vmin_per)
 
         if obj in ['spectrum', 'psd']:
