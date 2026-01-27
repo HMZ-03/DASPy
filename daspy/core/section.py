@@ -62,7 +62,7 @@ class Section(object):
         self.data = data
         self.dx = dx
         self.fs = fs
-        self.start_channel = start_channel
+        self.start_channel = int(start_channel)
         self.start_distance = start_distance
         self.start_time = start_time
         opt_attrs = ['origin_time', 'gauge_length', 'data_type', 'scale',
@@ -220,8 +220,20 @@ class Section(object):
     def end_time(self):
         return self.start_time + self.nsp / self.fs
 
-    def copy(self):
-        return deepcopy(self)
+    def copy(self, data=True):
+        if data:
+            return deepcopy(self)
+        else:
+            # Create a shallow copy and manually copy data attributes
+            out = self.__class__.__new__(self.__class__)
+            for key, value in self.__dict__.items():
+                if key == 'data':
+                    # Don't copy data array, just reference it
+                    out.data = self.data
+                else:
+                    # Deep copy other attributes
+                    setattr(out, key, deepcopy(value))
+            return out
 
     @classmethod
     def from_obspy_stream(cls, st, channel_no='auto'):
@@ -837,6 +849,41 @@ class Section(object):
         self.start_distance += i0 * self.dx
         self.start_channel += i0
         return self
+
+    def cutting(self, t=None, sp=None, x=None, ch=None):
+        """
+        Cut data into two parts at a given time, sampling point, distance, or
+        channel position.
+
+        :param t: float or DASDateTime. Time position to cut. Returns two
+            sections split at this time.
+        :param sp: int. Sampling point position to cut. Returns two sections
+            split at this sampling point.
+        :param x: float. Distance position to cut. Returns two sections split
+            at this distance.
+        :param ch: int. Channel number to cut. Returns two sections split at
+            this channel.
+        :return: tuple of two Section instances. (section_before, section_after)
+        """
+        if sum([t is not None, sp is not None, x is not None,
+                ch is not None]) != 1:
+            raise ValueError("Exactly one of t, sp, x, or ch must be "
+                             "specified.")
+        _, i, _, j = _trimming_index(self.nch, self.nsp, dx=self.dx,
+            fs=self.fs, start_channel=self.start_channel,
+            start_distance=self.start_distance, start_time=self.start_time,
+            xmax=x, chmax=ch, tmax=t, spmax=sp)
+        
+        out1 = self.copy(data=False)
+        out2 = self.copy(data=False)
+        out1.data = self.data[:i, :j].copy()
+        out2.data = self.data[i:, j:].copy()
+
+        out2.start_time += j / out2.fs
+        out2.start_distance += i * out2.dx
+        out2.start_channel += i
+
+        return out1, out2
 
     def padding(self, dn, reverse=False):
         """
