@@ -120,13 +120,14 @@ def _h5_file_format(h5_file):
     return file_format
 
 
-def _trimming_slice_metadata(shape, metadata={'dx': None, 'fs': None},
-                             chmin=None, chmax=None, dch=1, xmin=None,
-                             xmax=None, tmin=None, tmax=None, spmin=None,
-                             spmax=None):
+def _trimming_slice_metadata(shape, metadata=None, chmin=None, chmax=None,
+                             dch=1, xmin=None, xmax=None, tmin=None, tmax=None,
+                             spmin=None, spmax=None):
     """
     Calculate slicing indices and update metadata for trimming.
     """
+    if metadata is None:
+        matadata = {'dx': None, 'fs': None}
     nch, nsp = shape
     metadata.setdefault('dx', None)
     metadata.setdefault('fs', None)
