@@ -127,7 +127,7 @@ def _trimming_slice_metadata(shape, metadata=None, chmin=None, chmax=None,
     Calculate slicing indices and update metadata for trimming.
     """
     if metadata is None:
-        matadata = {'dx': None, 'fs': None}
+        metadata = {'dx': None, 'fs': None}
     nch, nsp = shape
     metadata.setdefault('dx', None)
     metadata.setdefault('fs', None)
