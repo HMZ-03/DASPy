@@ -1,10 +1,10 @@
-# Purpose: Fast Discrete Curvelet Transform
-# Author: Minzhe Hu
-# Date: 2024.4.11
-# Email: hmz2018@mail.ustc.edu.cn
-# Modified from
-# http://www.curvelet.org/download-secure.php?file=CurveLab-2.1.3.tar.gz
-# (matlab version)
+"""Fast Discrete Curvelet Transform.
+Author: Minzhe Hu
+Date: 2024.4.11
+Email: hmz2018@mail.ustc.edu.cn
+Modified from
+http://www.curvelet.org/download-secure.php?file=CurveLab-2.1.3.tar.gz"""
+
 import numpy as np
 from numpy.fft import fftshift, ifftshift, fft2, ifft2
 

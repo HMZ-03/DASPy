@@ -1,7 +1,8 @@
-# Purpose: Several functions for analysis data quality and geometry of channels
-# Author: Minzhe Hu, Zefeng Li
-# Date: 2025.3.31
-# Email: hmz2018@mail.ustc.edu.cn
+"""Several functions for analysis data quality and geometry of channels.
+Author: Minzhe Hu, Zefeng Li
+Date: 2025.3.31
+Email: hmz2018@mail.ustc.edu.cn"""
+
 import numpy as np
 from copy import deepcopy
 from geographiclib.geodesic import Geodesic

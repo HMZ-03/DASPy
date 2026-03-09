@@ -1,7 +1,8 @@
-# Purpose: Module for handling DASDateTime objects.
-# Author: Minzhe Hu
-# Date: 2025.9.15
-# Email: hmz2018@mail.ustc.edu.cn
+"""Module for handling DASDateTime objects.
+Author: Minzhe Hu
+Date: 2025.9.15
+Email: hmz2018@mail.ustc.edu.cn"""
+
 import re
 import time
 from typing import Iterable

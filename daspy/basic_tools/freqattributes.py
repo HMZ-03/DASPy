@@ -1,7 +1,8 @@
-# Purpose: Analyze frequency attribute and transform in frequency domain
-# Author: Minzhe Hu
-# Date: 2025.11.12
-# Email: hmz2018@mail.ustc.edu.cn
+"""Analyze frequency attribute and transform in frequency domain.
+Author: Minzhe Hu
+Date: 2025.11.12
+Email: hmz2018@mail.ustc.edu.cn"""
+
 import numpy as np
 from numpy.fft import rfft, rfft2, fftshift, fftfreq, rfftfreq
 from scipy.signal import stft, welch

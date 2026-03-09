@@ -1,9 +1,9 @@
-# Purpose: Module for reading DAS data.
-# Author: Minzhe Hu, Ji Zhang
-# Date: 2025.11.19
-# Email: hmz2018@mail.ustc.edu.cn
-# Partially modified from
-# https://github.com/RobbinLuo/das-toolkit/blob/main/DasTools/DasPrep.py
+"""Module for reading DAS data.
+Author: Minzhe Hu, Ji Zhang
+Date: 2025.11.19
+Email: hmz2018@mail.ustc.edu.cn
+https://github.com/RobbinLuo/das-toolkit/blob/main/DasTools/DasPrep.py"""
+
 import warnings
 import inspect
 import json

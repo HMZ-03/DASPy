@@ -1,7 +1,8 @@
-# Purpose: Remove noise from data
-# Author: Minzhe Hu, Zefeng Li
-# Date: 2025.9.18
-# Email: hmz2018@mail.ustc.edu.cn
+"""Remove noise from data.
+Author: Minzhe Hu, Zefeng Li
+Date: 2025.9.18
+Email: hmz2018@mail.ustc.edu.cn"""
+
 import numpy as np
 from copy import deepcopy
 from scipy.ndimage import median_filter

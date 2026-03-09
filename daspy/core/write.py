@@ -1,7 +1,8 @@
-# Purpose: Module for writing DAS data.
-# Author: Minzhe Hu
-# Date: 2025.11.19
-# Email: hmz2018@mail.ustc.edu.cn
+"""Module for writing DAS data.
+Author: Minzhe Hu
+Date: 2025.11.19
+Email: hmz2018@mail.ustc.edu.cn"""
+
 import os
 import warnings
 import pickle

@@ -1,7 +1,8 @@
-# Purpose: Module for handling Collection objects.
-# Author: Minzhe Hu
-# Date: 2025.11.26
-# Email: hmz2018@mail.ustc.edu.cn
+"""Module for handling Collection objects.
+Author: Minzhe Hu
+Date: 2025.11.26
+Email: hmz2018@mail.ustc.edu.cn"""
+
 import os
 import warnings
 import pickle

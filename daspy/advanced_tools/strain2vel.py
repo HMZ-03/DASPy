@@ -1,7 +1,8 @@
-# Purpose: Convert strain rate data to velocity
-# Author: Minzhe Hu
-# Date: 2024.3.10
-# Email: hmz2018@mail.ustc.edu.cn
+"""Convert strain rate data to velocity.
+Author: Minzhe Hu
+Date: 2024.3.10
+Email: hmz2018@mail.ustc.edu.cn"""
+
 import numpy as np
 from numpy.fft import irfft2, ifftshift
 from scipy.signal import hilbert

@@ -1,7 +1,8 @@
-# Purpose: Waveform decomposition
-# Author: Minzhe Hu
-# Date: 2024.5.13
-# Email: hmz2018@mail.ustc.edu.cn
+"""Waveform decomposition.
+Author: Minzhe Hu
+Date: 2024.5.13
+Email: hmz2018@mail.ustc.edu.cn"""
+
 import numpy as np
 from numpy.fft import irfft2, ifftshift
 from daspy.basic_tools.preprocessing import padding, cosine_taper

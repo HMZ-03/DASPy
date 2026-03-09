@@ -1,7 +1,8 @@
-# Purpose: Plot data
-# Author: Minzhe Hu
-# Date: 2025.6.17
-# Email: hmz2018@mail.ustc.edu.cn
+"""Plot data.
+Author: Minzhe Hu
+Date: 2025.6.17
+Email: hmz2018@mail.ustc.edu.cn"""
+
 import numpy as np
 import matplotlib.pyplot as plt
 from collections.abc import Sequence

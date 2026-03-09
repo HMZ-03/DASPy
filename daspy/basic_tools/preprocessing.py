@@ -1,7 +1,8 @@
-# Purpose: Some preprocess methods
-# Author: Minzhe Hu
-# Date: 2025.10.30
-# Email: hmz2018@mail.ustc.edu.cn
+"""Some preprocess methods.
+Author: Minzhe Hu
+Date: 2025.10.30
+Email: hmz2018@mail.ustc.edu.cn"""
+
 import warnings
 import numpy as np
 from numpy.fft import rfft, irfft, rfftfreq

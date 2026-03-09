@@ -1,8 +1,9 @@
-# Purpose: Filter the waveform
-# Author: Minzhe Hu
-# Date: 2024.10.16
-# Email: hmz2018@mail.ustc.edu.cn
-# Modified from https://docs.obspy.org/_modules/obspy/signal/filter.html
+"""Filter the waveform.
+Author: Minzhe Hu
+Date: 2024.10.16
+Email: hmz2018@mail.ustc.edu.cn
+Modified from https://docs.obspy.org/_modules/obspy/signal/filter.html"""
+
 import warnings
 import numpy as np
 from scipy.signal import cheb2ord, cheby2, hilbert, iirfilter, zpk2sos, sosfilt
