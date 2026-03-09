@@ -206,17 +206,17 @@ class Collection(object):
             required data.
         :param readsec: bool. If True, read as a instance of daspy.Section and
             return. If False, update self.flist.
-        :param tolerance: float. The maximum error allowed between ftime and the
-            actual file start time
+        :param tolerance: float. The maximum error allowed between ftime and
+            the actual file start time.
         :param ftype: None, str or function. None for automatic detection, or
             str to specify a type of 'pkl', 'pickle', 'tdms', 'h5', 'hdf5',
             'segy', 'sgy', or 'npy', or a function for read data and metadata.
             Only used when readsec=True.
-        :param file_format: str. The format in which the file is saved. It could
-            be name of the device manufacturer (e.g. 'Silixa'), device model
-            (e.g. 'OptaSense QuantX'), file format standard (s.g. 'AI4EPS'),
-            organization (e.g. 'INGV') or dataset (e.g. 'FORESEE'). Only used
-            when readsec=True.
+        :param file_format: str. The format in which the file is saved. It
+            could be name of the device manufacturer (e.g. 'Silixa'), device
+            model (e.g. 'OptaSense QuantX'), file format standard (s.g.
+            'AI4EPS'), organization (e.g. 'INGV') or dataset (e.g. 'FORESEE').
+            Only used when readsec=True.
         :param dtype: str. The data type of the returned data. Only used when
             readsec=True.
         :param chmin, chmax, dch: int. Channel number range and step. Only used
@@ -478,13 +478,109 @@ class Collection(object):
                 if os.path.exists(kwargs_file):
                     os.remove(kwargs_file)
 
+    def time_integration(self, savepath='./processed', merge=1,
+                         suffix=f'_time_integration', ftype=None, dtype=None,
+                         file_format='auto', save_operations=False,
+                         tolerance=0.5, **kwargs):
+        """
+        Time integration of data.
+        """
+        self.process([['time_integration', kwargs]], savepath=savepath,
+                     merge=merge, suffix=suffix, ftype=ftype, dtype=dtype,
+                     file_format=file_format, save_operations=save_operations,
+                     tolerance=tolerance)
+
+    def time_differential(self, savepath='./processed', merge=1,
+                          suffix=f'_time_differential', ftype=None, dtype=None,
+                          file_format='auto', save_operations=False,
+                          tolerance=0.5, **kwargs):
+        """
+        Time differential of data.
+        """
+        self.process([['time_differential', kwargs]], savepath=savepath,
+                     merge=merge, suffix=suffix, ftype=ftype, dtype=dtype,
+                     file_format=file_format, save_operations=save_operations,
+                     tolerance=tolerance)
+
+    def downsampling(self, savepath='./processed', merge=1,
+                     suffix=f'_downsampling', ftype=None, dtype=None,
+                     file_format='auto', save_operations=False, tolerance=0.5,
+                     **kwargs):
+        """
+        Downsampling of data.
+        """
+        self.process([['downsampling', kwargs]], savepath=savepath, merge=merge,
+                     suffix=suffix, ftype=ftype, dtype=dtype,
+                     file_format=file_format, save_operations=save_operations,
+                     tolerance=tolerance)
+
+    def bandpass(self, savepath='./processed', merge=1,
+                 suffix=f'_bandpass', ftype=None, dtype=None,
+                 file_format='auto', save_operations=False, tolerance=0.5,
+                 **kwargs):
+        """
+        Bandpass filtering of data.
+        """
+        self.process([['bandpass', kwargs]], savepath=savepath, merge=merge,
+                     suffix=suffix, ftype=ftype, dtype=dtype,
+                     file_format=file_format, save_operations=save_operations,
+                     tolerance=tolerance)
+
+    def bandstop(self, savepath='./processed', merge=1,
+                 suffix=f'_bandstop', ftype=None, dtype=None,
+                 file_format='auto', save_operations=False, tolerance=0.5,
+                 **kwargs):
+        """
+        Bandstop filtering of data.
+        """
+        self.process([['bandstop', kwargs]], savepath=savepath, merge=merge,
+                     suffix=suffix, ftype=ftype, dtype=dtype,
+                     file_format=file_format, save_operations=save_operations,
+                     tolerance=tolerance)
+
+    def lowpass(self, savepath='./processed', merge=1,
+                suffix=f'_lowpass', ftype=None, dtype=None,
+                file_format='auto', save_operations=False, tolerance=0.5,
+                **kwargs):
+        """
+        Lowpass filtering of data.
+        """
+        self.process([['lowpass', kwargs]], savepath=savepath, merge=merge,
+                     suffix=suffix, ftype=ftype, dtype=dtype,
+                     file_format=file_format, save_operations=save_operations,
+                     tolerance=tolerance)
+
+    def highpass(self, savepath='./processed', merge=1,
+                 suffix=f'_highpass', ftype=None, dtype=None,
+                 file_format='auto', save_operations=False, tolerance=0.5,
+                 **kwargs):
+        """
+        Highpass filtering of data.
+        """
+        self.process([['highpass', kwargs]], savepath=savepath, merge=merge,
+                     suffix=suffix, ftype=ftype, dtype=dtype,
+                     file_format=file_format, save_operations=save_operations,
+                     tolerance=tolerance)
+
+    def lowpass_cheby_2(self, savepath='./processed', merge=1,
+                        suffix=f'_lowpass_cheby_2', ftype=None, dtype=None,
+                        file_format='auto', save_operations=False,
+                        tolerance=0.5, **kwargs):
+        """
+        Lowpass Chebyshev type II filtering of data.
+        """
+        self.process([['lowpass_cheby_2', kwargs]], savepath=savepath,
+                     merge=merge, suffix=suffix, ftype=ftype, dtype=dtype,
+                     file_format=file_format, save_operations=save_operations,
+                     tolerance=tolerance)
+
 
 # Dynamically add methods for cascade_methods
 def _create_cascade_method(method_name):
     def cascade_method(self, savepath='./processed', merge=1,
                        suffix=f'_{method_name}', ftype=None, dtype=None,
-                       file_format='auto', save_operations=False, tolerance=0.5,
-                       **kwargs):
+                       file_format='auto', save_operations=False,
+                       tolerance=0.5, **kwargs):
         """
         Automatically generated method for {method_name}.
         Applies the {method_name} operation to the data and saves the result.
