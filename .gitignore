@@ -1,2 +1,6 @@
-*.pyc
+__pycache__/
+*.py[cod]
+*.so
+build/
+dist/
 DASPy_toolbox.egg-info/

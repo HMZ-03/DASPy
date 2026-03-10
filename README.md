@@ -1,67 +1,100 @@
-<img src="https://raw.github.com/hmz-03/daspy/main/website/logo.png" height="200" />
+<img src="https://raw.githubusercontent.com/HMZ-03/DASPy/main/website/logo.png" height="200" />
 
 [![Supported Python versions](https://img.shields.io/badge/python-3.9%20and%20up-blue)](https://pypi.org/project/DASPy-toolbox/)
 [![License](https://img.shields.io/pypi/l/daspy-toolbox.svg)](https://opensource.org/license/mit)
 [![PyPI Version](https://img.shields.io/pypi/v/daspy-toolbox.svg)](https://pypi.org/project/DASPy-toolbox/)
-
 [![DOI](https://img.shields.io/badge/DOI-10.1785/0220240124-blue.svg)](https://doi.org/10.1785/0220240124)
 [![PyPI Downloads](https://img.shields.io/pypi/dm/daspy-toolbox.svg?label=pypi)](https://pypi.org/project/DASPy-toolbox/)
 [![Conda Downloads](https://img.shields.io/conda/dn/conda-forge/daspy-toolbox?label=conda)](https://anaconda.org/conda-forge/daspy-toolbox)
 
-DASPy is an open-source project dedicated to provide a python package for DAS (Distributed Acoustic Sensing) data processing.
+# DASPy
 
-The goal of the DASPy project is to lower the bar of DAS data processing. DASPy includes:
-* Classic seismic data processing techniques, including preprocessing, filter, spectrum analysis, and visualization
-* Specialized algorithms for DAS applications, including denoising, waveform decomposition, channel attribute analysis, and strain-velocity conversion. 
+DASPy is an open-source Python package for **Distributed Acoustic Sensing (DAS)**
+data processing.
 
-DASPy is licensed under the MIT License. [An English version of DASPy tutorial](https://daspy-tutorial.readthedocs.io/en/latest/), [a Chinese version of DASPy tutorial](https://daspy-tutorial-cn.readthedocs.io/zh-cn/latest/) and [an example of Jupyter notebook](document/example.ipynb) is available. If you have any questions, please contact me via <hmz2018@mail.ustc.edu.cn>.
+The project aims to lower the barrier for DAS processing and to provide a
+practical toolkit for DAS seismology workflows.
+
+## Features
+
+DASPy includes:
+
+- **Classic seismic processing**: preprocessing, filtering, spectral analysis,
+  and visualization.
+- **DAS-oriented algorithms**: denoising, wavefield decomposition, channel
+  analysis, and strain-velocity conversion.
+- **Convenient data structures**: `Section`, `Collection`, and `DASDateTime`
+  for waveform, continuous acquisition, and time handling workflows.
+
+## Documentation
+
+- English tutorial: <https://daspy-tutorial.readthedocs.io/en/latest/>
+- 中文教程: <https://daspy-tutorial-cn.readthedocs.io/zh-cn/latest/>
+- Example notebook: [`document/example.ipynb`](document/example.ipynb)
 
 ## Installation
-DASPy runs on Linux, Windows and Mac OS and on Python 3.9 and up.
 
-### Pip
-```
+DASPy supports **Python 3.9+** on Linux, macOS, and Windows.
+
+### pip
+
+Install from PyPI:
+
+```bash
 pip install daspy-toolbox
 ```
 
-Install the latest version from GitHub:
+Install the latest development version:
 
-```
+```bash
 pip install git+https://github.com/HMZ-03/DASPy.git
 ```
 
-### Conda
+### conda
 
-```
-conda install daspy-toolbox
-```
-
-or
-
-```
+```bash
 conda install conda-forge::daspy-toolbox
 ```
 
-If you are using Python 3.13 or later, the installation process using conda may fail because the segyio package is not already built in conda-forge. If this happens, please use other methods to install it (such as pip) or use Python 3.12 or earlier.
+If you are using Python 3.13 or later, installation through conda may fail
+because `segyio` is not yet available for all conda-forge builds. In that case,
+use `pip` or Python 3.12 and earlier.
 
 ### Manual installation
-1. Install dependent packages: numpy, scipy >=1.13, matplotlib, geographiclib, pyproj, h5py, segyio, nptdms, tqdm
 
-2. Add DASPy into your Python path.
+1. Install dependencies: `numpy`, `scipy>=1.13`, `matplotlib`,
+   `geographiclib`, `pyproj`, `h5py`, `segyio`, `nptdms`, `tqdm`.
+2. Add DASPy to your Python path, or install it in editable mode:
 
-## Getting started
+```bash
+git clone https://github.com/HMZ-03/DASPy.git
+cd DASPy
+pip install -e .
 ```
+
+## Quick start
+
+```python
 from daspy import read
-sec = read()  # load example waveform
+
+sec = read()  # load the built-in example waveform
 sec.bandpass(1, 15)
 sec.plot()
 ```
+
 <img src="./website/waveform.png" height="500" />
 
-### Contributing
+## Contributing
 
-Please see details on how to contribute to the project [here](CONTRIBUTING.md) and [here](CodingStyleGuide.md).
+Contributions are welcome. Please see [CONTRIBUTING.md](CONTRIBUTING.md).
 
-### Reference
+## Reference
 
-  * Minzhe Hu and Zefeng Li (2024), [DASPy: A Python Toolbox for DAS Seismology](https://pubs.geoscienceworld.org/ssa/srl/article/95/5/3055/645865/DASPy-A-Python-Toolbox-for-DAS-Seismology), *Seismological Research Letters*, 95(5), 3055–3066, doi: `https://doi.org/10.1785/0220240124`.
+- Minzhe Hu and Zefeng Li (2024),
+  [DASPy: A Python Toolbox for DAS Seismology](https://pubs.geoscienceworld.org/ssa/srl/article/95/5/3055/645865/DASPy-A-Python-Toolbox-for-DAS-Seismology),
+  *Seismological Research Letters*, 95(5), 3055–3066,
+  doi: `https://doi.org/10.1785/0220240124`.
+
+## Contact
+
+If you have questions, please contact <hmz2018@mail.ustc.edu.cn>.
