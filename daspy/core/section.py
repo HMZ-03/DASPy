@@ -656,24 +656,27 @@ class Section(object):
             kwargs.setdefault('x0', self.start_distance)
         if tmode in ['origin', 'start', 'time']:
             kwargs.setdefault('t0', self.start_time)
-            if tmode == 'time':
-                if ('transpose' in kwargs.keys()) and kwargs['transpose']:
-                    kwargs.setdefault('xlabel', 'Times')
-                else:
-                    kwargs.setdefault('ylabel', 'Times')
-            elif tmode == 'origin':
+            if tmode == 'origin':
                 if hasattr(self, 'origin_time'):
                     kwargs['t0'] -= self.origin_time
                     if ('transpose' in kwargs.keys()) and kwargs['transpose']:
                         kwargs.setdefault('xlabel',
-                                          'Times after occurance (s)')
+                                          'Time after occurance (s)')
                     else:
                         kwargs.setdefault('ylabel',
-                                          'Times after occurance (s)')
+                                          'Time after occurance (s)')
                 else:
-                    tmode == 'start'
+                    tmode = 'time'
+
+            if tmode == 'time' and isinstance(kwargs['t0'], datetime):
+                if ('transpose' in kwargs.keys()) and kwargs['transpose']:
+                    kwargs.setdefault('xlabel', 'Time')
+                else:
+                    kwargs.setdefault('ylabel', 'Time')
+
             if tmode == 'start':
                 kwargs['t0'] -= self.start_time
+
             tmode = 'time'
         if hasattr(self, 'data_type'):
             kwargs.setdefault('colorbar_label', self.data_type)
