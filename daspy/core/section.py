@@ -656,7 +656,12 @@ class Section(object):
             kwargs.setdefault('x0', self.start_distance)
         if tmode in ['origin', 'start', 'time']:
             kwargs.setdefault('t0', self.start_time)
-            if tmode == 'origin':
+            if tmode == 'time':
+                if ('transpose' in kwargs.keys()) and kwargs['transpose']:
+                        kwargs.setdefault('xlabel', 'Times')
+                    else:
+                        kwargs.setdefault('ylabel', 'Times')
+            elif tmode == 'origin':
                 if hasattr(self, 'origin_time'):
                     kwargs['t0'] -= self.origin_time
                     if ('transpose' in kwargs.keys()) and kwargs['transpose']:
