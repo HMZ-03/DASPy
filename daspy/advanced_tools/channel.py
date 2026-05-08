@@ -119,8 +119,8 @@ def _channel_location(track_pt):
     interp_ch = []
     chn = np.floor(tn[idx_kp[0]]).astype(int)
     interp_ch.append([*track[idx_kp[0]], chn])
-    if abs(chn - tn[idx_kp[0]]) > 1e-6:
-        chn += 1
+    # if abs(chn - tn[idx_kp[0]]) > 1e-6:
+    #     chn += 1
 
     seg_interval = []
     for i in range(1, len(idx_kp)):

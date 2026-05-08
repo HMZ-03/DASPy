@@ -273,9 +273,15 @@ def _read_h5(fname, headonly=False, file_format='auto', chmin=None, chmax=None,
                     fs = attrs['PulseRateFreq'][0]
             time = h5_file[f'{group}/Source1/time']
             if len(time.shape) == 2: # Febus A1-R
-                start_time = DASDateTime.fromtimestamp(time[0, 0]).utc()
+                try:
+                    start_time = DASDateTime.fromtimestamp(time[0, 0]).utc()
+                except:
+                    start_time = time[0, 0]
             elif len(time.shape) == 1: # Febus A1
-                start_time = DASDateTime.fromtimestamp(time[0]).utc()
+                try:
+                    start_time = DASDateTime.fromtimestamp(time[0]).utc()
+                except:
+                    start_time = time[0]
             metadata = {'dx': attrs['Spacing'][0], 'fs': fs,
                         'start_channel': int(attrs['Extent'][0]),
                         'start_distance': attrs['Origin'][0],
