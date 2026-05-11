@@ -84,10 +84,11 @@ def plot(data: np.ndarray, dx=None, fs=None, ax=None, obj='waveform', dpi=300,
 
         if dx is None or xmode.lower() == 'channel':
             xlabel_default = 'Channel'
-            extent = [x0, x0 + nch, t0 + nt / fs, t0]
+            extent = [x0 - 0.5, x0 + nch - 0.5, t0 + nt / fs, t0]
         elif xmode.lower() == 'distance':
             xlabel_default = 'Disitance (km)'
-            extent = [x0 * 1e-3, (x0 + nch * dx) * 1e-3, t0 + nt / fs, t0]
+            extent = [(x0 - 0.5 * dx) * 1e-3, (x0 + (nch - 0.5) * dx) * 1e-3,
+                      t0 + nt / fs, t0]
 
         if obj == 'phasepick' and len(pick):
             pick_color = {'P': 'r', 'S': 'b', 'N': 'k'}
@@ -124,10 +125,11 @@ def plot(data: np.ndarray, dx=None, fs=None, ax=None, obj='waveform', dpi=300,
             origin = 'lower'
             if dx is None or xmode.lower() == 'channel':
                 xlabel_default = 'Channel'
-                extent = [x0, x0 + nch, min(f), max(f)]
+                extent = [x0 - 0.5, x0 + nch - 0.5, min(f), max(f)]
             elif xmode.lower() == 'distance':
                 xlabel_default = 'Disitance (km)'
-                extent = [x0 * 1e-3, (x0 + nch * dx) * 1e-3, min(f), max(f)]
+                extent = [(x0 - 0.5 * dx) * 1e-3,
+                          (x0 + (nch - 0.5) * dx) * 1e-3, min(f), max(f)]
             ylabel_default = 'Frequency (Hz)'
         elif obj == 'spectrogram':
             data = data.T

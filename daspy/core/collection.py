@@ -6,12 +6,14 @@ Email: hmz2018@mail.ustc.edu.cn"""
 import os
 import warnings
 import pickle
+import inspect
 import numpy as np
 from copy import deepcopy
 from tqdm import tqdm
 from glob import glob
 from datetime import datetime
 from daspy.core.read import read
+from daspy.core.section import Section
 from daspy.core.dasdatetime import DASDateTime
 
 
@@ -349,6 +351,35 @@ class Collection(object):
                             'highpass', 'lowpass_cheby_2']:
                 kwargs_list[j]['zi'] = 0
 
+    def _section_method_parameters(self, method):
+        func = getattr(Section, method)
+        sig = inspect.signature(func)
+        parameters = {
+            name for name, param in sig.parameters.items()
+            if name != 'self' and param.kind in [
+                inspect.Parameter.POSITIONAL_OR_KEYWORD,
+                inspect.Parameter.KEYWORD_ONLY]
+        }
+
+        for line in (func.__doc__ or '').splitlines():
+            line = line.strip()
+            if line.startswith(':param '):
+                names = line[7:].split(':', 1)[0].replace(' ', '')
+                parameters.update(name for name in names.split(',') if name)
+        return parameters
+
+    def _split_process_kwargs(self, method, kwargs):
+        operation_parameters = self._section_method_parameters(method)
+        operation_kwargs = {
+            key: value for key, value in kwargs.items()
+            if key in operation_parameters
+        }
+        read_kwargs = {
+            key: value for key, value in kwargs.items()
+            if key not in operation_parameters
+        }
+        return operation_kwargs, read_kwargs
+
     def process(self, operations, savepath='./processed', merge=1,
                 suffix='_pro', ftype=None, dtype=None, file_format='auto',
                 save_operations=False, tolerance=0.5, **read_kwargs):
@@ -486,10 +517,12 @@ class Collection(object):
         """
         Time integration of data.
         """
-        self.process([['time_integration', kwargs]], savepath=savepath,
+        operation_kwargs, read_kwargs = self._split_process_kwargs(
+            'time_integration', kwargs)
+        self.process([['time_integration', operation_kwargs]], savepath=savepath,
                      merge=merge, suffix=suffix, ftype=ftype, dtype=dtype,
                      file_format=file_format, save_operations=save_operations,
-                     tolerance=tolerance)
+                     tolerance=tolerance, **read_kwargs)
 
     def time_differential(self, savepath='./processed', merge=1,
                           suffix=f'_time_differential', ftype=None, dtype=None,
@@ -498,10 +531,12 @@ class Collection(object):
         """
         Time differential of data.
         """
-        self.process([['time_differential', kwargs]], savepath=savepath,
+        operation_kwargs, read_kwargs = self._split_process_kwargs(
+            'time_differential', kwargs)
+        self.process([['time_differential', operation_kwargs]], savepath=savepath,
                      merge=merge, suffix=suffix, ftype=ftype, dtype=dtype,
                      file_format=file_format, save_operations=save_operations,
-                     tolerance=tolerance)
+                     tolerance=tolerance, **read_kwargs)
 
     def downsampling(self, savepath='./processed', merge=1,
                      suffix=f'_downsampling', ftype=None, dtype=None,
@@ -510,10 +545,12 @@ class Collection(object):
         """
         Downsampling of data.
         """
-        self.process([['downsampling', kwargs]], savepath=savepath, merge=merge,
-                     suffix=suffix, ftype=ftype, dtype=dtype,
+        operation_kwargs, read_kwargs = self._split_process_kwargs(
+            'downsampling', kwargs)
+        self.process([['downsampling', operation_kwargs]], savepath=savepath,
+                     merge=merge, suffix=suffix, ftype=ftype, dtype=dtype,
                      file_format=file_format, save_operations=save_operations,
-                     tolerance=tolerance)
+                     tolerance=tolerance, **read_kwargs)
 
     def bandpass(self, savepath='./processed', merge=1,
                  suffix=f'_bandpass', ftype=None, dtype=None,
@@ -522,10 +559,12 @@ class Collection(object):
         """
         Bandpass filtering of data.
         """
-        self.process([['bandpass', kwargs]], savepath=savepath, merge=merge,
-                     suffix=suffix, ftype=ftype, dtype=dtype,
+        operation_kwargs, read_kwargs = self._split_process_kwargs(
+            'bandpass', kwargs)
+        self.process([['bandpass', operation_kwargs]], savepath=savepath,
+                     merge=merge, suffix=suffix, ftype=ftype, dtype=dtype,
                      file_format=file_format, save_operations=save_operations,
-                     tolerance=tolerance)
+                     tolerance=tolerance, **read_kwargs)
 
     def bandstop(self, savepath='./processed', merge=1,
                  suffix=f'_bandstop', ftype=None, dtype=None,
@@ -534,10 +573,12 @@ class Collection(object):
         """
         Bandstop filtering of data.
         """
-        self.process([['bandstop', kwargs]], savepath=savepath, merge=merge,
-                     suffix=suffix, ftype=ftype, dtype=dtype,
+        operation_kwargs, read_kwargs = self._split_process_kwargs(
+            'bandstop', kwargs)
+        self.process([['bandstop', operation_kwargs]], savepath=savepath,
+                     merge=merge, suffix=suffix, ftype=ftype, dtype=dtype,
                      file_format=file_format, save_operations=save_operations,
-                     tolerance=tolerance)
+                     tolerance=tolerance, **read_kwargs)
 
     def lowpass(self, savepath='./processed', merge=1,
                 suffix=f'_lowpass', ftype=None, dtype=None,
@@ -546,10 +587,12 @@ class Collection(object):
         """
         Lowpass filtering of data.
         """
-        self.process([['lowpass', kwargs]], savepath=savepath, merge=merge,
-                     suffix=suffix, ftype=ftype, dtype=dtype,
+        operation_kwargs, read_kwargs = self._split_process_kwargs(
+            'lowpass', kwargs)
+        self.process([['lowpass', operation_kwargs]], savepath=savepath,
+                     merge=merge, suffix=suffix, ftype=ftype, dtype=dtype,
                      file_format=file_format, save_operations=save_operations,
-                     tolerance=tolerance)
+                     tolerance=tolerance, **read_kwargs)
 
     def highpass(self, savepath='./processed', merge=1,
                  suffix=f'_highpass', ftype=None, dtype=None,
@@ -558,10 +601,12 @@ class Collection(object):
         """
         Highpass filtering of data.
         """
-        self.process([['highpass', kwargs]], savepath=savepath, merge=merge,
-                     suffix=suffix, ftype=ftype, dtype=dtype,
+        operation_kwargs, read_kwargs = self._split_process_kwargs(
+            'highpass', kwargs)
+        self.process([['highpass', operation_kwargs]], savepath=savepath,
+                     merge=merge, suffix=suffix, ftype=ftype, dtype=dtype,
                      file_format=file_format, save_operations=save_operations,
-                     tolerance=tolerance)
+                     tolerance=tolerance, **read_kwargs)
 
     def lowpass_cheby_2(self, savepath='./processed', merge=1,
                         suffix=f'_lowpass_cheby_2', ftype=None, dtype=None,
@@ -570,30 +615,9 @@ class Collection(object):
         """
         Lowpass Chebyshev type II filtering of data.
         """
-        self.process([['lowpass_cheby_2', kwargs]], savepath=savepath,
+        operation_kwargs, read_kwargs = self._split_process_kwargs(
+            'lowpass_cheby_2', kwargs)
+        self.process([['lowpass_cheby_2', operation_kwargs]], savepath=savepath,
                      merge=merge, suffix=suffix, ftype=ftype, dtype=dtype,
                      file_format=file_format, save_operations=save_operations,
-                     tolerance=tolerance)
-
-
-# Dynamically add methods for cascade_methods
-def _create_cascade_method(method_name):
-    def cascade_method(self, savepath='./processed', merge=1,
-                       suffix=f'_{method_name}', ftype=None, dtype=None,
-                       file_format='auto', save_operations=False,
-                       tolerance=0.5, **kwargs):
-        """
-        Automatically generated method for {method_name}.
-        Applies the {method_name} operation to the data and saves the result.
-        """
-        operations = [[method_name, kwargs]]
-        self.process(operations, savepath=savepath, merge=merge, suffix=suffix,
-                     ftype=ftype, dtype=dtype, file_format=file_format,
-                     save_operations=save_operations, tolerance=tolerance)
-    return cascade_method
-
-
-for method in ['time_integration', 'time_differential', 'downsampling',
-               'bandpass', 'bandstop', 'lowpass', 'highpass',
-               'lowpass_cheby_2']:
-    setattr(Collection, method, _create_cascade_method(method))
+                     tolerance=tolerance, **read_kwargs)
