@@ -10,4 +10,4 @@ from daspy.core.read import read
 from daspy.core.section import Section
 
 __all__ = ["Section", "Collection", "read", "DASDateTime", "local_tz", "utc"]
-__version__ = "1.2.4"
+__version__ = "1.2.5"

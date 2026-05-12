@@ -15,7 +15,7 @@ README = ROOT / "README.md"
 
 setup(
     name="DASPy-toolbox",
-    version="1.2.4",
+    version="1.2.5",
     description=(
         "DASPy is an open-source Python package for "
         "Distributed Acoustic Sensing (DAS) data processing."
