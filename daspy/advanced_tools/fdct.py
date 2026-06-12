@@ -6,7 +6,19 @@
 # http://www.curvelet.org/download-secure.php?file=CurveLab-2.1.3.tar.gz
 # (matlab version)
 import numpy as np
-from numpy.fft import fftshift, ifftshift, fft2, ifft2
+from scipy.fft import fftshift, ifftshift
+from scipy.fft import fft2 as _fft2, ifft2 as _ifft2
+
+
+_FFT_WORKERS = None
+
+
+def fft2(x):
+    return _fft2(x, workers=_FFT_WORKERS)
+
+
+def ifft2(x):
+    return _ifft2(x, workers=_FFT_WORKERS)
 
 
 def _round(x):
