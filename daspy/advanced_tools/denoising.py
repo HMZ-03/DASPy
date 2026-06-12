@@ -5,7 +5,6 @@
 import numpy as np
 from copy import deepcopy
 from scipy.ndimage import median_filter
-from scipy.interpolate import interp1d
 from daspy.basic_tools.preprocessing import padding
 from daspy.advanced_tools.fdct import fdct_wrapping, ifdct_wrapping
 
@@ -26,17 +25,47 @@ def spike_removal(data, nch=50, nsp=5, thresh=10):
 
     medians1 = median_filter(absdata, (nch, 1))
     medians = median_filter(medians1, (1, nsp))
-    ratio = absdata / medians  # comparisons matrix
+    with np.errstate(divide='ignore', invalid='ignore'):
+        bad = absdata / medians > thresh
 
     # find the bad values and interpolate with their neighbors
     data_dn = data.copy()
-    out_i, out_j = np.where(ratio > thresh)
-    for j in set(out_j):
-        bch = out_i[out_j == j]
-        gch = list(set(range(len(data))) - set(bch))
-        f = interp1d(gch, data[gch, j], bounds_error=False,
-                     fill_value=(data[gch[0], j], data[gch[-1], j]))
-        data_dn[bch, j] = f(bch)
+    if not np.any(bad):
+        return data_dn
+
+    nch = data.shape[0]
+    channel_idx = np.arange(nch, dtype=np.int32)[:, None]
+    prev_good = np.where(~bad, channel_idx, -1)
+    np.maximum.accumulate(prev_good, axis=0, out=prev_good)
+    next_good = np.where(~bad, channel_idx, nch)
+    next_good = np.minimum.accumulate(next_good[::-1], axis=0)[::-1]
+
+    out_i, out_j = np.nonzero(bad)
+    lo = prev_good[out_i, out_j]
+    hi = next_good[out_i, out_j]
+    has_lo = lo >= 0
+    has_hi = hi < nch
+
+    if np.any(~has_lo & ~has_hi):
+        raise ValueError('Cannot interpolate when all channels are outliers.')
+
+    both = has_lo & has_hi
+    if np.any(both):
+        i = out_i[both]
+        j = out_j[both]
+        lo_b = lo[both]
+        hi_b = hi[both]
+        weight = (i - lo_b) / (hi_b - lo_b)
+        data_dn[i, j] = data[lo_b, j] + \
+            (data[hi_b, j] - data[lo_b, j]) * weight
+
+    right = ~has_lo & has_hi
+    if np.any(right):
+        data_dn[out_i[right], out_j[right]] = data[hi[right], out_j[right]]
+
+    left = has_lo & ~has_hi
+    if np.any(left):
+        data_dn[out_i[left], out_j[left]] = data[lo[left], out_j[left]]
 
     return data_dn
 
