@@ -4,6 +4,7 @@
 # Email: hmz2018@mail.ustc.edu.cn
 import numpy as np
 from copy import deepcopy
+from functools import lru_cache
 from scipy.ndimage import median_filter
 from daspy.basic_tools.preprocessing import padding
 from daspy.advanced_tools.fdct import fdct_wrapping, ifdct_wrapping
@@ -170,6 +171,12 @@ def _velocity_bin(nbangles, fs, dx):
     return velocity
 
 
+@lru_cache(maxsize=128)
+def _velocity_factors(nbangles, fs, dx, vmin, vmax, flag):
+    velocity = _velocity_bin(nbangles, fs, dx)
+    return _mask_factor(velocity, vmin, vmax, flag=flag)
+
+
 def _mask_factor(velocity, vmin, vmax, flag=0):
     if flag:
         if flag == -1:
@@ -260,11 +267,16 @@ def curvelet_denoising(data, choice=0, pad=0.3, noise=None, noise_perc=95,
                              nbangles=nbangles, percentile=noise_perc)
         for s in range(1, len(C)):
             for w in range(len(C[s])):
-                # first do a hard threshold
-                C[s][w] = C[s][w] * (abs(C[s][w]) > abs(E[s][w]))
+                threshold = abs(E[s][w])
+                coeff = C[s][w]
+                mag = abs(coeff)
+                mask = mag > threshold
                 if soft_thresh:
-                    # soften the existing coefficients
-                    C[s][w] = np.sign(C[s][w]) * (abs(C[s][w]) - abs(E[s][w]))
+                    # first do a hard threshold, then soften the coefficients.
+                    C[s][w] = np.where(mask,
+                                       np.sign(coeff) * (mag - threshold), 0)
+                else:
+                    C[s][w] = coeff * mask
 
     # apply velocity filtering
     if choice in (1, 2):
@@ -282,8 +294,7 @@ def curvelet_denoising(data, choice=0, pad=0.3, noise=None, noise_perc=95,
 
         for s in range(scale_begin - 1, len(C) - finest + 1):
             nbangles = len(C[s])
-            velocity = _velocity_bin(nbangles, fs, dx)
-            factors = _mask_factor(velocity, vmin, vmax, flag=flag)
+            factors = _velocity_factors(nbangles, fs, dx, vmin, vmax, flag)
             for w in range(nbangles):
                 if mode == 'retain':
                     C[s][w] *= factors[w]
