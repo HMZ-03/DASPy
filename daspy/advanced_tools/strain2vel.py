@@ -144,7 +144,59 @@ def curvelet_conversion(data, dx, fs, pad=0.3, scale_begin=2, nbscales=None,
     return data_vel
 
 
-def slowness(g, dx, fs, slm, sls, swin=2):
+def _time_padding(data, gap):
+    if gap == 0:
+        return data
+
+    data_ex = np.zeros((len(data), data.shape[1] + 2 * gap),
+                       dtype=data.dtype)
+    data_ex[:, gap:-gap] = data
+    return data_ex
+
+
+def _smooth_slowness(p, swin):
+    nt = len(p)
+    for i in range(swin, nt - swin):
+        win = p[i - swin:i + swin + 1]
+        sign = np.sign(sum(np.sign(win)))
+        win = [px for px in win if np.sign(px) == sign]
+        p[i] = np.mean(win)
+    return p
+
+
+def _slowness_no_sem(g_ex, h_ex, dx, fs, slm, sls, L, nt, gap, swin,
+                     row0=0):
+    grdpnt = round(slm / sls)
+    best_sem = np.zeros(nt)
+    best_idx = np.zeros(nt, dtype=np.int32)
+
+    for i in range(2 * grdpnt + 1):
+        px = (i - grdpnt) * sls
+        if abs(px) < 1e-5:
+            continue
+
+        sum_g = np.zeros(nt, dtype=g_ex.dtype)
+        sum_h = np.zeros(nt, dtype=h_ex.dtype)
+        energy = np.zeros(nt, dtype=np.result_type(g_ex.dtype, h_ex.dtype))
+        for j in range(-L, L):
+            shift = round(px * j * dx * fs)
+            row = row0 + j + L
+            gt = g_ex[row, gap + shift:gap + shift + nt]
+            ht = h_ex[row, gap + shift:gap + shift + nt]
+            sum_g += gt
+            sum_h += ht
+            energy += gt**2 + ht**2
+
+        sem = (sum_g**2 + sum_h**2) / energy / (2 * L + 1)
+        update = sem > best_sem
+        best_sem[update] = sem[update]
+        best_idx[update] = i
+
+    p = (best_idx - grdpnt) * sls
+    return _smooth_slowness(p, swin)
+
+
+def slowness(g, dx, fs, slm, sls, swin=2, h=None, return_sem=True):
     """
     Estimate the slowness time series by calculate semblance.
     {Lior et al., 2021, Solid Earth}
@@ -156,19 +208,26 @@ def slowness(g, dx, fs, slm, sls, swin=2):
     :param slm: float. Slowness x max
     :param sls: float. Slowness step
     :param swin: int. Slowness smooth window
-    :return: Sequences of slowness and sembalence.
+    :param h: 2-dimensional array. Optional precomputed Hilbert transform
+        imaginary component.
+    :param return_sem: bool. If True, return the full semblance matrix.
+    :return: Sequences of slowness and sembalence if return_sem is True,
+        otherwise only the slowness sequence.
     """
     L = (len(g) - 1) // 2
     nt = len(g[0])
-    h = np.imag(hilbert(g))
+    if h is None:
+        h = np.imag(hilbert(g))
     grdpnt = round(slm / sls)
-    sem = np.zeros((2 * grdpnt + 1, nt))
     gap = round(slm * dx * L * fs)
+    h_ex = _time_padding(h, gap)
+    g_ex = _time_padding(g, gap)
 
-    h_ex = np.zeros((len(g), nt + 2 * gap))
-    h_ex[:, gap:-gap] = h
-    g_ex = np.zeros((len(g), nt + 2 * gap))
-    g_ex[:, gap:-gap] = g
+    if not return_sem:
+        return _slowness_no_sem(g_ex, h_ex, dx, fs, slm, sls, L, nt, gap,
+                                swin)
+
+    sem = np.zeros((2 * grdpnt + 1, nt))
 
     for i in range(2 * grdpnt + 1):
         px = (i - grdpnt) * sls
@@ -183,12 +242,7 @@ def slowness(g, dx, fs, slm, sls, swin=2):
         sem[i] = (np.sum(gt, axis=0)**2 + np.sum(ht, axis=0)**2) / \
             np.sum(gt**2 + ht**2, axis=0) / (2 * L + 1)
     p = (np.argmax(sem, axis=0) - grdpnt) * sls
-    # smooth P
-    for i in range(swin, nt - swin):
-        win = p[i - swin:i + swin + 1]
-        sign = np.sign(sum(np.sign(win)))
-        win = [px for px in win if np.sign(px) == sign]
-        p[i] = np.mean(win)
+    _smooth_slowness(p, swin)
 
     return p, sem
 
@@ -235,11 +289,15 @@ def slant_stacking(data, dx, fs, L=None, slm=0.01,
                 data_vel = np.vstack((data_vel, d_vel))
     else:
         data_ex = padding(data, (2 * L, 0))
+        h_ex = np.imag(hilbert(data_ex))
+        gap = round(slm * dx * L * fs)
+        data_ex = _time_padding(data_ex, gap)
+        h_ex = _time_padding(h_ex, gap)
         swin = int(max((1 / frqhigh * fs) // 2, 1))
         data_vel = np.zeros((len(channel), nt))
         for i, ch in enumerate(channel):
-            p, _ = slowness(data_ex[ch:ch + 2 * L + 1], dx, fs, slm, sls,
-                            swin=swin)
+            p = _slowness_no_sem(data_ex, h_ex, dx, fs, slm, sls, L, nt, gap,
+                                 swin, row0=ch)
             data_vel[i] = bandpass(data[ch] / p, fs=fs, freqmin=frqlow,
                                    freqmax=frqhigh)
 
