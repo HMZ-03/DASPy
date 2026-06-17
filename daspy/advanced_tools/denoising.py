@@ -5,8 +5,8 @@ Email: hmz2018@mail.ustc.edu.cn"""
 
 import numpy as np
 from copy import deepcopy
+from functools import lru_cache
 from scipy.ndimage import median_filter
-from scipy.interpolate import interp1d
 from daspy.basic_tools.preprocessing import padding
 from daspy.advanced_tools.fdct import fdct_wrapping, ifdct_wrapping
 
@@ -27,17 +27,47 @@ def spike_removal(data, nch=50, nsp=5, thresh=10):
 
     medians1 = median_filter(absdata, (nch, 1))
     medians = median_filter(medians1, (1, nsp))
-    ratio = absdata / medians  # comparisons matrix
+    with np.errstate(divide='ignore', invalid='ignore'):
+        bad = absdata / medians > thresh
 
     # find the bad values and interpolate with their neighbors
     data_dn = data.copy()
-    out_i, out_j = np.where(ratio > thresh)
-    for j in set(out_j):
-        bch = out_i[out_j == j]
-        gch = list(set(range(len(data))) - set(bch))
-        f = interp1d(gch, data[gch, j], bounds_error=False,
-                     fill_value=(data[gch[0], j], data[gch[-1], j]))
-        data_dn[bch, j] = f(bch)
+    if not np.any(bad):
+        return data_dn
+
+    nch = data.shape[0]
+    channel_idx = np.arange(nch, dtype=np.int32)[:, None]
+    prev_good = np.where(~bad, channel_idx, -1)
+    np.maximum.accumulate(prev_good, axis=0, out=prev_good)
+    next_good = np.where(~bad, channel_idx, nch)
+    next_good = np.minimum.accumulate(next_good[::-1], axis=0)[::-1]
+
+    out_i, out_j = np.nonzero(bad)
+    lo = prev_good[out_i, out_j]
+    hi = next_good[out_i, out_j]
+    has_lo = lo >= 0
+    has_hi = hi < nch
+
+    if np.any(~has_lo & ~has_hi):
+        raise ValueError('Cannot interpolate when all channels are outliers.')
+
+    both = has_lo & has_hi
+    if np.any(both):
+        i = out_i[both]
+        j = out_j[both]
+        lo_b = lo[both]
+        hi_b = hi[both]
+        weight = (i - lo_b) / (hi_b - lo_b)
+        data_dn[i, j] = data[lo_b, j] + \
+            (data[hi_b, j] - data[lo_b, j]) * weight
+
+    right = ~has_lo & has_hi
+    if np.any(right):
+        data_dn[out_i[right], out_j[right]] = data[hi[right], out_j[right]]
+
+    left = has_lo & ~has_hi
+    if np.any(left):
+        data_dn[out_i[left], out_j[left]] = data[lo[left], out_j[left]]
 
     return data_dn
 
@@ -142,6 +172,12 @@ def _velocity_bin(nbangles, fs, dx):
     return velocity
 
 
+@lru_cache(maxsize=128)
+def _velocity_factors(nbangles, fs, dx, vmin, vmax, flag):
+    velocity = _velocity_bin(nbangles, fs, dx)
+    return _mask_factor(velocity, vmin, vmax, flag=flag)
+
+
 def _mask_factor(velocity, vmin, vmax, flag=0):
     if flag:
         if flag == -1:
@@ -232,11 +268,16 @@ def curvelet_denoising(data, choice=0, pad=0.3, noise=None, noise_perc=95,
                              nbangles=nbangles, percentile=noise_perc)
         for s in range(1, len(C)):
             for w in range(len(C[s])):
-                # first do a hard threshold
-                C[s][w] = C[s][w] * (abs(C[s][w]) > abs(E[s][w]))
+                threshold = abs(E[s][w])
+                coeff = C[s][w]
+                mag = abs(coeff)
+                mask = mag > threshold
                 if soft_thresh:
-                    # soften the existing coefficients
-                    C[s][w] = np.sign(C[s][w]) * (abs(C[s][w]) - abs(E[s][w]))
+                    # first do a hard threshold, then soften the coefficients.
+                    C[s][w] = np.where(mask,
+                                       np.sign(coeff) * (mag - threshold), 0)
+                else:
+                    C[s][w] = coeff * mask
 
     # apply velocity filtering
     if choice in (1, 2):
@@ -254,8 +295,7 @@ def curvelet_denoising(data, choice=0, pad=0.3, noise=None, noise_perc=95,
 
         for s in range(scale_begin - 1, len(C) - finest + 1):
             nbangles = len(C[s])
-            velocity = _velocity_bin(nbangles, fs, dx)
-            factors = _mask_factor(velocity, vmin, vmax, flag=flag)
+            factors = _velocity_factors(nbangles, fs, dx, vmin, vmax, flag)
             for w in range(nbangles):
                 if mode == 'retain':
                     C[s][w] *= factors[w]
