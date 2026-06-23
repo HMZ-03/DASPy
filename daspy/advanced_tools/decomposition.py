@@ -56,7 +56,7 @@ def fk_fan_mask(f, k, fmin=None, fmax=None, kmin=None, kmax=None, vmin=None,
                 np.cos(((tp_b - abs(p[area])) / tp_wid) * np.pi)
 
     if flag:
-        mask[np.sign(vv) == flag] = 0
+        mask[np.sign(vv) == -flag] = 0
     return mask
 
 

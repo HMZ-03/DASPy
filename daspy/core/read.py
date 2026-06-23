@@ -349,12 +349,12 @@ def _read_h5(fname, headonly=False, file_format='auto', chmin=None, chmax=None,
 
         elif file_format == 'Puniu Tech HiFi-DAS':
             dataset = h5_file['default']
+            attrs = {k: (v.decode() if isinstance(v, bytes) else v) for k, v
+                     in dataset.attrs.items()}
             if 'time,channel' in attrs.get('row_major_order', 'time, channel')\
                 .replace(' ', '').lower():
                 transpose = True
 
-            attrs = {k: (v.decode() if isinstance(v, bytes) else v) for k, v
-                     in dataset.attrs.items()}
             step = int(attrs['step'])
             dx = step * attrs.get('spatial_sampling_rate', 1.0)
             start_channel = int(attrs['start_channel'])
@@ -362,10 +362,10 @@ def _read_h5(fname, headonly=False, file_format='auto', chmin=None, chmax=None,
                 if chmin:
                     chmin = (chmin - start_channel) / step + start_channel
                 if chmax:
-                    chmax = (chmin - start_channel) / step + start_channel
+                    chmax = (chmax - start_channel) / step + start_channel
             t0 = int(attrs.get('epoch', 0)) + int(attrs.get('ns', 0)) * 1e-9
             data_type = 'strain rate' if attrs.get('format', '') == \
-                'differential' else 'strain',
+                'differential' else 'strain'
             metadata = {'dx': dx, 'fs': float(attrs['sampling_rate']),
                         'start_channel': start_channel,
                         'start_distance': start_channel * dx,
@@ -611,8 +611,9 @@ def _read_tdms(fname, headonly=False, file_format='auto', chmin=None,
                 data = np.zeros(shape,
                     dtype=tdms_file[key][str(start_channel)].dtype)[si, sj]
             else:
-                data = np.asarray([tdms_file[key][str(ch)][sj] for ch in
-                                   range(si.start, si.stop, si.step)])
+                data = np.asarray([
+                    tdms_file[key][str(start_channel + ch)][sj]
+                    for ch in range(si.start, si.stop, si.step)])
         elif file_format == 'Institute of Semiconductors, CAS':
             try:
                 start_channel = int(properties['Initial Channel'])

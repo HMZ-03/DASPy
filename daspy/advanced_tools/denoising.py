@@ -181,8 +181,9 @@ def _velocity_factors(nbangles, fs, dx, vmin, vmax, flag):
 def _mask_factor(velocity, vmin, vmax, flag=0):
     if flag:
         if flag == -1:
-            vmin = -vmax
-            vmax = -vmin
+            old_vmin, old_vmax = vmin, vmax
+            vmin = -old_vmax
+            vmax = -old_vmin
     else:
         half = len(velocity) // 8
         for i in range(half):
