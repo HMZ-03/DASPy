@@ -15,7 +15,7 @@ def _package_version() -> str:
     try:
         return version("DASPy-toolbox")
     except PackageNotFoundError:
-        return "1.2.3"
+        return "1.2.6"
 
 
 def build_parser() -> argparse.ArgumentParser:
