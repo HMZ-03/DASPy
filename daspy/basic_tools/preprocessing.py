@@ -373,4 +373,4 @@ def distance_integration(data, dx, c=0):
     :param c: float. A constant added to the result.
     :return: Integrated data.
     """
-    return np.cumsum(data, axis=1) * dx + c
+    return np.cumsum(data, axis=0) * dx + c

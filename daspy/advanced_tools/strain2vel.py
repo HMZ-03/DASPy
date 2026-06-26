@@ -179,7 +179,7 @@ def _slowness_no_sem(g_ex, h_ex, dx, fs, slm, sls, L, nt, gap, swin,
         sum_g = np.zeros(nt, dtype=g_ex.dtype)
         sum_h = np.zeros(nt, dtype=h_ex.dtype)
         energy = np.zeros(nt, dtype=np.result_type(g_ex.dtype, h_ex.dtype))
-        for j in range(-L, L):
+        for j in range(-L, L + 1):
             shift = round(px * j * dx * fs)
             row = row0 + j + L
             gt = g_ex[row, gap + shift:gap + shift + nt]
@@ -236,7 +236,7 @@ def slowness(g, dx, fs, slm, sls, swin=2, h=None, return_sem=True):
             continue
         gt = np.zeros(g.shape)
         ht = np.zeros(h.shape)
-        for j in range(-L, L):
+        for j in range(-L, L + 1):
             shift = round(px * j * dx * fs)
             gt[j + L] = g_ex[j + L, gap + shift:gap + shift + nt]
             ht[j + L] = h_ex[j + L, gap + shift:gap + shift + nt]

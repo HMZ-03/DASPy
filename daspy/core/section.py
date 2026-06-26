@@ -1438,17 +1438,23 @@ class Section(object):
             parameters can reduce artifacts.
         :param edge: float. The width of fan mask taper edge.
         """
-        if hasattr(self, 'turning_channels') and turning is None:
+        if turning is False:
+            turning = None
+        elif hasattr(self, 'turning_channels') and turning is None:
             turning = np.array(self.turning_channels) - self.start_channel
 
         self._strain2vel_attr()
-        if verbose and not turning:
+        has_turning = turning is not None and len(np.atleast_1d(turning)) > 0
+        if verbose and not has_turning:
             data_res, fk, f, k, mask = fk_rescaling(self.data, self.dx, self.fs,
                                                     verbose=True, **kwargs)
             self.data = data_res
             return fk, f, k, mask
         else:
-            self.data = fk_rescaling(self.data, self.dx, self.fs, **kwargs)
+            self.data = fk_rescaling(self.data, self.dx, self.fs,
+                                     turning=np.atleast_1d(turning)
+                                     if has_turning else None,
+                                     **kwargs)
             return self
 
     def curvelet_conversion(self, turning=None, **kwargs):

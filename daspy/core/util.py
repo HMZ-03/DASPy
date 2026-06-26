@@ -21,7 +21,8 @@ def _device_standardized_name(file_format: str) -> str:
         'OptaSense ODH4+': ['optasenseodh4+', 'odh4+', 'optasenseodh4plus',
                             'odh4plus'],
         'OptaSense QuantX': ['optasensequantx', 'quantx'],
-        'Puniu Tech HiFi-DAS': ['puniutechhifidas, puniu, puniutech, hifidas',
+        'Puniu Tech HiFi-DAS': ['puniutechhifidas', 'puniu', 'puniutech',
+                                'hifidas',
                                 'puniuhifidas', 'puniudas'],
         'Silixa iDAS': ['silixaidas', 'silixaidasv1', 'idasv1', 'idas'],
         'Silixa iDAS-v2': ['silixaidasv2', 'idasv2'],
@@ -104,8 +105,7 @@ def _h5_file_format(h5_file):
                        'Sampling_points_in_time'}:
         file_format = 'JAMSTEC'
     elif list(keys) == ['data']:
-        if 'Interval of monitor point' in \
-            list(h5_file['data'].attrs['Interval of monitor point'].keys()):
+        if 'Interval of monitor point' in h5_file['data'].attrs:
             file_format = 'NEC'
         else:
             file_format = 'AI4EPS'
