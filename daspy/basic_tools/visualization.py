@@ -73,7 +73,7 @@ def plot(data: np.ndarray, dx=None, fs=None, ax=None, obj='waveform', dpi=300,
         cmap = 'RdBu' if cmap is None else cmap
         if vmax is None:
             vmax_per = 90 if vmax_per is None else vmax_per
-            vmax = np.percentile(data, vmax_per)
+            vmax = np.percentile(abs(data), vmax_per)
         vmin = -vmax if vmin is None else vmin
         origin = 'upper'
         if fs is None or tmode == 'sampling':
